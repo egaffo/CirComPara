@@ -32,7 +32,16 @@ build_dir = 'build'
 ## EXECUTE SCRIPTS
 preprocess  = env.SConscript(os.path.join(build_dir, preprocess_sconscript), variant_dir=build_dir, 
                              src_dir=env['SCRIPT_PATH'], duplicate=0)
+vars.Add('CLEAN_READS', 'Clean-read files', '')
+vars.Update(env)
+## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript)
+env['CLEAN_READS'] = ','.join(['#'+c.path for c in preprocess])
+
 mappings    = env.SConscript(os.path.join(build_dir, mapping_sconscript), variant_dir=build_dir,
                              src_dir=env['SCRIPT_PATH'], duplicate=0)
+env.Replace(MAPPING_FILE = '#'+mappings[0].path)
+
 expression  = env.SConscript(os.path.join(build_dir, expression_sconscript), variant_dir=build_dir,
                              src_dir=env['SCRIPT_PATH'], duplicate=0)
+
+#print  [e.path for node in expression for e in node]

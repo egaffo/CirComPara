@@ -24,4 +24,5 @@ segemehl_map = env.Command([os.path.join(segemehl_mapping_dir,
                                          "{}_unmatched.fastq".format(sample_id))],
                            [clean_reads], segemehl_map_cmd)
 env.Precious(segemehl_map)
-env.Replace(MAPPING_FILE = '#'+segemehl_map[0].path)
+
+Return('segemehl_map')

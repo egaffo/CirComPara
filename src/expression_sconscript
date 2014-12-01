@@ -8,3 +8,4 @@ Import('*')
 circrna_dir = 'circrna'
 circrna =  SConscript(os.path.join(circrna_dir, 'circrna_sconscript'), variant_dir=circrna_dir,
                       src_dir=env['SCRIPT_PATH'], duplicate=0)
+Return('circrna')

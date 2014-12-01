@@ -15,10 +15,4 @@ for idx, read in enumerate(reads):
     target = os.path.join(preprocess_dir, 'clean_' + str(idx+1) + '.fastq')
     clean_reads.extend(env.Command(target, read, 'cat $SOURCE > $TARGET'))
 
-vars = Variables()
-vars.Add('CLEAN_READS', 'Clean-read files', '')
-vars.Update(env)
-## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript)
-env['CLEAN_READS'] = ','.join(['#'+c.path for c in clean_reads])
-Export('env')
-
+Return('clean_reads')
