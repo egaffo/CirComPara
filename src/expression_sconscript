@@ -1,0 +1,10 @@
+import os
+
+## This script functions as a dispatcher to the desired gene expression analysis methods.
+## It sets the necessary variables and launch the expression analyses.
+
+Import('*')
+
+circrna_dir = 'circrna'
+circrna =  SConscript(os.path.join(circrna_dir, 'circrna_sconscript'), variant_dir=circrna_dir,
+                      src_dir=env['SCRIPT_PATH'], duplicate=0)

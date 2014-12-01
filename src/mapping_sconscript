@@ -1,0 +1,13 @@
+import os
+
+## This script functions as a dispatcher to the desired mapper.
+## It sets the necessary variables and launch the mapper.
+
+Import('*')
+
+mapping_dir = 'mappings'
+make_mapping_dir = env.Command(Dir(mapping_dir), [], Mkdir('$TARGET'))
+if env['MAPPER'].lower()=='segemehl':
+    SConscript(os.path.join(mapping_dir, 'segemehl_mapping_sconscript'), src_dir=env['SCRIPT_PATH'], 
+               variant_dir=mapping_dir, duplicate=0)
+

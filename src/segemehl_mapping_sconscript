@@ -1,0 +1,27 @@
+import os
+
+Import('*')
+
+segemehl_mapping_dir = 'segemehl'
+make_segemehl_mapping_dir = env.Command(Dir(segemehl_mapping_dir), [], Mkdir('$TARGET'))
+
+CPUS = env['CPUS']
+clean_reads = env['CLEAN_READS'].split(',')
+sample_id = env['SAMPLE']
+
+## MAP READS
+if len(clean_reads)>1:
+    segemehl_map_cmd = '''segemehl.x -i ${SEGEMEHL_INDEX} -d ${GENOME_FASTA} -q ${SOURCES[0]} '''\
+                            '''-p ${SOURCES[1]} -S''' + ''' $(-t {}$) '''.format(CPUS) +\
+                            '''-u ${TARGETS[1]} -C -T > ${TARGETS[0]}'''
+else:
+    segemehl_map_cmd = '''segemehl.x -i ${SEGEMEHL_INDEX} -d ${GENOME_FASTA} -q $SOURCE -S'''+\
+                    ''' $(-t {}$) '''.format(CPUS) +\
+                    '''-u ${TARGETS[1]} -C -T > ${TARGETS[0]}'''
+segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, 
+                                         "{}.sam".format(sample_id)), 
+                            os.path.join(segemehl_mapping_dir, 
+                                         "{}_unmatched.fastq".format(sample_id))],
+                           [clean_reads], segemehl_map_cmd)
+
+env.Replace(MAPPING_FILE = '#'+segemehl_map[0].path)

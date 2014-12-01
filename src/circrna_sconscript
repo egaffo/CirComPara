@@ -1,0 +1,24 @@
+import os
+
+Import('*')
+
+mapfile = env['MAPPING_FILE']
+mapfile_basename = env['SAMPLE']
+
+## SORT SAM/BAM
+sort_alignments_cmd = "samtools view -uS $(-@{0}$) $SOURCE | samtools sort $(-@{0}$)"\
+                      " -O 'sam' -T $SOURCE > $TARGET".format(env['CPUS'])
+sort_alignments = env.Command(["{}_sorted.sam".format(mapfile_basename)], 
+                            [mapfile], sort_alignments_cmd)
+
+## COLLECT SPLICE JUNCTIONS
+collect_splice_cmd = "testrealign.x -d ${GENOME_FASTA} -q $SOURCE -n "\
+                     "-U ${TARGETS[0]} -T ${TARGETS[1]} " + "$(-t {}$)".format(env['CPUS'])
+collect_splice_targets = ["splicesites.bed", "transrealigned.bed"]
+collect_splice = env.Command(collect_splice_targets, sort_alignments[0], collect_splice_cmd)
+
+## EXTRACT CIRCULAR SPLICE EVENTS
+extract_circular_cmd = "grep ':C:' ${SOURCES[0]} | cut -f 4 | cut -f 2 -d: |"\
+                       "sort | uniq -c | sort -k1,1n -k2,2n > $TARGET"
+extract_circular = env.Command(["{}_circular.junction.stats.txt".format(mapfile_basename)], 
+                                [collect_splice], extract_circular_cmd)

@@ -1,0 +1,38 @@
+import os
+
+varfile = ARGUMENTS.get('VARS', 'vars.py')
+vars = Variables(varfile)
+vars.Add('CPUS', 'Set number of CPUs', '1')
+vars.Add('READS', 'Read file(s) to map in FASTQ format. If paired-end a comma separated list.', '') 
+vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl') 
+vars.Add('SCRIPT_PATH', 'Path to SConscript files', '#src')
+
+env = Environment(variables = vars,
+                  ENV = os.environ,
+                  SEGEMEHL_INDEX = os.environ['SEGEMEHL_INDEX'],
+                  GENOME_FASTA = os.environ['GENOME_FASTA'],
+                  MAPPER = '${MAPPER}',
+                  SAMPLE = os.path.basename(Dir('.').abspath),
+                  )
+Help(vars.GenerateHelpText(env))
+
+## SET (DISPATCHER) SCRIPT NAMES. THESE ARE THE MAIN PIPELINE STEPS, EACH OF THEM MIGHT FIRE
+## DIFFERENT ACTIONS/SCONSCRIPTS
+preprocess_sconscript   = 'preprocess_sconscript'
+mapping_sconscript      = 'mapping_sconscript'
+expression_sconscript   = 'expression_sconscript'
+
+read_dir = 'data'
+read_files = ','.join(['#'+os.path.join(read_dir, f) for f in os.listdir(read_dir)])
+env['READS'] = read_files
+Export('env')
+
+build_dir = 'build'
+
+## EXECUTE SCRIPTS
+preprocess  = env.SConscript(os.path.join(build_dir, preprocess_sconscript), variant_dir=build_dir, 
+                             src_dir=env['SCRIPT_PATH'], duplicate=0)
+mappings    = env.SConscript(os.path.join(build_dir, mapping_sconscript), variant_dir=build_dir,
+                             src_dir=env['SCRIPT_PATH'], duplicate=0)
+expression  = env.SConscript(os.path.join(build_dir, expression_sconscript), variant_dir=build_dir,
+                             src_dir=env['SCRIPT_PATH'], duplicate=0)

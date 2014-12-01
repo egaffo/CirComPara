@@ -1,0 +1,24 @@
+import os
+
+#def SymLink(target, source, env):
+#    '''Define Action to create symlinks'''
+#    os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+
+Import('*')
+
+preprocess_dir = 'preprocess'
+make_preprocess_dir = env.Command(Dir(preprocess_dir), [], Mkdir('$TARGET'))
+
+reads = env['READS'].split(',')
+clean_reads = []
+for idx, read in enumerate(reads):
+    target = os.path.join(preprocess_dir, 'clean_' + str(idx+1) + '.fastq')
+    clean_reads.extend(env.Command(target, read, 'cat $SOURCE > $TARGET'))
+
+vars = Variables()
+vars.Add('CLEAN_READS', 'Clean-read files', '')
+vars.Update(env)
+## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript)
+env['CLEAN_READS'] = ','.join(['#'+c.path for c in clean_reads])
+Export('env')
+
