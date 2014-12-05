@@ -10,6 +10,8 @@ make_mapping_dir = env.Command(Dir(mapping_dir), [], Mkdir('$TARGET'))
 mappings = []
 if env['MAPPER'].lower()=='segemehl':
     mappings.extend(SConscript(os.path.join(mapping_dir, 'segemehl_mapping_sconscript'), 
-                    src_dir=env['SCRIPT_PATH'], variant_dir=mapping_dir, duplicate=0)
+                    src_dir=env['SCRIPT_PATH'], 
+                    variant_dir=mapping_dir, 
+                    duplicate=0)
                    )
 Return('mappings')

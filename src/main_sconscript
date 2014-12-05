@@ -6,11 +6,15 @@ vars.Add('CPUS', 'Set number of CPUs', '1')
 vars.Add('READS', 'Read file(s) to map in FASTQ format. If paired-end a comma separated list.', '') 
 vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl') 
 vars.Add('SCRIPT_PATH', 'Path to SConscript files', '#src')
+vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
+vars.Add('ADAPTER_FILE', 'FASTA file full path of the adapter sequence', '')
 
 env = Environment(variables = vars,
                   ENV = os.environ,
                   SEGEMEHL_INDEX = os.environ['SEGEMEHL_INDEX'],
                   GENOME_FASTA = os.environ['GENOME_FASTA'],
+                  PREPROCESSOR = '${PREPROCESSOR}',
+                  ADAPTER_FILE = '${ADAPTER_FILE}',
                   MAPPER = '${MAPPER}',
                   SAMPLE = os.path.basename(Dir('.').abspath),
                   )
@@ -23,7 +27,8 @@ mapping_sconscript      = 'mapping_sconscript'
 expression_sconscript   = 'expression_sconscript'
 
 read_dir = 'data'
-read_files = ','.join(['#'+os.path.join(read_dir, f) for f in os.listdir(read_dir)])
+read_file_list = os.listdir(read_dir)
+read_files = ','.join(sorted(['#'+os.path.join(read_dir, f) for f in read_file_list]))
 env['READS'] = read_files
 Export('env')
 
@@ -34,8 +39,13 @@ preprocess  = env.SConscript(os.path.join(build_dir, preprocess_sconscript), var
                              src_dir=env['SCRIPT_PATH'], duplicate=0)
 vars.Add('CLEAN_READS', 'Clean-read files', '')
 vars.Update(env)
-## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript)
-env['CLEAN_READS'] = ','.join(['#'+c.path for c in preprocess])
+## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript).
+## Implementation note: here you should know what the preprocess SConscript returns to handle it 
+## properly
+clean_reads = [preprocess[0]]
+if len(read_file_list)>1:
+    clean_reads.append(preprocess[2])
+env['CLEAN_READS'] = ','.join(sorted(['#'+c.path for c in clean_reads]))
 
 mappings    = env.SConscript(os.path.join(build_dir, mapping_sconscript), variant_dir=build_dir,
                              src_dir=env['SCRIPT_PATH'], duplicate=0)

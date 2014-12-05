@@ -6,9 +6,9 @@ mapfile = env['MAPPING_FILE']
 mapfile_basename = env['SAMPLE']
 
 ## SORT SAM/BAM
-sort_alignments_cmd = "samtools view -uS $(-@{0}$) $SOURCE | samtools sort $(-@{0}$)"\
-                      " -O 'sam' -T $SOURCE > $TARGET".format(env['CPUS'])
-sort_alignments = env.Command(["{}_sorted.sam".format(mapfile_basename)], 
+sort_alignments_cmd = "samtools view -u $(-@{0}$) $SOURCE | samtools sort $(-@{0}$)"\
+                      " -O 'sam' -T $SOURCE | gzip > $TARGET".format(env['CPUS'])
+sort_alignments = env.Command(["{}_sorted.sam.gz".format(mapfile_basename)], 
                             [mapfile], sort_alignments_cmd)
 
 ## COLLECT SPLICE JUNCTIONS

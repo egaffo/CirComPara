@@ -5,5 +5,7 @@ export SEGEMEHL_INDEX="/blackhole/enrico/circular/tools/segemehl_indexes/hg38/hg
 export GENOME_FASTA="/blackhole/enrico/circular/tools/segemehl_indexes/hg38/chr*.fa"
 export SRATOOLKIT_HOME="/home/enrico/tools/sra/sratoolkit.2.3.5-2-ubuntu64/bin/"
 export SAMTOOLS_HOME="/blackhole/enrico/circular/tools/samtools-1.1/"
+#export FASTX_TOOLKIT="$HOME/tools/fastx_toolkit/bin"
+export TRIMMOMATIC="/home/enrico/tools/trimmomatic/trimmomatic-0.32.jar"
 
-export PATH="$SEGEMEHL_HOME:$SRATOOLKIT_HOME:$SAMTOOLS_HOME:$PATH"
+export PATH="$FASTX_TOOLKIT:$SEGEMEHL_HOME:$SRATOOLKIT_HOME:$SAMTOOLS_HOME:$PATH"

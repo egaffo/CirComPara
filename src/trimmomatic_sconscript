@@ -1,0 +1,46 @@
+import os
+
+Import('*')
+
+trimmomatic_dir = 'trimmomatic'
+make_trimmomatic_dir = env.Command(Dir(trimmomatic_dir), [], Mkdir('$TARGET'))
+
+try:
+    if not env['ADAPTER_FILE'].strip() == '':
+        adapter_removal = ' ILLUMINACLIP:' + env['ADAPTER_FILE'] + ':2:30:10 '
+    else:
+        adapter_removal = ''
+except KeyError:
+    adapter_removal = ''
+try:
+    trimmomatic_steps = env['TRIMMOMATIC_PARAMS']
+except KeyError:
+    trimmomatic_steps = 'MAXINFO:40:0.5 LEADING:20 TRAILING:20 '\
+                        'SLIDINGWINDOW:4:30 MINLEN:50'
+
+clean_reads = []
+reads = env['READS'].split(',')
+if len(reads)>1:
+    ## MANAGE PAIRED END READS
+    read1_filebase = os.path.splitext(os.path.basename(reads[0].replace('.gz', '')))[0]
+    read2_filebase = os.path.splitext(os.path.basename(reads[1].replace('.gz', '')))[0]
+    targets = [os.path.join(trimmomatic_dir, '{}.fq.P.qtrim.gz'.format(read1_filebase)),
+               os.path.join(trimmomatic_dir, '{}.fq.U.qtrim.gz'.format(read1_filebase)),
+               os.path.join(trimmomatic_dir, '{}.fq.P.qtrim.gz'.format(read2_filebase)),
+               os.path.join(trimmomatic_dir, '{}.fq.U.qtrim.gz'.format(read2_filebase))]
+    trimmomatic_cmd = 'java -jar ' + env['ENV']['TRIMMOMATIC'] + ' PE $(-threads ' +\
+                      env['CPUS'] + '$) ${SOURCES[0]} ${SOURCES[1]} '\
+                      '${TARGETS[0]} ${TARGETS[1]} ${TARGETS[2]} ${TARGETS[3]} ' +\
+                      adapter_removal + trimmomatic_steps
+else:
+    ## MANAGE SINGLE END READS
+    read1_filebase = os.path.splitext(os.path.basename(reads[0].replace('.gz', '')))[0]
+    targets = [os.path.join(trimmomatic_dir, '{}.fq.SE.fq.gz'.format(read1_filebase))]
+    trimmomatic_cmd = 'java -jar ' + env['ENV']['TRIMMOMATIC'] + ' SE $(-threads ' +\
+                      env['CPUS'] + '$) ${SOURCES[0]} '\
+                      '${TARGETS[0]} ' + \
+                      adapter_removal + trimmomatic_steps
+
+clean_reads.extend(env.Command(targets, reads, trimmomatic_cmd))
+
+Return('clean_reads')

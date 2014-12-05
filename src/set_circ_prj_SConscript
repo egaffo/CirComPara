@@ -28,8 +28,7 @@ SRC_SCRIPTS = [os.path.join(installdir, f) for f in os.listdir(installdir)
 project_dirs = ['src', 'build', 'data']
 
 ## READ METAFILE AND BUILD PROJECT STRUCTURE
-readspersample = defaultdict(list) 
-prjstructure_nodes = []
+adapters = defaultdict(list)
 with open(env['META']) as csvfile:
     reader = csv.DictReader(csvfile)
     ## CREATE DIRECTORY STRUCTURE AND SET PROJECT FILES FOR EACH SAMPLE IN METAFILE TABLE
@@ -57,57 +56,20 @@ with open(env['META']) as csvfile:
         link_main = env.Command(os.path.join(sample, os.path.basename(main_script)),
                                 main_script,
                                 SymLink)
+
+        try:
+            if not row['adapter'].strip() == '':
+                adapter_file = os.path.abspath(row['adapter'])
+            else:
+                adapter_file = row['adapter'].strip()
+        except KeyError:
+            adapter_file = ''
+        adapters[sample] = adapter_file
         
-#        ## SET READ PREPROCESSING SUBDIR
-#        read_preprocess_dir = os.path.join(maindir, subdirs['prep'])
-#        make_read_preprocess_dir = env.Command(Dir(read_preprocess_dir), [], Mkdir('$TARGET'))
-#        sample_file = row['file']
-#        link_target_fasta = os.path.join(read_preprocess_dir, os.path.split(sample_file)[1])
-#        link_fasta = env.Command(link_target_fasta, 
-#                                 sample_file, 
-#                                 SymLink)
-#        link_preprocess_script = env.Command(os.path.join(read_preprocess_dir, 
-#                                                          os.path.basename(preprocess_script)),
-#                                             preprocess_script,
-#                                             SymLink)
-#        readspersample[maindir].append(os.path.abspath(link_target_fasta))
-#        ## SET MAPPING SUBDIR
-#        mapping_dir = os.path.join(maindir, subdirs['maps'])
-#        make_mapping_dir = env.Command(Dir(mapping_dir), [], Mkdir('$TARGET'))
-#        link_mapping_script = env.Command(os.path.join(mapping_dir, os.path.basename(mapping_script)),
-#                                          mapping_script, 
-#                                          SymLink)
-#
-#        segemehl_dir = os.path.join(mapping_dir, subdirs['segemehl'], )
-#        make_segemehl_dir = env.Command(Dir(segemehl_dir), [], Mkdir('$TARGET'))
-#        link_segemehl_script = env.Command(os.path.join(segemehl_dir, 
-#                                                        os.path.basename(segemehl_script)),
-#                                           segemehl_script, SymLink)
-#
-#        ## SET EXPRESSION ANALYSIS SUBDIR
-#        expression_dir = os.path.join(maindir, subdirs['expr'])
-#        make_expression_dir = env.Command(Dir(expression_dir), [], Mkdir('$TARGET'))
-#        link_expression_script = env.Command(os.path.join(expression_dir, 
-#                                                          os.path.basename(expression_script)),
-#                                             expression_script, SymLink)
-#
-#        circrna_dir = os.path.join(expression_dir, subdirs['circ'])
-#        make_circrna_dir = env.Command(Dir(circrna_dir), [], Mkdir('$TARGET'))
-#        link_circrna_script = env.Command(os.path.join(circrna_dir,
-#                                                       os.path.basename(circrna_script)),
-#                                          circrna_script, SymLink)
-#        ## COLLECT NODE TARGETS
-#        prjstructure_nodes.extend([makedir, link_main, link_fasta, link_preprocess_script, 
-#                                  link_mapping_script, make_expression_dir, link_expression_script])
-#
-#
-#varfile_nodes = []
-#for sample,readlist in readspersample.iteritems():
-#    samplevarfile = os.path.join(str(sample), 'vars.py')
-#    writeVarfile =  '''echo -e 'READS = "''' + ",".join(readlist) + \
-#                    '''"\\nMAPPER = "''' + env['MAPPER'] + \
-#                    '''"\\nCIRCRNA_PATH = "''' + \
-#                    os.path.abspath(os.path.join(sample, subdirs['expr'], subdirs['circ'])) + \
-#                    '''"' > $TARGET'''
-#    varfile_nodes.extend(env.Command(samplevarfile, [], writeVarfile))
-#
+varfile_nodes = []
+for sample,adapter in adapters.iteritems():
+    samplevarfile = os.path.join(str(sample), 'vars.py')
+    writeVarfile =  '''echo -e 'ADAPTER_FILE = "''' + adapter + \
+                    '''"\\n' > $TARGET'''
+    varfile_nodes.extend(env.Command(samplevarfile, [], writeVarfile))
+
