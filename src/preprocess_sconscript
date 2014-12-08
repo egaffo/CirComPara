@@ -14,5 +14,14 @@ if env['PREPROCESSOR'].lower()=='trimmomatic':
     preprocessings.extend(SConscript(os.path.join(preprocess_dir, 'trimmomatic_sconscript'),
                           src_dir=env['SCRIPT_PATH'], variant_dir=preprocess_dir, duplicate=0)
                          )
+preprocessing_stats = []
+for f in preprocessings:
+    env.Replace(FILE_TO_PROCESS = '#'+f.path)
+    preprocessing_stats.append(SConscript(os.path.join(preprocess_dir, 
+                                                       'read_statistics_sconscript'), 
+                                          src_dir=env['SCRIPT_PATH'], 
+                                          variant_dir=preprocess_dir, duplicate=0)
+                              )
+
 
 Return('preprocessings')

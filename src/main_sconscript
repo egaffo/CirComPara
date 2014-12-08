@@ -22,15 +22,24 @@ Help(vars.GenerateHelpText(env))
 
 ## SET (DISPATCHER) SCRIPT NAMES. THESE ARE THE MAIN PIPELINE STEPS, EACH OF THEM MIGHT FIRE
 ## DIFFERENT ACTIONS/SCONSCRIPTS
+read_statistics_sconscript = 'read_statistics_sconscript'
 preprocess_sconscript   = 'preprocess_sconscript'
 mapping_sconscript      = 'mapping_sconscript'
 expression_sconscript   = 'expression_sconscript'
 
 read_dir = 'data'
-read_file_list = os.listdir(read_dir)
+read_file_list = [f for f in os.listdir(read_dir) if os.path.isfile(os.path.join(read_dir, f))]
 read_files = ','.join(sorted(['#'+os.path.join(read_dir, f) for f in read_file_list]))
 env['READS'] = read_files
 Export('env')
+
+raw_read_stats = []
+for f in read_file_list:
+    env.Replace(FILE_TO_PROCESS = File(f).path)
+    raw_read_stats.append(SConscript(os.path.join(read_dir, 
+                                                  'read_statistics_sconscript'),
+                                     src_dir=env['SCRIPT_PATH'], 
+                                     variant_dir=read_dir, duplicate=0))
 
 build_dir = 'build'
 
