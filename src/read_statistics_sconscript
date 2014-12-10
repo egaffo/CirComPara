@@ -1,9 +1,5 @@
 import os
 
-#def SymLink(target, source, env):
-#    '''Define Action to create symlinks'''
-#    os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
-
 Import('*')
 
 statistics_dir = 'read_statistics'
@@ -12,15 +8,35 @@ make_statistics_dir = env.Command(Dir(statistics_dir), [], Mkdir('$TARGET'))
 readset = env['FILE_TO_PROCESS']
 readset_basename = os.path.splitext(os.path.basename(readset))[0]
 readset_ext = os.path.splitext(os.path.basename(readset))[1]
-fastx_quality_stats_cmd = 'fastx_quality_stats -N > $TARGET'
+
 if readset_ext == '.gz':
     pre_cmd = 'zcat $SOURCE | '
 else:
     pre_cmd = 'cat $SOURCE | '
 
+stats = []
+## COMPUTE STATISTICS
+fastx_quality_stats_cmd = 'fastx_quality_stats -N > $TARGET'
 fastx_quality_stats = env.Command(os.path.join(statistics_dir, 
-                                              readset_basename + 
-                                              '.fastx_quality_stats.tsv'), 
+                                              readset_basename + '.fastx_quality_stats.tsv'), 
                                  readset, pre_cmd + fastx_quality_stats_cmd)
-Return('fastx_quality_stats')
+stats.append(fastx_quality_stats)
 
+## DRAW PLOTS:
+fastx_quality_plot_cmd = 'fastx_stats_make_boxplot.R -i $SOURCE -o $TARGET'
+fastx_quality_plot= env.Command(os.path.join(statistics_dir,
+                                             readset_basename + '.fastx_quality_boxplot.svg'),
+                                 fastx_quality_stats, fastx_quality_plot_cmd)
+stats.append(fastx_quality_plot)
+
+length_plot_cmd = 'fastx_stats_make_length_plot.R -i $SOURCE -o $TARGET'
+length_plot = env.Command(os.path.join(statistics_dir, readset_basename + '.length_plot.svg'),
+                          fastx_quality_stats, length_plot_cmd)
+stats.append(length_plot)
+
+nucleotide_plot_cmd = 'fastx_stats_make_nucleotide_plot.R -i $SOURCE -o $TARGET'
+nucleotide_plot = env.Command(os.path.join(statistics_dir, readset_basename + 'nucleotide_plot.svg'),
+                              fastx_quality_stats, nucleotide_plot_cmd)
+stats.append(nucleotide_plot)
+
+Return('stats')

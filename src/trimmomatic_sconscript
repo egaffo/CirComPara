@@ -16,7 +16,7 @@ try:
     trimmomatic_steps = env['TRIMMOMATIC_PARAMS']
 except KeyError:
     trimmomatic_steps = 'MAXINFO:40:0.5 LEADING:20 TRAILING:20 '\
-                        'SLIDINGWINDOW:4:30 MINLEN:50'
+                        'SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30'
 
 clean_reads = []
 reads = env['READS'].split(',')

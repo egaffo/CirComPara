@@ -33,15 +33,16 @@ read_files = ','.join(sorted(['#'+os.path.join(read_dir, f) for f in read_file_l
 env['READS'] = read_files
 Export('env')
 
-raw_read_stats = []
-for f in read_file_list:
-    env.Replace(FILE_TO_PROCESS = File(f).path)
-    raw_read_stats.append(SConscript(os.path.join(read_dir, 
-                                                  'read_statistics_sconscript'),
-                                     src_dir=env['SCRIPT_PATH'], 
-                                     variant_dir=read_dir, duplicate=0))
 
 build_dir = 'build'
+
+raw_read_stats = []
+for f in read_files.split(','):
+    env.Replace(FILE_TO_PROCESS = '#'+File(f).path)
+    raw_read_stats.append(SConscript(os.path.join(build_dir, 
+                                                  'read_statistics_sconscript'),
+                                     src_dir=env['SCRIPT_PATH'], 
+                                     variant_dir=build_dir, duplicate=0))
 
 ## EXECUTE SCRIPTS
 preprocess  = env.SConscript(os.path.join(build_dir, preprocess_sconscript), variant_dir=build_dir, 
