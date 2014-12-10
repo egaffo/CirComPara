@@ -5,7 +5,18 @@ import os
 
 Import('*')
 
+expression_results = []
+
 circrna_dir = 'circrna'
-circrna =  SConscript(os.path.join(circrna_dir, 'circrna_sconscript'), variant_dir=circrna_dir,
+circrna = SConscript(os.path.join(circrna_dir, 'circrna_sconscript'), variant_dir=circrna_dir,
                       src_dir=env['SCRIPT_PATH'], duplicate=0)
-Return('circrna')
+
+expression_results.append(circrna)
+
+if not env['ANNOTATION'] == '':
+    htseq_count_dir = 'htseq'
+    htseq = SConscript(os.path.join(htseq_count_dir, 'htseq_count_sconscript'), 
+                       variant_dir=htseq_count_dir, src_dir=env['SCRIPT_PATH'], duplicate=0)
+    expression_results.append(htseq)
+
+Return('expression_results')

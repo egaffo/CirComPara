@@ -8,6 +8,7 @@ vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl')
 vars.Add('SCRIPT_PATH', 'Path to SConscript files', '#src')
 vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
 vars.Add('ADAPTER_FILE', 'FASTA file full path of the adapter sequence', '')
+vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
 
 env = Environment(variables = vars,
                   ENV = os.environ,
@@ -17,6 +18,7 @@ env = Environment(variables = vars,
                   ADAPTER_FILE = '${ADAPTER_FILE}',
                   MAPPER = '${MAPPER}',
                   SAMPLE = os.path.basename(Dir('.').abspath),
+                  ANNOTATION = '${ANNOTATION}'
                   )
 Help(vars.GenerateHelpText(env))
 
