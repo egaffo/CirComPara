@@ -10,15 +10,19 @@ clean_reads = env['CLEAN_READS'].split(',')
 sample_id = env['SAMPLE']
 
 ## MAP READS
+sam_sort_cmd = ''' samtools view -u $(-@''' + CPUS +\
+                            '''$) - | samtools sort -@$(''' + CPUS +\
+                            '''$) -O 'bam' -T $('''+ sample_id +\
+                            '''$) > ${TARGETS[0]}'''
+
 if len(clean_reads)>1:
     segemehl_map_cmd = '''segemehl.x -s -i ${SEGEMEHL_INDEX} -d ${GENOME_FASTA} -q ${SOURCES[0]} '''\
                             '''-p ${SOURCES[1]} -S''' + ''' $(-t {}$) '''.format(CPUS) +\
-                            '''-u ${TARGETS[1]} -C -T | samtools view -b $(-@''' + CPUS +\
-                            '''$) - > ${TARGETS[0]}'''
+                            '''-u ${TARGETS[1]} -C -T | ''' + sam_sort_cmd
 else:
     segemehl_map_cmd = '''segemehl.x -i ${SEGEMEHL_INDEX} -d ${GENOME_FASTA} -q $SOURCE -S'''+\
                     ''' $(-t {}$) '''.format(CPUS) +\
-                    '''-u ${TARGETS[1]} -C -T > ${TARGETS[0]}'''
+                    '''-u ${TARGETS[1]} -C -T | ''' + sam_sort_cmd
 segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, 
                                          "{}.bam".format(sample_id)), 
                             os.path.join(segemehl_mapping_dir, 
@@ -27,9 +31,3 @@ segemehl_map = env.Command([os.path.join(segemehl_mapping_dir,
 env.Precious(segemehl_map[0])
 Return('segemehl_map')
 
-#env['TARFLAGS'] = '-c -z'
-#compress_unmatched = env.Tar('${SOURCE}.tgz', segemehl_map[1])
-#delete_unmatched    = env.Command('', segemehl_map[1], Delete('$TARGET'))
-#Depends(delete_unmatched, compress_unmatched)
-#return_list = [segemehl_map[0], compress_unmatched]
-#Return('return_list')
