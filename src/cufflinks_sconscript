@@ -1,0 +1,20 @@
+import os
+
+Import('*')
+
+mapfile = env['MAPPING_FILE']
+mapfile_basename = env['SAMPLE']
+annotation = env['ANNOTATION']
+
+if os.path.splitext(annotation)[1] == '.gz':
+    annotation = env.Command(os.path.basename(os.path.splitext(annotation)[0]), 
+                             annotation, 'zcat $SOURCE > $TARGET')
+cufflinks_cmd = "cufflinks -q --no-update-check $(-p " + env['CPUS'] +\
+                "$) --seed 0 -g ${SOURCES[1]} ${SOURCES[0]} -o " + Dir('.').path
+cufflinks_targets = ['transcripts.gtf', 
+                     'isoforms.fpkm_tracking', 
+                     'genes.fpkm_tracking', 
+                     'skipped.gtf']
+cufflinks = env.Command(cufflinks_targets, [mapfile, annotation], cufflinks_cmd)
+
+Return('cufflinks')
