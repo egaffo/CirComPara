@@ -8,5 +8,6 @@ export SAMTOOLS_HOME="/blackhole/enrico/circular/tools/samtools-1.1/"
 export FASTX_TOOLKIT="$HOME/tools/fastx_toolkit/bin"
 export TRIMMOMATIC="/home/enrico/tools/trimmomatic/trimmomatic-0.32.jar"
 export JUNK2_HOME="/home/enrico/tools/junk2"
+export CUFFLINKS_HOME="/home/enrico/tools/cufflinks"
 
-export PATH="$JUNK2_HOME/bin:$FASTX_TOOLKIT:$SEGEMEHL_HOME:$SRATOOLKIT_HOME:$SAMTOOLS_HOME:$PATH"
+export PATH="$CUFFLINKS_HOME:$JUNK2_HOME/bin:$FASTX_TOOLKIT:$SEGEMEHL_HOME:$SRATOOLKIT_HOME:$SAMTOOLS_HOME:$PATH"
