@@ -35,7 +35,7 @@ length_plot = env.Command(os.path.join(statistics_dir, readset_basename + '.leng
 stats.append(length_plot)
 
 nucleotide_plot_cmd = 'fastx_stats_make_nucleotide_plot.R -i $SOURCE -o $TARGET'
-nucleotide_plot = env.Command(os.path.join(statistics_dir, readset_basename + 'nucleotide_plot.svg'),
+nucleotide_plot = env.Command(os.path.join(statistics_dir, readset_basename + '.nucleotide_plot.svg'),
                               fastx_quality_stats, nucleotide_plot_cmd)
 stats.append(nucleotide_plot)
 
