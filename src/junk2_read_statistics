@@ -2,10 +2,10 @@ import os
 
 Import('*')
 
-statistics_dir = 'read_statistics'
+statistics_dir = 'fastx_stats'
 make_statistics_dir = env.Command(Dir(statistics_dir), [], Mkdir('$TARGET'))
 
-readset = env['FILE_TO_PROCESS']
+#readset = env['FILE_TO_PROCESS']
 readset_basename = os.path.splitext(os.path.basename(readset))[0]
 readset_ext = os.path.splitext(os.path.basename(readset))[1]
 

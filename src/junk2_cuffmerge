@@ -1,0 +1,5 @@
+import os, itertools
+
+Import('*')
+gtf_files = transcripts_gtf_files
+print '\t [JUNK2 MERGE] merging ' + '\n\t [JUNK2 MERGE] merging '.join(itertools.chain(*gtf_files))

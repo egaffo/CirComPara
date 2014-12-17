@@ -1,0 +1,30 @@
+import os, itertools
+
+Import('*')
+
+SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+preprocess_dir = 'preprocess'
+make_preprocess_dir = env.Command(Dir(preprocess_dir), [], Mkdir('$TARGET'))
+#preprocessings = []
+#if env['PREPROCESSOR'].lower()=='trimmomatic':
+#    preps = SConscript(os.path.join(preprocess_dir, 'junk2_trimmomatic'),
+#                       src_dir = SRC_DIR, 
+#                       variant_dir = preprocess_dir, duplicate = 0, 
+#                       exports = 'env raw_reads')
+#    preprocessings.append(preps)
+#else:
+#    preprocessings.append(raw_reads)
+#
+#preprocessing_stats = []
+#for f in itertools.chain.from_iterable(preprocessings):
+#    readset = File(f).path
+#    preprocessing_stats.append(SConscript(os.path.join(preprocess_dir, 'junk2_read_statistics'), 
+#                                          src_dir = SRC_DIR, 
+#                                          variant_dir = preprocess_dir, duplicate = 0, 
+#                                          exports = 'env readset')
+#                              )
+#
+#preprocessed_files = [File(f) for f in itertools.chain.from_iterable(preprocessings)]
+#
+#Return('preprocessed_files')
