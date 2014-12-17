@@ -19,7 +19,8 @@ except KeyError:
                         'SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30'
 
 #clean_reads = []
-reads = env['READS'].split(',')
+#reads = env['READS'].split(',')
+reads = raw_reads
 if len(reads)>1:
     ## MANAGE PAIRED END READS
     read1_filebase = os.path.splitext(os.path.basename(reads[0].replace('.gz', '')))[0]

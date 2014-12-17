@@ -6,24 +6,28 @@ import os
 Import('*')
 
 expression_results = []
+SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
 circrna_dir = 'circrna'
-circrna = SConscript(os.path.join(circrna_dir, 'circrna_sconscript'), variant_dir=circrna_dir,
-                      src_dir=env['SCRIPT_PATH'], duplicate=0)
+circrna = SConscript(os.path.join(circrna_dir, 'junk2_circrna'), 
+                     variant_dir = circrna_dir, src_dir = SRC_DIR, 
+                     duplicate = 0, exports = 'env mapping_file')
 
 expression_results.append(circrna)
 
 if not env['ANNOTATION'] == '':
     ##
     htseq_count_dir = 'htseq'
-    htseq = SConscript(os.path.join(htseq_count_dir, 'htseq_count_sconscript'), 
-                       variant_dir=htseq_count_dir, src_dir=env['SCRIPT_PATH'], duplicate=0)
+    htseq = SConscript(os.path.join(htseq_count_dir, 'junk2_htseq_count'), 
+                       variant_dir = htseq_count_dir, src_dir = SRC_DIR, 
+                       duplicate = 0, exports = 'env mapping_file')
     expression_results.append(htseq)
 
     ## 
     cufflinks_dir = 'cufflinks'
-    cufflinks = SConscript(os.path.join(cufflinks_dir, 'cufflinks_sconscript'),
-                           variant_dir=cufflinks_dir, src_dir=env['SCRIPT_PATH'], duplicate=0)
+    cufflinks = SConscript(os.path.join(cufflinks_dir, 'junk2_cufflinks'),
+                           variant_dir = cufflinks_dir, src_dir = SRC_DIR, 
+                           duplicate = 0, exports = 'env mapping_file')
     expression_results.append(cufflinks)
 
 Return('expression_results')

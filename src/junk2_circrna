@@ -2,7 +2,8 @@ import os
 
 Import('*')
 
-mapfile = env['MAPPING_FILE']
+#mapfile = env['MAPPING_FILE']
+mapfile = mapping_file
 mapfile_basename = env['SAMPLE']
 
 ## SORT SAM/BAM

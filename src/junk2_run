@@ -1,4 +1,4 @@
-import os, csv, itertools
+import os, csv, itertools, collections, re
 from collections import defaultdict
 
 def SymLink(target, source, env):
@@ -13,6 +13,7 @@ vars.Add('ANNOTATION', '', '')
 vars.Add('GENOME_FASTA', '', '')
 vars.Add('GENOME_INDEX', '', '')
 vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl')
+vars.Add('CPUS','The number of cores to be used for parallel tool (a.i. mapper)','1')
 env = Environment(ENV=os.environ,
                   variables=vars)
 Help(vars.GenerateHelpText(env))
@@ -46,7 +47,22 @@ for sample in sorted(samples.keys()):
     runs.append(run_sample)
 
 ## MERGE SAMPLE TRANSCRIPTOMES
-transcripts_gtf_files = itertools.chain(*runs)
+def flatten(l):
+    for el in l:
+        if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
+            for sub in flatten(el):
+                yield sub
+        else:
+            yield el
+
+def get_matching_nodes(nodelist, rexpression):
+    files = []
+    for node in flatten(nodelist):
+        if re.match(rexpression, node.path):
+            files.append(node)
+    return files
+
+transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
 
 cuffmerge_dir = 'cuffmerge'
 make_cuffmerge_dir = env.Command(Dir(cuffmerge_dir), [], Mkdir('$TARGET'))

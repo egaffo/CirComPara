@@ -6,7 +6,8 @@ segemehl_mapping_dir = 'segemehl'
 make_segemehl_mapping_dir = env.Command(Dir(segemehl_mapping_dir), [], Mkdir('$TARGET'))
 
 CPUS = env['CPUS']
-clean_reads = env['CLEAN_READS'].split(',')
+#clean_reads = env['CLEAN_READS'].split(',')
+clean_reads = reads_to_map
 sample_id = env['SAMPLE']
 
 ## MAP READS
@@ -16,11 +17,11 @@ sam_sort_cmd = ''' samtools view -u $(-@''' + CPUS +\
                             '''$) > ${TARGETS[0]}'''
 
 if len(clean_reads)>1:
-    segemehl_map_cmd = '''segemehl.x -s -i ${SEGEMEHL_INDEX} -d ${GENOME_FASTA} -q ${SOURCES[0]} '''\
+    segemehl_map_cmd = '''segemehl.x -s -i ${GENOME_INDEX} -d ${GENOME_FASTA} -q ${SOURCES[0]} '''\
                             '''-p ${SOURCES[1]} -S''' + ''' $(-t {}$) '''.format(CPUS) +\
                             '''-u ${TARGETS[1]} -C -T | ''' + sam_sort_cmd
 else:
-    segemehl_map_cmd = '''segemehl.x -i ${SEGEMEHL_INDEX} -d ${GENOME_FASTA} -q $SOURCE -S'''+\
+    segemehl_map_cmd = '''segemehl.x -i ${GENOME_INDEX} -d ${GENOME_FASTA} -q $SOURCE -S'''+\
                     ''' $(-t {}$) '''.format(CPUS) +\
                     '''-u ${TARGETS[1]} -C -T | ''' + sam_sort_cmd
 segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, 
