@@ -1,27 +1,29 @@
-import os
-
-#def SymLink(target, source, env):
-#    '''Define Action to create symlinks'''
-#    os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+import os, itertools
 
 Import('*')
 
+
 preprocess_dir = 'preprocess'
 make_preprocess_dir = env.Command(Dir(preprocess_dir), [], Mkdir('$TARGET'))
-
 preprocessings = []
 if env['PREPROCESSOR'].lower()=='trimmomatic':
-    preprocessings.extend(SConscript(os.path.join(preprocess_dir, 'trimmomatic_sconscript'),
-                          src_dir=env['SCRIPT_PATH'], variant_dir=preprocess_dir, duplicate=0)
-                         )
+    preps = SConscript(os.path.join(preprocess_dir, 'trimmomatic_sconscript'),
+                          src_dir=env['SCRIPT_PATH'], 
+                          variant_dir=preprocess_dir, duplicate=0)
+    preprocessings.append(preps)
+                     
+else:
+    preprocessings.append(env['READS'].split(','))
+
 preprocessing_stats = []
-for f in preprocessings:
-    env.Replace(FILE_TO_PROCESS = '#'+f.path)
+for f in itertools.chain.from_iterable(preprocessings):
+    env.Replace(FILE_TO_PROCESS = '#'+File(f).path)
     preprocessing_stats.append(SConscript(os.path.join(preprocess_dir, 
                                                        'read_statistics_sconscript'), 
                                           src_dir=env['SCRIPT_PATH'], 
                                           variant_dir=preprocess_dir, duplicate=0)
                               )
 
+preprocessings = [File(f) for f in itertools.chain.from_iterable(preprocessings)]
 
 Return('preprocessings')

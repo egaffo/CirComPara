@@ -18,7 +18,8 @@ env = Environment(variables = vars,
                   ADAPTER_FILE = '${ADAPTER_FILE}',
                   MAPPER = '${MAPPER}',
                   SAMPLE = os.path.basename(Dir('.').abspath),
-                  ANNOTATION = '${ANNOTATION}'
+                  ANNOTATION = '${ANNOTATION}',
+                  SCRIPT_PATH = '${SCRIPT_PATH}'
                   )
 Help(vars.GenerateHelpText(env))
 
@@ -29,12 +30,14 @@ preprocess_sconscript   = 'preprocess_sconscript'
 mapping_sconscript      = 'mapping_sconscript'
 expression_sconscript   = 'expression_sconscript'
 
+Import('*')
+
 read_dir = 'data'
 read_file_list = [f for f in os.listdir(read_dir) if os.path.isfile(os.path.join(read_dir, f))]
-read_files = ','.join(sorted(['#'+os.path.join(read_dir, f) for f in read_file_list]))
+read_files = ','.join(sorted(['#'+os.path.join(Dir('.').path, read_dir, f) for f in read_file_list]))
 env['READS'] = read_files
-Export('env')
 
+Export('env')
 
 build_dir = 'build'
 
@@ -53,14 +56,25 @@ vars.Add('CLEAN_READS', 'Clean-read files', '')
 vars.Update(env)
 ## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript).
 ## Implementation note: here you should know what the preprocess SConscript returns to handle it 
-## properly
+## properly. For instance: Trimmomatic with paired-end reads gives four output read files and 
+## you probably want to use the 0 and 2 indexed files of the returned list (i.e. the processed 
+## reads with mate read). Instead, if no preprocessing was performed, the clean reads are the raw
+## reads and the list is only two elements (for paired-end reads)
 clean_reads = [preprocess[0]]
+## paired end case
 if len(read_file_list)>1:
-    clean_reads.append(preprocess[2])
+    ## case: Trimmomatic paired-end
+    if env['PREPROCESSOR']=='trimmomatic':
+        clean_reads.append(preprocess[2])
+    ## case: no preprocessing was performed
+    else:
+        clean_reads.append(preprocess[1])
+
 env['CLEAN_READS'] = ','.join(sorted(['#'+c.path for c in clean_reads]))
 
 mappings    = env.SConscript(os.path.join(build_dir, mapping_sconscript), variant_dir=build_dir,
                              src_dir=env['SCRIPT_PATH'], duplicate=0)
+
 env.Replace(MAPPING_FILE = '#'+mappings[0].path)
 
 expression  = env.SConscript(os.path.join(build_dir, expression_sconscript), variant_dir=build_dir,

@@ -1,4 +1,4 @@
-import os
+import os, itertools
 
 Import('*')
 
@@ -18,7 +18,7 @@ except KeyError:
     trimmomatic_steps = 'MAXINFO:40:0.5 LEADING:20 TRAILING:20 '\
                         'SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30'
 
-clean_reads = []
+#clean_reads = []
 reads = env['READS'].split(',')
 if len(reads)>1:
     ## MANAGE PAIRED END READS
@@ -41,6 +41,11 @@ else:
                       '${TARGETS[0]} ' + \
                       adapter_removal + trimmomatic_steps
 
-clean_reads.extend(env.Command(targets, reads, trimmomatic_cmd))
+#clean_reads.append(env.Command(targets, reads, trimmomatic_cmd))
+clean_reads = env.Command(targets, reads, trimmomatic_cmd)
+
+
+#if len(reads)>1:
+#    clean_reads = [read for read in itertools.chain.from_iterable(clean_reads)]
 
 Return('clean_reads')
