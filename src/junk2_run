@@ -71,3 +71,29 @@ cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
                        variant_dir = cuffmerge_dir, duplicate = 0,
                        exports = 'env transcripts_gtf_files')
 
+## RETRIEVE TRANSCRIPT SEQUENCES
+# TODO
+# gffread -w transcripts.fa -g /path/to/genome.fa transcripts.gtf
+
+## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
+cuffquant_annotation = cuffmerge
+alignments = get_matching_nodes(runs, '.*mappings.*\.bam')
+
+cuffquant_dir = 'cuffquant'
+make_cuffquant_dir = env.Command(Dir(cuffquant_dir), [], Mkdir('$TARGET'))
+cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
+                       src_dir = SCONSCRIPT_HOME,
+                       variant_dir = cuffquant_dir, duplicate = 0,
+                       exports = 'env alignments cuffquant_annotation')
+
+Depends(cuffquant, [cuffmerge, alignments])
+
+## COMPUTE NORMALIZED EXPRESSION: CUFFNORM
+# TODO
+
+## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
+# TODO
+
+## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
+# TODO
+

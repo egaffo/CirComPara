@@ -1,0 +1,23 @@
+import os, itertools, zipfile
+
+Import('*')
+
+CPUS = env['CPUS']
+
+## MERGE TRANSCRIPTS.GTF FILES
+add_options = ' --seed 0 --frag-bias-correct ' + env['GENOME_FASTA'] +\
+              ' --multi-read-correct --max-bundle-frags 9999999 '
+
+
+transcripts_annotation = cuffquant_annotation
+cuffquant_cmd = 'cuffquant -q $(--no-update-check -p ' + CPUS + '$) -o ${TARGET.dir} ' + add_options +\
+                ' ${SOURCES[0]} ${SOURCES[1]}'
+samples_abundances = []
+for alignment in alignments:
+
+    cuffquant = env.Command(os.path.join('${SOURCES[1].filebase}', 'abundances.cxb'), 
+                            [transcripts_annotation, alignment], 
+                            cuffquant_cmd)
+    samples_abundances.append(cuffquant)
+
+Return('samples_abundances')
