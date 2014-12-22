@@ -1,7 +1,30 @@
-import os, itertools
+import os, itertools, zipfile
 
 Import('*')
+
 gtf_files = transcripts_gtf_files
-#print [g.path for g in gtf_files]
-for transc_file in gtf_files:
-    env.Command([], transc_file, 'head $SOURCE')
+CPUS = env['CPUS']
+
+## COLLECT TRANSCRIPTS.GTF FILES
+def WriteAssemblies(target, source, env):
+    with open(target[0].path, 'w') as af:
+        for gtf in source:
+            print>>af, gtf.path
+
+write_af = env.Command('assemblies.txt', [gtf_files], WriteAssemblies)
+
+## MERGE TRANSCRIPTS.GTF FILES
+add_options = ' -s ' + os.path.dirname(env['GENOME_FASTA'])
+if not env['ANNOTATION'] == '':
+    add_options = add_options + ' -g ' + env['ANNOTATION']
+
+cuffmerge_out_dir = 'merged'
+cuffmerge_cmd = 'cuffmerge $(-p ' + CPUS + '$) -o ${TARGET.dir} ' + add_options +\
+                ' ${SOURCE}'
+cuffmerge = env.Command(os.path.join(cuffmerge_out_dir, 'merged.gtf'), 
+                        write_af, cuffmerge_cmd)
+
+## AMEND DIRECTORY FROM LOG FILES WHEN CLEANING
+Clean(cuffmerge, os.path.join(cuffmerge_out_dir, 'logs'))
+
+Return('cuffmerge')
