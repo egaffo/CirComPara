@@ -92,7 +92,14 @@ Depends(cuffquant, [cuffmerge, alignments])
 # TODO
 
 ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
-# TODO
+cuffdiff_annotation = cuffmerge
+cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
+cuffdiff_dir = 'cuffdiff'
+make_cuffdiff_dir = env.Command(Dir(cuffdiff_dir), [], Mkdir('$TARGET'))
+cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
+                      src_dir = SCONSCRIPT_HOME,
+                      variant_dir = cuffdiff_dir, duplicate = 0,
+                      exports = 'env conditions cuffdiff_annotation cuffdiff_quantities get_matching_nodes')
 
 ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
 # TODO

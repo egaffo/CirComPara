@@ -1,0 +1,62 @@
+import os, re
+
+Import('*')
+## NEEDS:
+## conditions, cuffdiff_quantities, cuffdiff_annotation, get_matching_nodes()
+
+CPUS = env['CPUS']
+
+def get_node_sample(node, samples):
+    s = None
+    for sample in samples:
+        if re.match('.*'+sample+'.*', node.path):
+            s = sample
+            break
+    return s
+
+def get_node_condition(node, coditions):
+    condition = None
+    for c,samples in conditions.iteritems():
+        s = get_node_sample(node, samples)
+        if s:
+            condition = c
+            break
+    return condition
+
+cuffdiff_labels = [get_node_condition(n, conditions) for n in cuffdiff_quantities]
+
+def format_cuffdiff_sample_arguments(conditions, cuffdiff_quantities):
+    labels = []
+    node_lists = ''
+    for condition in conditions.keys():
+        labels.append(condition)
+        nodes = []
+        for sample in conditions[condition]:
+            nodes.extend(get_matching_nodes(cuffdiff_quantities, '.*'+sample+'.*'))
+        node_lists = node_lists + ','.join([n.path for n in nodes]) + ' '
+    return {'LABELS':','.join(labels), 'SAMS':node_lists}
+
+cuffdiff_parameters = format_cuffdiff_sample_arguments(conditions, cuffdiff_quantities)
+
+add_options = ' '
+
+cuffdiff_cmd = 'cuffdiff -q $(--no-update-check -p ' + CPUS + '$) -o ' + Dir('.').path + ' ' +\
+               add_options +\
+               ' -L ' + cuffdiff_parameters['LABELS'] + ' ${SOURCES[0]} ' +\
+               cuffdiff_parameters['SAMS']
+
+cuffdiff_targets = ['isoforms.fpkm_tracking', 'genes.fpkm_tracking', 
+                    'cds.fpkm_tracking', 'tss_groups.fpkm_tracking',
+                    'isoforms.count_tracking', 'genes.count_tracking', 
+                    'cds.count_tracking', 'tss_groups.count_tracking',
+                    'isoforms.read_group_tracking', 'genes.read_group_tracking',
+                    'cds.read_group_tracking', 'tss_groups.read_group_tracking',
+                    'isoform_exp.diff', 'gene_exp.diff',
+                    'tss_group_exp.diff', 'cds_exp.diff',
+                    'splicing.diff', 'cds.diff',
+                    'promoters.diff', 'read_groups.info', 'run.info']
+cuffdiff = env.Command(cuffdiff_targets,  
+                       [cuffdiff_annotation, cuffdiff_quantities], 
+                       cuffdiff_cmd)
+
+Return('cuffdiff')
