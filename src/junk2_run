@@ -72,8 +72,14 @@ cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
                        exports = 'env transcripts_gtf_files')
 
 ## RETRIEVE TRANSCRIPT SEQUENCES
-# TODO
-# gffread -w transcripts.fa -g /path/to/genome.fa transcripts.gtf
+transcript_sequences_annotation = cuffmerge
+transcript_sequences_genome = env['GENOME_FASTA']
+transcript_sequences_dir = 'transcript_sequences'
+make_transcript_sequences_dir = env.Command(Dir(transcript_sequences_dir), [], Mkdir('$TARGET'))
+transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 'junk2_transcript_fastas'), 
+                                  src_dir = SCONSCRIPT_HOME,
+                                  variant_dir = transcript_sequences_dir, duplicate = 0,
+                                  exports = 'env transcript_sequences_annotation transcript_sequences_genome')
 
 ## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
 cuffquant_annotation = cuffmerge
