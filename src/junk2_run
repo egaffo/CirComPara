@@ -107,6 +107,14 @@ cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
                       variant_dir = cuffdiff_dir, duplicate = 0,
                       exports = 'env conditions cuffdiff_annotation cuffdiff_quantities get_matching_nodes')
 
+Depends(cuffdiff, cuffquant)
+
 ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
-# TODO
+#deseq_annotation = cuffmerge
+#deseq_alignments = get_matching_nodes(runs, '.*mappings.*\.bam')
+#deseq = SConscript('junk2_DESeq',
+#                   src_dir = SCONSCRIPT_HOME,
+#                   variant_dir = Dir('.'), duplicate = 0,
+#                   exports = 'env conditions deseq_annotation deseq_alignments get_matching_nodes')
+#Depends(deseq, [cuffmerge, alignments])
 

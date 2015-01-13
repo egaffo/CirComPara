@@ -4,8 +4,10 @@ Import('*')
 
 #mapfile = env['MAPPING_FILE']
 mapfile = mapping_file
-mapfile_basename = env['SAMPLE']
-annotation = env['ANNOTATION']
+#mapfile_basename = env['SAMPLE']
+mapfile_basename = sample_name
+#annotation = env['ANNOTATION']
+annotation = htseq_count_annotation
 
 ## SORT SAM/BAM AND PIPE TO HTSEQ-COUNT
 ## WE PREFER TO SORT BY READ NAME TO REDUCE THE BUFFER USED BY HTSEQ-COUNT (RIGTH?)
@@ -14,6 +16,7 @@ htseq_count_cmd = "samtools sort -n $(-@{}$) ".format(env['CPUS']) + \
                   "${SOURCES[0]} | samtools fixmate -r -O 'sam' - - | awk '!/\\t\*\\t/' - | "\
                   "htseq-count -f sam -r name -s no - ${SOURCES[1]} > $TARGET"
 htseq_count = env.Command(["{}.htseq_count.txt".format(mapfile_basename)], 
-                            [mapfile, annotation], htseq_count_cmd)
+                           [mapfile, annotation], 
+                           htseq_count_cmd)
 
 Return('htseq_count')
