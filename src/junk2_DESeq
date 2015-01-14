@@ -1,0 +1,103 @@
+import os, itertools, collections, re, csv
+from collections import defaultdict
+
+Import('*')
+### NEEDS:
+### metafile, deseq_alignments, deseq_annotation
+
+SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+htseq_count_annotation = deseq_annotation
+
+htseq_counts_dir = 'htseq_counts'
+#make_htseq_counts_dir = env.Command(Dir(htseq_counts_dir), [], Mkdir('$TARGET'))
+htseq_counts = []
+for algn in deseq_alignments:
+    ## GET SAMPLE NAME
+    sample_name = os.path.splitext(os.path.basename(algn.path))[0]
+    mapping_file = algn
+    ## GET READ COUNTS
+    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'junk2_htseq_count'), 
+                             src_dir = SCONSCRIPT_HOME, 
+                             variant_dir = htseq_counts_dir, duplicate = 0, 
+                             exports = 'env mapping_file sample_name htseq_count_annotation')
+    htseq_counts.append(htseq_count)
+
+
+def flatten(l):
+    for el in l:
+        if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
+            for sub in flatten(el):
+                yield sub
+        else:
+            yield el
+
+def get_matching_nodes(nodelist, rexpression):
+    files = []
+    for node in flatten(nodelist):
+        if re.match(rexpression, node.path):
+            files.append(node)
+    return files
+
+def get_node_sample(node, samples):
+    s = None
+    for sample in samples:
+        if re.match('.*'+sample+'.*', node.path):
+            s = sample
+            break
+    return s
+
+def get_node_condition(node, conditions):
+    condition = None
+    for c,samples in conditions.iteritems():
+        s = get_node_sample(node, samples)
+        if s:
+            condition = c
+            break
+    return condition
+
+## Define an action to write a DESeq friendly sample count table
+def writeDESeqSampleTable(target, source, env):
+    ''' Generate a DESeq friendly sample count table. 
+    :param source: the project metafile, followed by the read count files computed by 
+    htseq-count.
+    :param target: name of the table file to be written.'''
+    
+    samples     = defaultdict(list)
+    conditions  = defaultdict(set)
+    with open(source[0].abspath, 'r') as metafile:
+        reader = csv.DictReader(metafile)
+        for row in reader:
+            samples[row['sample']].append(os.path.abspath(row['file']))
+            conditions[row['condition']].add(row['sample'])
+
+    with open(target[0].path, 'w') as csvfile:
+        headers = ['sampleName', 'fileName', 'condition']
+        writer = csv.DictWriter(csvfile, fieldnames=headers)
+        writer.writeheader()
+        for hc in source[1:len(source)]:
+            writer.writerow({'sampleName': get_node_sample(hc, samples),
+                             'fileName': hc.abspath, 
+                             'condition': get_node_condition(hc, conditions)})
+    return None
+
+## Define a Builder for the writeDESeqSampleTable action
+MakeDESeqSampleTable = Builder(action = writeDESeqSampleTable, suffix = '.csv')
+
+### WRITE "SAMPLE TABLE" FOR DESEQ
+env = Environment(BUILDERS = {'MakeDESeqSampleTable' : MakeDESeqSampleTable})
+deseq_sample_table = env.MakeDESeqSampleTable('deseq_sample_table', [metafile, htseq_counts])
+
+## MAKE RAW COUNT MATRIX
+raw_count_matrix_file = 'htseq_raw_counts.csv'
+raw_count_matrix_cmd = os.path.join(SCONSCRIPT_HOME, 'make_count_matrix.R -i ${SOURCES} -o $TARGET')
+raw_count_matrix = env.Command(raw_count_matrix_file, deseq_sample_table, raw_count_matrix_cmd)
+
+## MAKE NORMALISED COUNT MATRIX
+#TODO
+
+
+## RUN DESEQ
+#TODO
+
+Return('htseq_counts raw_count_matrix')

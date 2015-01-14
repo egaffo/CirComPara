@@ -65,7 +65,7 @@ def get_matching_nodes(nodelist, rexpression):
 transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
 
 cuffmerge_dir = 'cuffmerge'
-make_cuffmerge_dir = env.Command(Dir(cuffmerge_dir), [], Mkdir('$TARGET'))
+#make_cuffmerge_dir = env.Command(Dir(cuffmerge_dir), [], Mkdir('$TARGET'))
 cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
                        src_dir = SCONSCRIPT_HOME,
                        variant_dir = cuffmerge_dir, duplicate = 0,
@@ -75,7 +75,7 @@ cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
 transcript_sequences_annotation = cuffmerge
 transcript_sequences_genome = env['GENOME_FASTA']
 transcript_sequences_dir = 'transcript_sequences'
-make_transcript_sequences_dir = env.Command(Dir(transcript_sequences_dir), [], Mkdir('$TARGET'))
+#make_transcript_sequences_dir = env.Command(Dir(transcript_sequences_dir), [], Mkdir('$TARGET'))
 transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 'junk2_transcript_fastas'), 
                                   src_dir = SCONSCRIPT_HOME,
                                   variant_dir = transcript_sequences_dir, duplicate = 0,
@@ -86,7 +86,7 @@ cuffquant_annotation = cuffmerge
 alignments = get_matching_nodes(runs, '.*mappings.*\.bam')
 
 cuffquant_dir = 'cuffquant'
-make_cuffquant_dir = env.Command(Dir(cuffquant_dir), [], Mkdir('$TARGET'))
+#make_cuffquant_dir = env.Command(Dir(cuffquant_dir), [], Mkdir('$TARGET'))
 cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
                        src_dir = SCONSCRIPT_HOME,
                        variant_dir = cuffquant_dir, duplicate = 0,
@@ -101,7 +101,7 @@ Depends(cuffquant, [cuffmerge, alignments])
 cuffdiff_annotation = cuffmerge
 cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
 cuffdiff_dir = 'cuffdiff'
-make_cuffdiff_dir = env.Command(Dir(cuffdiff_dir), [], Mkdir('$TARGET'))
+#make_cuffdiff_dir = env.Command(Dir(cuffdiff_dir), [], Mkdir('$TARGET'))
 cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
                       src_dir = SCONSCRIPT_HOME,
                       variant_dir = cuffdiff_dir, duplicate = 0,
@@ -110,11 +110,13 @@ cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
 Depends(cuffdiff, cuffquant)
 
 ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
-#deseq_annotation = cuffmerge
-#deseq_alignments = get_matching_nodes(runs, '.*mappings.*\.bam')
-#deseq = SConscript('junk2_DESeq',
-#                   src_dir = SCONSCRIPT_HOME,
-#                   variant_dir = Dir('.'), duplicate = 0,
-#                   exports = 'env conditions deseq_annotation deseq_alignments get_matching_nodes')
-#Depends(deseq, [cuffmerge, alignments])
+deseq_annotation = cuffmerge
+deseq_alignments = get_matching_nodes(runs, '.*mappings.*\.bam')
+metafile = File(env['META']).abspath
+deseq_dir = 'deseq'
+deseq = SConscript(os.path.join(deseq_dir, 'junk2_DESeq'),
+                   src_dir = SCONSCRIPT_HOME,
+                   variant_dir = deseq_dir, duplicate = 0,
+                   exports = 'env deseq_annotation deseq_alignments metafile')
+Depends(deseq, [cuffmerge, alignments])
 
