@@ -14,7 +14,7 @@ def get_node_sample(node, samples):
             break
     return s
 
-def get_node_condition(node, coditions):
+def get_node_condition(node, conditions):
     condition = None
     for c,samples in conditions.iteritems():
         s = get_node_sample(node, samples)
