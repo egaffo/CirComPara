@@ -1,0 +1,93 @@
+'''
+
+This is a SConscript script that executes the tasks necessary to find 
+circular RNA junctions from RNA-seq data, according to the procedure 
+described in:
+
+  Nature. 2013 Mar 21;495(7441):333-8. 
+  doi: 10.1038/nature11928. Epub 2013 Feb 27.
+      
+  Circular RNAs are a large class of animal RNAs with regulatory potency.
+          
+  Memczak S, Jens M, Elefsinioti A, Torti F, Krueger J, Rybak A, Maier L,
+  Mackowiak SD, Gregersen LH, Munschauer M, Loewer A, Ziebold U, 
+  Landthaler M, Kocks C, le Noble F, Rajewsky N.
+
+Download the scripts from http://www.circbase.org/download/find_circ.tar.gz
+
+Software dependencies: 
+ * Bowtie2-2.2.4
+ * Samtools-1.1
+ * Pysam
+
+When called from a SConscript it imports the following variables:
+ * find_circ_cpus
+ * find_circ_bt2_idx
+ * find_circ_reads
+
+'''
+import os
+
+vars = Variables('vars.py')
+vars.Add('CPUS', 'Max parallel jobs to execute', '4')
+vars.Add('BOWTIE2_INDEX', 'The Bowtie2 index', 'bt2_cdr1as_locus')
+vars.Add('GENOME_FASTA', 'The  path to genome. Point to folder with one fasta file for each chromosome.', '.')
+vars.Add('READS', 'Input reads. If paired-end, use a comma separated list', 'reads.fa')
+vars.Add('SAMPLE', 'Name of the sample', 'cdr1as_test_')
+env = Environment(ENV=os.environ,
+                  variables=vars)
+Help(vars.GenerateHelpText(env))
+unknown = vars.UnknownVariables()
+if unknown:
+    print "Unknown variables:", unknown.keys()
+    Exit(1)
+
+Import('*')
+
+try:
+    # these variables can be passed with 'exports' when calling this SConscript
+    # from another SConscript
+    CPUS = find_circ_cpus
+    BOWTIE2_INDEX = find_circ_bt2_idx
+    READS = find_circ_reads
+    GENOME_FASTA = find_circ_genome
+    SAMPLE = find_circ_sample
+except NameError:
+    CPUS = env['CPUS']
+    BOWTIE2_INDEX = env['BOWTIE2_INDEX'] # Assume you have already your genome Bowtie2 index
+    READS = env['READS'].split(',')
+    GENOME_FASTA = env['GENOME_FASTA']
+    SAMPLE = env['SAMPLE']
+
+make_out_dir = env.Command('circ_out', [], Mkdir('$TARGET'))
+
+read_bowtie2_par = '-U ${SOURCE}'
+if len(READS)==2:
+    read_bowtie2_par = '-1 ${SOURCES[0]} -2 ${SOURCES[1]}'
+find_circ_cmd = 'bowtie2 $(-p'+ CPUS +\
+                '$) --very-sensitive --score-min=C,-15,0 -x ' +\
+                BOWTIE2_INDEX + ' -q ' + read_bowtie2_par + ' 2> bt2_firstpass.log'+\
+                ' | samtools view -hu - | samtools sort -O "sam" -T tmp - | samtools view'+\
+                ' -hf 4 - | samtools view -b - | unmapped2anchors.py - |'+\
+                ' bowtie2 --reorder --score-min=C,-15,0 -q -x ' +\
+                BOWTIE2_INDEX + ' -U - 2> bt2_secondpass.log | find_circ.py '+\
+                ' -G ' + GENOME_FASTA + ' -p ' + SAMPLE + '_ -s '+\
+                'find_circ.log > ${TARGETS[0]} 2> ${TARGETS[1]}'
+
+find_circ = env.Command([os.path.join(make_out_dir[0].path, 'sites.bed'), 
+                         os.path.join(make_out_dir[0].path, 'sites.reads')], 
+                        READS, 
+                        find_circ_cmd)
+
+# To get a reasonable set of circRNA candidates try:
+filter_circ_cmd = 'grep circ ${SOURCES[0]} | grep -v M | sum.py -2,3 | scorethresh.py -16 1 |'+\
+                  ' scorethresh.py -15 2 | scorethresh.py -14 2 | scorethresh.py 7 2 |'+\
+                  ' scorethresh.py 8,9 35 | scorethresh.py -17 100000 > ${TARGET}'
+filter_circ = env.Command([os.path.join(make_out_dir[0].path, 'circ_candidates.bed')], 
+                          [find_circ[0]], 
+                          filter_circ_cmd)
+
+Clean(find_circ, ['find_circ.log', 'bt2_firstpass.log', 'bt2_secondpass.log'])
+Clean('.', make_out_dir[0].path)
+
+Return('find_circ filter_circ')
