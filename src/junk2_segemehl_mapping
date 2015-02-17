@@ -1,34 +1,99 @@
+'''
+
+This is a SConscript script that executes the tasks necessary to map
+RNA-seq reads to a reference genome using 'segemehl' [1].
+
+
+[1] Hoffmann, S. et al. 
+    
+    A multi-split mapping algorithm for circular RNA, splicing, 
+    trans-splicing and fusion detection. 
+    
+    Genome Biology 15, R34 (2014).
+Software dependencies:
+ * Samtools-1.1
+
+When called from a SConscript it imports the following variables:
+ * env
+ * segemehl_cpus
+ * reads_to_map
+ * sample_id
+ * segemehl_genome_fasta
+ * segemehl_index
+ * segemehl_extra_params
+
+'''
+
 import os
 
 Import('*')
 
+try:
+    # these are the variables passed with 'exports' from a calling SConscript
+    env = env
+    CPUS = segemehl_cpus
+    READS = reads_to_map
+    SAMPLE = sample_id
+    SEGEMEHL_INDEX = segemehl_index
+    GENOME_FASTA = segemehl_genome_fasta
+    SEGEMEHL_PARAMS = segemehl_extra_params 
+
+except NameError:
+    vars = Variables('vars.py')
+    vars.Add('CPUS', 'Max parallel jobs to execute', '4')
+    vars.Add('SEGEMEHL_INDEX', 'The SEGEMEHL index', '')
+    vars.Add('SEGEMEHL_PARAMS', 'SEGEMEHL extra parameters', '')
+    vars.Add('GENOME_FASTA', '''The  path to genome. Point to folder with one '''
+                             '''fasta file for each chromosome.''', '.')
+    vars.Add('READS', 'Input reads. If paired-end, use a comma separated list', 'reads.fa')
+    vars.Add('SAMPLE', 'Name of the sample', 'sample')
+    
+    cmdline_env = Environment(ENV=os.environ,
+                              variables=vars)
+    
+    Help(vars.GenerateHelpText(cmdline_env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
+
+   # These are the variables given from the command line when the SConscript is called
+    # standalone
+    env = cmdline_env
+    CPUS = env['CPUS']
+    SEGEMEHL_INDEX = env['SEGEMEHL_INDEX'] # Assume you have already your segemehl genome index
+    READS = env['READS'].split(',')
+    GENOME_FASTA = env['GENOME_FASTA']
+    SAMPLE = env['SAMPLE']
+    SEGEMEHL_PARAMS = env['SEGEMEHL_PARAMS']
+ 
 segemehl_mapping_dir = 'segemehl'
 make_segemehl_mapping_dir = env.Command(Dir(segemehl_mapping_dir), [], Mkdir('$TARGET'))
-
-CPUS = env['CPUS']
-#clean_reads = env['CLEAN_READS'].split(',')
-clean_reads = reads_to_map
-sample_id = env['SAMPLE']
 
 ## MAP READS
 sam_sort_cmd = ''' samtools view -u $(-@''' + CPUS +\
                             '''$) - | samtools sort -@$(''' + CPUS +\
-                            '''$) -O 'bam' -T $('''+ sample_id +\
+                            '''$) -O 'bam' -T $('''+ SAMPLE +\
                             '''$) > ${TARGETS[0]}'''
 
-if len(clean_reads)>1:
-    segemehl_map_cmd = '''segemehl.x -s -i ${GENOME_INDEX} -d ${GENOME_FASTA} -q ${SOURCES[0]} '''\
-                            '''-p ${SOURCES[1]} -S''' + ''' $(-t {}$) '''.format(CPUS) +\
-                            '''-u ${TARGETS[1]} -C -T | ''' + sam_sort_cmd
+if len(READS)>1:
+    segemehl_map_cmd = '''segemehl.x -s ''' + SEGEMEHL_PARAMS +\
+                       ''' -i ''' + SEGEMEHL_INDEX + ''' -d ''' + GENOME_FASTA +\
+                       ''' -q ${SOURCES[0]} -p ${SOURCES[1]} -S''' +\
+                       ''' $(-t {}$) '''.format(CPUS) +\
+                       '''-u ${TARGETS[1]} -C -T | ''' + sam_sort_cmd
 else:
-    segemehl_map_cmd = '''segemehl.x -i ${GENOME_INDEX} -d ${GENOME_FASTA} -q $SOURCE -S'''+\
-                    ''' $(-t {}$) '''.format(CPUS) +\
-                    '''-u ${TARGETS[1]} -C -T | ''' + sam_sort_cmd
-segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, 
-                                         "{}.bam".format(sample_id)), 
-                            os.path.join(segemehl_mapping_dir, 
-                                         "{}_unmatched.fastq".format(sample_id))],
-                           [clean_reads], segemehl_map_cmd)
-env.Precious(segemehl_map[0])
-Return('segemehl_map')
+    segemehl_map_cmd = '''segemehl.x -s ''' + SEGEMEHL_PARAMS +\
+                       ''' -i ''' + SEGEMEHL_INDEX + ''' -d ''' + GENOME_FASTA +\
+                       ''' -q $SOURCE -S'''+ ''' $(-t {}$) '''.format(CPUS) +\
+                       '''-u ${TARGETS[1]} -C -T | ''' + sam_sort_cmd
 
+segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, "{}.bam".format(SAMPLE)), 
+                            os.path.join(segemehl_mapping_dir, "{}_unmatched.fastq".format(SAMPLE))],
+                           [READS], segemehl_map_cmd)
+
+env.Precious(segemehl_map[0]) # do not delete old alignment file untill the new one has been computed
+
+Clean('.', make_segemehl_mapping_dir[0].path)
+
+Return('segemehl_map')
