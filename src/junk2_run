@@ -8,15 +8,25 @@ def SymLink(target, source, env):
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
 vars.Add('META', 'The metadata table file where you specify the project samples, etc.', 'meta.csv')
-vars.Add('PREPROCESSOR', '', 'trimmomatic')
-vars.Add('ANNOTATION', '', '')
-vars.Add('GENOME_FASTA', '', '')
-vars.Add('GENOME_INDEX', '', '')
-vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl')
-vars.Add('CPUS','The number of cores to be used for parallel tool (a.i. mapper)','1')
+vars.Add('CPUS', 'Set number of CPUs', '4')
+vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl') 
+vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
+vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
+vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
+vars.Add('GENOME_INDEX', '''The index of the reference genome. Depends on the mapper used; '''
+                         '''e.g. genome.idx if using segemehl''', 'genome.idx')
+
 env = Environment(ENV=os.environ,
                   variables=vars)
 Help(vars.GenerateHelpText(env))
+
+META         = env['META']
+CPUS         = env['CPUS']
+GENOME_INDEX = env['GENOME_INDEX']
+GENOME_FASTA = env['GENOME_FASTA']
+PREPROCESSOR = env['PREPROCESSOR']
+MAPPER       = env['MAPPER']
+ANNOTATION   = env['ANNOTATION']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -27,7 +37,7 @@ Execute(Mkdir(samples_dir))
 samples     = defaultdict(list)
 adapters    = defaultdict(list)
 conditions  = defaultdict(set)
-with open(env['META']) as csvfile:
+with open(META) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         samples[row['sample']].append(os.path.abspath(row['file']))
@@ -38,12 +48,20 @@ with open(env['META']) as csvfile:
 ## PROCESS SAMPLES
 runs = []
 for sample in sorted(samples.keys()):
-    raw_reads = samples[sample]
+    sample_cpus         = CPUS
+    sample_genome_index = GENOME_INDEX
+    sample_genome_fasta = GENOME_FASTA
+    sample_preprocessor = PREPROCESSOR
+    sample_adapter_file = '' #adapters[sample]
+    sample_mapper       = MAPPER
+    sample_annotation   = ANNOTATION
+    sample_raw_reads    = samples[sample]
+
     sample_dir = os.path.join(samples_dir, sample)
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_run_sample'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = sample_dir, duplicate = 0,
-                            exports = 'env raw_reads')
+                            exports = 'env sample_cpus sample_genome_index sample_genome_fasta sample_preprocessor sample_adapter_file sample_mapper sample_annotation sample_raw_reads')
     runs.append(run_sample)
 
 ## MERGE SAMPLE TRANSCRIPTOMES
@@ -65,7 +83,6 @@ def get_matching_nodes(nodelist, rexpression):
 transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
 
 cuffmerge_dir = 'cuffmerge'
-#make_cuffmerge_dir = env.Command(Dir(cuffmerge_dir), [], Mkdir('$TARGET'))
 cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
                        src_dir = SCONSCRIPT_HOME,
                        variant_dir = cuffmerge_dir, duplicate = 0,
@@ -73,9 +90,8 @@ cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
 
 ## RETRIEVE TRANSCRIPT SEQUENCES
 transcript_sequences_annotation = cuffmerge
-transcript_sequences_genome = env['GENOME_FASTA']
+transcript_sequences_genome = GENOME_FASTA
 transcript_sequences_dir = 'transcript_sequences'
-#make_transcript_sequences_dir = env.Command(Dir(transcript_sequences_dir), [], Mkdir('$TARGET'))
 transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 'junk2_transcript_fastas'), 
                                   src_dir = SCONSCRIPT_HOME,
                                   variant_dir = transcript_sequences_dir, duplicate = 0,
@@ -86,7 +102,6 @@ cuffquant_annotation = cuffmerge
 alignments = get_matching_nodes(runs, '.*mappings.*\.bam')
 
 cuffquant_dir = 'cuffquant'
-#make_cuffquant_dir = env.Command(Dir(cuffquant_dir), [], Mkdir('$TARGET'))
 cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
                        src_dir = SCONSCRIPT_HOME,
                        variant_dir = cuffquant_dir, duplicate = 0,
@@ -101,7 +116,6 @@ Depends(cuffquant, [cuffmerge, alignments])
 cuffdiff_annotation = cuffmerge
 cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
 cuffdiff_dir = 'cuffdiff'
-#make_cuffdiff_dir = env.Command(Dir(cuffdiff_dir), [], Mkdir('$TARGET'))
 cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
                       src_dir = SCONSCRIPT_HOME,
                       variant_dir = cuffdiff_dir, duplicate = 0,
@@ -112,11 +126,19 @@ Depends(cuffdiff, cuffquant)
 ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
 deseq_annotation = cuffmerge
 deseq_alignments = get_matching_nodes(runs, '.*mappings.*\.bam')
-metafile = File(env['META']).abspath
+metafile = File(META).abspath
+deseq_cpus = CPUS
 deseq_dir = 'deseq'
 deseq = SConscript(os.path.join(deseq_dir, 'junk2_DESeq'),
                    src_dir = SCONSCRIPT_HOME,
                    variant_dir = deseq_dir, duplicate = 0,
-                   exports = 'env deseq_annotation deseq_alignments metafile')
+                   exports = 'env deseq_annotation deseq_alignments metafile deseq_cpus')
 Depends(deseq, [cuffmerge, alignments])
 
+## CLEAN DIRS WHEN CLEANING TARGETS
+Clean('.', samples_dir)
+Clean('.', cuffmerge_dir)
+Clean('.', transcript_sequences_dir)
+Clean('.', cuffquant_dir)
+Clean('.', cuffdiff_dir)
+Clean('.', deseq_dir)

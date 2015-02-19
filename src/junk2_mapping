@@ -14,10 +14,10 @@ Variables to set when calling from a SConscript:
 '''
 import os
 
-
 Import('*')
 
 try:
+    env
     mapper
     genome_index
     genome_fasta
@@ -26,13 +26,37 @@ try:
     mapper_cpus
     reads_to_map = clean_reads
 except NameError:
-    print "ERROR: variable not set in mapper dispatcher. Exiting"
-    Exit(1)
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl') 
+    vars.Add('MAPPER_PARAM', 'Additional parameters for the mapper', '')
+    vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
+    vars.Add('GENOME_INDEX', '''The index of the reference genome. Depends on the mapper used; '''
+                             '''e.g. genome.idx if using segemehl''', 'genome.idx')
+    vars.Add('READS', 'RNA-seq reads. Comma separated list if paired-end', 'reads.fa')
+    vars.Add('SAMPLE', 'The sample name', 'sample')
+    
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
+
+    mapper = env['MAPPER']
+    genome_index = env['GENOME_INDEX']
+    genome_fasta = env['GENOME_FASTA']
+    sample_id = env['SAMPLE']
+    mapper_extra_params = env['MAPPER_PARAM']
+    mapper_cpus = env['CPUS']
+    reads_to_map = [File(f).abspath for f in env['READS'].split(',')]
 
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
 mapping_dir = 'mappings'
-make_mapping_dir = env.Command(Dir(mapping_dir), [], Mkdir('$TARGET'))
+#make_mapping_dir = env.Command(Dir(mapping_dir), [], Mkdir('$TARGET'))
 mappings = []
 if mapper.lower()=='segemehl':
     segemehl_cpus = mapper_cpus
@@ -47,5 +71,5 @@ if mapper.lower()=='segemehl':
                     exports = 'env reads_to_map segemehl_cpus sample_id segemehl_genome_fasta segemehl_index segemehl_extra_params')
                    )
 
-Clean('.', make_mapping_dir[0].path)
+Clean('.', mapping_dir)
 Return('mappings')

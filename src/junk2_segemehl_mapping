@@ -10,6 +10,7 @@ RNA-seq reads to a reference genome using 'segemehl' [1].
     trans-splicing and fusion detection. 
     
     Genome Biology 15, R34 (2014).
+
 Software dependencies:
  * Samtools-1.1
 
@@ -57,7 +58,7 @@ except NameError:
         print "Unknown variables:", unknown.keys()
         Exit(1)
 
-   # These are the variables given from the command line when the SConscript is called
+    # These are the variables given from the command line when the SConscript is called
     # standalone
     env = cmdline_env
     CPUS = env['CPUS']

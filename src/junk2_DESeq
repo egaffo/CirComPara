@@ -3,24 +3,26 @@ from collections import defaultdict
 
 Import('*')
 ### NEEDS:
-### metafile, deseq_alignments, deseq_annotation
+### metafile, deseq_alignments, deseq_annotation, deseq_cpus
+
+CPUS = deseq_cpus
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
 htseq_count_annotation = deseq_annotation
 
 htseq_counts_dir = 'htseq_counts'
-#make_htseq_counts_dir = env.Command(Dir(htseq_counts_dir), [], Mkdir('$TARGET'))
 htseq_counts = []
 for algn in deseq_alignments:
     ## GET SAMPLE NAME
     sample_name = os.path.splitext(os.path.basename(algn.path))[0]
     mapping_file = algn
+    htseq_count_cpus = CPUS
     ## GET READ COUNTS
     htseq_count = SConscript(os.path.join(htseq_counts_dir, 'junk2_htseq_count'), 
                              src_dir = SCONSCRIPT_HOME, 
                              variant_dir = htseq_counts_dir, duplicate = 0, 
-                             exports = 'env mapping_file sample_name htseq_count_annotation')
+                             exports = 'env mapping_file sample_name htseq_count_annotation htseq_count_cpus')
     htseq_counts.append(htseq_count)
 
 

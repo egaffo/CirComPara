@@ -18,6 +18,7 @@ Software dependencies:
  * Samtools-1.1
 
 When called from a SConscript it imports the following variables:
+ * env
  * ciri_cpus
  * ciri_bwa_index
  * ciri_reads
@@ -31,47 +32,49 @@ When called from a SConscript it imports the following variables:
 
 import os
 
-vars = Variables('vars.py')
-vars.Add('CPUS', 'Max parallel jobs to execute', '4')
-vars.Add('BWA_INDEX', 'The BWA index', '')
-vars.Add('BWA_PARAMS', 'The BWA extra parameters', '')
-vars.Add('GENOME_FASTA', 'The  path to genome. Point to folder with one\
-                          fasta file for each chromosome.', '.')
-vars.Add('READS', 'Input reads. If paired-end, use a comma separated list', 'reads.fa')
-vars.Add('SAMPLE', 'Name of the sample', '')
-vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
-vars.Add('CIRI_ANNOTATION', 'The full path to the GTF/GFF annotation file', '')
-
-env = Environment(ENV=os.environ,
-                  variables=vars)
-Help(vars.GenerateHelpText(env))
-unknown = vars.UnknownVariables()
-if unknown:
-    print "Unknown variables:", unknown.keys()
-    Exit(1)
 
 Import('*')
 
 try:
     # these variables can be passed with 'exports' when calling this SConscript
     # from another SConscript
-    CPUS = ciri_cpus
-    BWA_INDEX = ciri_bwa_index
-    READS = ciri_reads
-    GENOME_FASTA = ciri_genome_fasta
-    SAMPLE = ciri_sample
-    BWA_PARAMS = ciri_bwa_extra_parameters
+    env             = env
+    CPUS            = ciri_cpus
+    BWA_INDEX       = ciri_bwa_index
+    READS           = ciri_reads
+    GENOME_FASTA    = ciri_genome_fasta
+    SAMPLE          = ciri_sample
+    BWA_PARAMS      = ciri_bwa_extra_parameters
     CIRI_ANNOTATION = ciri_annotation
-    CIRI = ciri_script
+    CIRI            = ciri_script
 except NameError:
-    CPUS = env['CPUS']
-    BWA_INDEX = env['BWA_INDEX'] # Assume you have already your genome Bowtie2 index
-    READS = env['READS'].split(',')
-    GENOME_FASTA = env['GENOME_FASTA']
-    SAMPLE = env['SAMPLE']
-    BWA_PARAMS = env['BWA_PARAMS']
-    CIRI = env['CIRI']
+    CPUS            = env['CPUS']
+    BWA_INDEX       = env['BWA_INDEX'] # Assume you have already your genome Bowtie2 index
+    READS           = env['READS'].split(',')
+    GENOME_FASTA    = env['GENOME_FASTA']
+    SAMPLE          = env['SAMPLE']
+    BWA_PARAMS      = env['BWA_PARAMS']
+    CIRI            = env['CIRI']
     CIRI_ANNOTATION = env['CIRI_ANNOTATION']
+
+    vars = Variables('vars.py')
+    vars.Add('CPUS', 'Max parallel jobs to execute', '4')
+    vars.Add('BWA_INDEX', 'The BWA index', '')
+    vars.Add('BWA_PARAMS', 'The BWA extra parameters', '')
+    vars.Add('GENOME_FASTA', 'The  path to genome. Point to folder with one\
+                              fasta file for each chromosome.', '.')
+    vars.Add('READS', 'Input reads. If paired-end, use a comma separated list', 'reads.fa')
+    vars.Add('SAMPLE', 'Name of the sample', '')
+    vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
+    vars.Add('CIRI_ANNOTATION', 'The full path to the GTF/GFF annotation file', '')
+    
+    env = Environment(ENV=os.environ,
+                      variables=vars)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
 
 bwa_cpus = CPUS
 

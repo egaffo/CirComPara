@@ -1,11 +1,45 @@
+'''
+
+This is a SConscript script that performs various scripts to analyse FASTQ files.
+It relies on FASTX-Toolkit (http://hannonlab.cshl.edu/fastx_toolkit/) and custom
+R scripts.
+
+Software dependencies:
+ * FASTX-Toolkit v0.0.14
+ * JUNK2 custom R scripts
+
+When called from a SConscript it imports the following variables:
+ * env
+ * read_statistics_readset
+  
+'''
+
 import os
 
 Import('*')
 
-statistics_dir = 'fastx_stats'
-make_statistics_dir = env.Command(Dir(statistics_dir), [], Mkdir('$TARGET'))
+try:
+    # these are the variables passed with 'exports' from a calling SConscript
+    env = env
+    readset = read_statistics_readset
+except NameError:
+    vars = Variables('vars.py')
+    vars.Add('READS', 'FASTQ read file to process, either in plain text or gzipped (.gz)', 'reads.fq')
+    
+    env = Environment(ENV=os.environ,
+                      variables=vars)
+    
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
+    # These are the variables given from the command line when the SConscript is called
+    # standalone
+    readset = env['READS']
 
-#readset = env['FILE_TO_PROCESS']
+statistics_dir = 'fastx_stats'
+
 readset_basename = os.path.splitext(os.path.basename(readset))[0]
 readset_ext = os.path.splitext(os.path.basename(readset))[1]
 
@@ -38,5 +72,7 @@ nucleotide_plot_cmd = 'fastx_stats_make_nucleotide_plot.R -i $SOURCE -o $TARGET'
 nucleotide_plot = env.Command(os.path.join(statistics_dir, readset_basename + '.nucleotide_plot.svg'),
                               fastx_quality_stats, nucleotide_plot_cmd)
 stats.append(nucleotide_plot)
+
+Clean('.', statistics_dir)
 
 Return('stats')

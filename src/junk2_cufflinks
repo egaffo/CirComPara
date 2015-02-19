@@ -1,16 +1,59 @@
+'''
+This SConscript performs Cufflinks [1] on a single sample.
+
+[1] Trapnell, C. et al. 
+    
+    Differential gene and transcript expression analysis of RNA-seq 
+    experiments with TopHat and Cufflinks. 
+    
+    Nature Protocols 7, 562-578 (2012).
+
+Software requirements inherited from the called SConscripts:
+ * Cufflinks v2.2.1
+
+Variables to export when calling from a SConscript:
+ * env
+ * mapping_file
+ * sample_name
+ * cufflinks_annotation
+ * cufflinks_cpus
+
+'''
 import os
 
 Import('*')
 
-#mapfile = env['MAPPING_FILE']
-mapfile = mapping_file
-mapfile_basename = env['SAMPLE']
-annotation = env['ANNOTATION']
+try:
+    env = env
+    mapfile = mapping_file
+    mapfile_basename = sample_name
+    annotation = cufflinks_annotation
+    CPUS = cufflinks_cpus
+except NameError:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('ANNOTATION', 'The GFF/GTF file with gene annotation (e.g. from Ensembl)', 'exons.gtf') 
+    vars.Add('ALIGNMENTS', 'The read alignment file in SAM/BAM format', 'sample.bam')
+    vars.Add('SAMPLE', 'The sample name', 'sample')
+
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
+
+    mapfile_basename = env['SAMPLE']
+    mapfile = env['ALIGNMENTS']
+    annotation = env['ANNOTATION']
+    CPUS = env['CPUS']
 
 if os.path.splitext(annotation)[1] == '.gz':
     annotation = env.Command(os.path.basename(os.path.splitext(annotation)[0]), 
                              annotation, 'zcat $SOURCE > $TARGET')
-cufflinks_cmd = "cufflinks -q --no-update-check $(-p " + env['CPUS'] +\
+cufflinks_cmd = "cufflinks -q --no-update-check $(-p " + CPUS +\
                 "$) --seed 0 -g ${SOURCES[1]} ${SOURCES[0]} -o " + Dir('.').path
 cufflinks_targets = ['transcripts.gtf', 
                      'isoforms.fpkm_tracking', 
