@@ -113,13 +113,15 @@ Depends(cuffquant, [cuffmerge, alignments])
 # TODO
 
 ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
+cuffdiff_cpus = CPUS
+cuffdiff_conditions = conditions
 cuffdiff_annotation = cuffmerge
 cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
 cuffdiff_dir = 'cuffdiff'
 cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
                       src_dir = SCONSCRIPT_HOME,
                       variant_dir = cuffdiff_dir, duplicate = 0,
-                      exports = 'env conditions cuffdiff_annotation cuffdiff_quantities get_matching_nodes')
+                      exports = 'env cuffdiff_cpus cuffdiff_conditions cuffdiff_annotation cuffdiff_quantities')
 
 Depends(cuffdiff, cuffquant)
 

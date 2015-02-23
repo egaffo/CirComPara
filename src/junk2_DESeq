@@ -1,30 +1,26 @@
+'''
+This SConscript performs differential expression analysis by means of 
+DESeq [1]
+
+[1]
+
+Software dependencies:
+ * 
+
+Variables and functions required to export when calling from a SConscript:
+ * metafile
+ * deseq_alignments
+ * deseq_annotation
+ * deseq_cpus
+
+'''
+
 import os, itertools, collections, re, csv
 from collections import defaultdict
 
 Import('*')
-### NEEDS:
-### metafile, deseq_alignments, deseq_annotation, deseq_cpus
 
-CPUS = deseq_cpus
-
-SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
-
-htseq_count_annotation = deseq_annotation
-
-htseq_counts_dir = 'htseq_counts'
-htseq_counts = []
-for algn in deseq_alignments:
-    ## GET SAMPLE NAME
-    sample_name = os.path.splitext(os.path.basename(algn.path))[0]
-    mapping_file = algn
-    htseq_count_cpus = CPUS
-    ## GET READ COUNTS
-    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'junk2_htseq_count'), 
-                             src_dir = SCONSCRIPT_HOME, 
-                             variant_dir = htseq_counts_dir, duplicate = 0, 
-                             exports = 'env mapping_file sample_name htseq_count_annotation htseq_count_cpus')
-    htseq_counts.append(htseq_count)
-
+## AUXILIARY FUNCTIONS
 
 def flatten(l):
     for el in l:
@@ -58,6 +54,55 @@ def get_node_condition(node, conditions):
             break
     return condition
 
+try:
+    env = env
+    CPUS        = deseq_cpus
+    META        = metafile
+    ANNOTATION  = deseq_annotation
+    QUANTITIES  = deseq_alignments
+
+except NameError:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('QUANTITIES', 'Comma separated list of alignment files (SAM/BAM)', 
+             'cond1_1.bam,cond1_2.bam,cond2_1.bam,cond2_2.bam') 
+    vars.Add('ANNOTATION', 'Gene annotation (a.i. an Ensembl GFF)', 'merged.gtf')
+    vars.Add('META', '''Conditions to test differential expression in a comma separated values (CSV) table. Required colums are 'sample','condition','file' ''', 
+             'meta.csv')
+    
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+    CPUS       = env['CPUS']
+    QUANTITIES = env['QUANTITIES'].split(',')
+    ANNOTATION = env['ANNOTATION']
+    META       = env['META']
+
+SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
+htseq_count_annotation = ANNOTATION
+htseq_counts_dir = 'htseq_counts'
+htseq_counts = []
+for algn in QUANTITIES:
+    ## GET SAMPLE NAME
+    sample_name = os.path.splitext(os.path.basename(File(algn).path))[0]
+    mapping_file = algn
+    htseq_count_cpus = CPUS
+    ## GET READ COUNTS
+    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'junk2_htseq_count'), 
+                             src_dir = SCONSCRIPT_HOME, 
+                             variant_dir = htseq_counts_dir, duplicate = 0, 
+                             exports = 'env mapping_file sample_name htseq_count_annotation htseq_count_cpus')
+    htseq_counts.append(htseq_count)
+
+
 ## Define an action to write a DESeq friendly sample count table
 def writeDESeqSampleTable(target, source, env):
     ''' Generate a DESeq friendly sample count table. 
@@ -88,7 +133,7 @@ MakeDESeqSampleTable = Builder(action = writeDESeqSampleTable, suffix = '.csv')
 
 ### WRITE "SAMPLE TABLE" FOR DESEQ
 env = Environment(BUILDERS = {'MakeDESeqSampleTable' : MakeDESeqSampleTable})
-deseq_sample_table = env.MakeDESeqSampleTable('deseq_sample_table', [metafile, htseq_counts])
+deseq_sample_table = env.MakeDESeqSampleTable('deseq_sample_table', [META, htseq_counts])
 
 ## MAKE RAW COUNT MATRIX
 raw_count_matrix_file = 'htseq_raw_counts.csv'

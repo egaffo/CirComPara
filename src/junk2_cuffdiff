@@ -1,10 +1,27 @@
-import os, re
+'''
+This SConscript performs differential expression analysis by means of 
+Cuffdiff [1]
+
+[1] Trapnell, C. et al. 
+    
+    Differential analysis of gene regulation at transcript resolution with RNA-seq. 
+    
+    Nat Biotech 31, 46-53 (2013).
+
+Software dependencies:
+ * Cuffdiff v2.2.1
+
+Variables and functions required to export when calling from a SConscript:
+ * cuffdiff_cpus
+ * cuffdiff_conditions
+ * cuffdiff_quantities
+ * cuffdiff_annotation
+
+'''
+
+import os, re, collections 
 
 Import('*')
-## NEEDS:
-## conditions, cuffdiff_quantities, cuffdiff_annotation, get_matching_nodes()
-
-CPUS = env['CPUS']
 
 def get_node_sample(node, samples):
     s = None
@@ -23,7 +40,20 @@ def get_node_condition(node, conditions):
             break
     return condition
 
-cuffdiff_labels = [get_node_condition(n, conditions) for n in cuffdiff_quantities]
+def flatten(l):
+    for el in l:
+        if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
+            for sub in flatten(el):
+                yield sub
+        else:
+            yield el
+
+def get_matching_nodes(nodelist, rexpression):
+    files = []
+    for node in flatten(nodelist):
+        if re.match(rexpression, node.path):
+            files.append(node)
+    return files
 
 def format_cuffdiff_sample_arguments(conditions, cuffdiff_quantities):
     labels = []
@@ -35,9 +65,46 @@ def format_cuffdiff_sample_arguments(conditions, cuffdiff_quantities):
             nodes.extend(get_matching_nodes(cuffdiff_quantities, '.*'+sample+'.*'))
         node_lists = node_lists + ','.join([n.path for n in nodes]) + ' '
     return {'LABELS':','.join(labels), 'SAMS':node_lists}
+ 
+cuffdiff_parameters = {}
 
-cuffdiff_parameters = format_cuffdiff_sample_arguments(conditions, cuffdiff_quantities)
+try:
+    env = env
+    CPUS        = cuffdiff_cpus
+    CONDITIONS  = cuffdiff_conditions
+    ANNOTATION  = cuffdiff_annotation
+    QUANTITIES  = cuffdiff_quantities
 
+    cuffdiff_labels = [get_node_condition(n, cuffdiff_conditions) for n in cuffdiff_quantities]
+   
+    cuffdiff_parameters = format_cuffdiff_sample_arguments(cuffdiff_conditions, cuffdiff_quantities)
+
+except NameError:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('QUANTITIES', 'Comma separated list of condition replicates alignment files (SAM/BAM) or Cuffquant files (CXB); @ character separates condition lists', 
+             'cond1_1.cxb,cond1_2.cxb@cond2_1.cxb,cond2_2.cxb') 
+    vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', 'merged.gtf')
+    vars.Add('CONDITIONS', '''Conditions to test differential expression comma separated list ordered as the QUANTITIES parameter''', 
+             'CONDITION_1,CONDITION_2')
+    
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+    CPUS = env['CPUS']
+    QUANTITIES = ' '.join(env['QUANTITIES'].split('@'))
+    ANNOTATION = env['ANNOTATION']
+    CONDITIONS = env['CONDITIONS']
+
+    cuffdiff_parameters = {'LABELS': CONDITIONS, 'SAMS': QUANTITIES}
+
+#TODO add_options
 add_options = ' '
 
 cuffdiff_cmd = 'cuffdiff -q $(--no-update-check -p ' + CPUS + '$) -o ' + Dir('.').path + ' ' +\
