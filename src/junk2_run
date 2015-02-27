@@ -81,12 +81,14 @@ def get_matching_nodes(nodelist, rexpression):
     return files
 
 transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
-
+cuffmerge_cpus = CPUS
+cuffmerge_annotation = ANNOTATION
+cuffmerge_genome_fasta = GENOME_FASTA
 cuffmerge_dir = 'cuffmerge'
 cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
                        src_dir = SCONSCRIPT_HOME,
                        variant_dir = cuffmerge_dir, duplicate = 0,
-                       exports = 'env transcripts_gtf_files')
+                       exports = 'env transcripts_gtf_files cuffmerge_cpus cuffmerge_annotation cuffmerge_genome_fasta')
 
 ## RETRIEVE TRANSCRIPT SEQUENCES
 transcript_sequences_annotation = cuffmerge
