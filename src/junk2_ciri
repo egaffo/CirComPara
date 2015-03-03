@@ -79,7 +79,8 @@ except NameError:
 
 bwa_cpus = CPUS
 
-make_out_dir = env.Command('ciri_out', [], Mkdir('$TARGET'))
+#make_out_dir = env.Command('ciri_out', [], Mkdir('$TARGET'))
+out_dir = 'ciri_out'
 
 ## Make alignment file with BWA-MEM
 read_bwa_par = ' ${SOURCES[0]} '
@@ -90,7 +91,7 @@ if len(READS)==2:
 
 bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + '$) -M ' + BWA_PARAMS + ' ' + BWA_INDEX +\
           ' ' + read_bwa_par + ' > $TARGET' 
-bwa = env.Command([os.path.join(make_out_dir[0].path, SAMPLE + '_bwa.sam')], 
+bwa = env.Command([os.path.join(out_dir, SAMPLE + '_bwa.sam')], 
                   [READS], bwa_cmd)
 
 ## Parse BWA-MEM generated SAM file with CIRI
@@ -98,12 +99,11 @@ if CIRI_ANNOTATION:
     ciri_parameters = ciri_parameters + ' -A ' + CIRI_ANNOTATION
 
 ciri_cmd = 'perl ' + CIRI + ' -I ${SOURCES[0]} -O $TARGET -F ' + GENOME_FASTA + ' ' + ciri_parameters
-ciri_target = os.path.join(make_out_dir[0].path, SAMPLE + '_ciri.out')
+ciri_target = os.path.join(out_dir, SAMPLE + '_ciri.out')
 ciri = env.Command([ciri_target],
                    [bwa], 
                    ciri_cmd)
 
 Clean(ciri, [ciri_target + '.log', 'CIRIerror.log'])
-Clean('.', make_out_dir[0].path)
 
 Return('bwa ciri')
