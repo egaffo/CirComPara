@@ -1,0 +1,117 @@
+'''
+This SConscript performs circRNAs detection on a RNA-seq sample using different
+circRNA detection methods.
+
+Software dependencies are inherited from the JUNK2-SConscripts used:
+ * junk2_circrna
+ * junk2_ciri
+
+'''
+
+import os
+
+junk2_circrna = 'junk2_circrna'
+junk2_ciri      = 'junk2_ciri'
+junk2_segemehl_mapping = 'junk2_segemehl_mapping'
+
+Import('*')
+
+try:
+    env = env
+    CPUS         = sample_cpus
+    GENOME_FASTA = sample_genome_fasta
+    ANNOTATION   = sample_annotation
+    READS        = sample_raw_reads
+
+    SEGEMEHL_INDEX = sample_segemehl_index
+
+    BWA_INDEX    = ciri_bwa_index
+    BWA_PARAMS   = ciri_bwa_extra_parameters
+    CIRI            = ciri_script
+
+except NameError:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
+    vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
+    vars.Add('READS', 'RNA-seq reads. Comma separated list if paired-end', 'reads.fa')
+
+    vars.Add('SEGEMEHL_INDEX', '''The .idx index for segemehl''', 'genome.idx')
+
+    vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','bwa.idx')
+    vars.Add('BWA_PARAMS','Extra parameters for BWA','')
+    vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
+
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+    CPUS = env['CPUS']
+    GENOME_FASTA = env['GENOME_FASTA']
+    ANNOTATION = env['ANNOTATION']
+    READS = env['READS'].split(',')
+
+    SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
+
+    BWA_INDEX = env['BWA_INDEX']
+    BWA_PARAMS = env['BWA_PARAMS']
+    CIRI = env['CIRI']
+
+SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+results = []
+
+## GET INPUT READ FILE FULL PATH
+raw_reads = [File(f).abspath for f in READS]
+
+sample_name = os.path.basename(Dir('.').path)
+if sample_name=='.':
+    sample_name = os.path.basename(Dir('.').abspath)
+
+build_dir = 'circRNAs'
+
+## SEGEMEHL CIRCRNA
+segemehl_cpus = CPUS
+reads_to_map = raw_reads
+sample_id = sample_name
+segemehl_genome_fasta = GENOME_FASTA
+segemehl_index = SEGEMEHL_INDEX
+segemehl_extra_params = ''
+segemap = env.SConscript(os.path.join(build_dir, junk2_segemehl_mapping),
+                         variant_dir = build_dir, src_dir = SRC_DIR,
+                         duplicate = 0, exports='env segemehl_cpus reads_to_map sample_id segemehl_genome_fasta segemehl_index segemehl_extra_params')
+
+mapping_file = segemap[0]
+segemehlcirc_cpus = CPUS
+segemehlcirc_genome_fasta = GENOME_FASTA
+segecirc_dir = 'segecirc'
+segecirc = env.SConscript(os.path.join(build_dir, segecirc_dir, junk2_circrna),
+                          variant_dir = os.path.join(build_dir, segecirc_dir), src_dir = SRC_DIR,
+                          duplicate = 0, exports='env mapping_file sample_name segemehlcirc_cpus segemehlcirc_genome_fasta')
+results.append(segecirc)
+
+## CIRI
+ciri_cpus = CPUS
+ciri_reads = raw_reads
+ciri_genome_fasta = GENOME_FASTA
+ciri_sample = sample_name
+ciri_bwa_index = BWA_INDEX
+ciri_bwa_extra_parameters = BWA_PARAMS 
+ciri_script = CIRI
+ciri_annotation = ANNOTATION
+
+ciri = env.SConscript(os.path.join(build_dir, junk2_ciri), 
+                      variant_dir = build_dir, src_dir = SRC_DIR, 
+                      duplicate = 0, 
+                      exports = 'env ciri_cpus ciri_bwa_index ciri_reads ciri_genome_fasta ciri_sample ciri_bwa_extra_parameters ciri_annotation ciri_script')
+
+results.append(ciri)
+
+Clean('.', build_dir)
+
+Return('results')
