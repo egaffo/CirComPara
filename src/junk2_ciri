@@ -104,6 +104,6 @@ ciri = env.Command([ciri_target],
                    [bwa], 
                    ciri_cmd)
 
-Clean(ciri, [ciri_target + '.log', 'CIRIerror.log'])
+Clean(ciri, [ciri_target + '.log', os.path.join(Dir('#').abspath, 'CIRIerror.log')])
 
 Return('bwa ciri')
