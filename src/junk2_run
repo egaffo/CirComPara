@@ -32,7 +32,6 @@ SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
 ## READ META FILE AND MAKE SAMPLE DIRECTORIES
 samples_dir = 'samples'
-Execute(Mkdir(samples_dir))
 
 samples     = defaultdict(list)
 adapters    = defaultdict(list)
@@ -43,7 +42,6 @@ with open(META) as csvfile:
         samples[row['sample']].append(os.path.abspath(row['file']))
         adapters[row['sample']].append(row['adapter'])
         conditions[row['condition']].add(row['sample'])
-        Execute(Mkdir(os.path.join(samples_dir, row['sample'])))
 
 ## PROCESS SAMPLES
 runs = []
