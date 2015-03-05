@@ -67,14 +67,14 @@ read_bowtie2_par = '-U ${SOURCE}'
 if len(READS)==2:
     read_bowtie2_par = '-1 ${SOURCES[0]} -2 ${SOURCES[1]}'
 
-bt2_firstpass   = os.path.join(out_dir, 'bt2_firstpass.log')
-bt2_secondpass  = os.path.join(out_dir, 'bt2_secondpass.log')
-find_circ_log   = os.path.join(out_dir, 'find_circ.log')
+bt2_firstpass   = os.path.join(Dir('.').abspath, out_dir, 'bt2_firstpass.log')
+bt2_secondpass  = os.path.join(Dir('.').abspath, out_dir, 'bt2_secondpass.log')
+find_circ_log   = os.path.join(Dir('.').abspath, out_dir, 'find_circ.log')
 find_circ_cmd = 'bowtie2 $(-p'+ CPUS +\
                 '$) --very-sensitive --score-min=C,-15,0 -x ' +\
                 BOWTIE2_INDEX + ' -q ' + read_bowtie2_par + ' 2> '+ bt2_firstpass +\
-                ' | samtools view -hu - | samtools sort -O "sam" -T tmp - | samtools view'+\
-                ' -hf 4 - | samtools view -b - | unmapped2anchors.py - |'+\
+                ' | samtools view -hu - | samtools sort -O "sam" -T $('''+ SAMPLE +\
+                '$) - | samtools view -hf 4 - | samtools view -b - | unmapped2anchors.py - |'+\
                 ' bowtie2 --reorder --score-min=C,-15,0 -q -x ' +\
                 BOWTIE2_INDEX + ' -U - 2> ' + bt2_secondpass + ' | find_circ.py '+\
                 ' -G ' + GENOME_FASTA + ' -p ' + SAMPLE + '_ -s '+\
