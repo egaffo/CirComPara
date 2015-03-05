@@ -9,9 +9,11 @@ vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
 vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
 
 vars.Add('SEGEMEHL_INDEX', '''The .idx index for segemehl''', 'genome.idx')
-vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','bwa.idx')
+vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','/path/to/index')
 vars.Add('BWA_PARAMS','Extra parameters for BWA','')
 vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
+
+vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','/path/to/index')
 
 env = Environment(ENV=os.environ,
                   variables=vars)
@@ -30,6 +32,8 @@ SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
 BWA_INDEX      = env['BWA_INDEX']
 BWA_PARAMS     = env['BWA_PARAMS']
 CIRI           = env['CIRI']
+
+BOWTIE2_INDEX = env['BOWTIE2_INDEX']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -56,12 +60,14 @@ with open(META) as csvfile:
         ciri_bwa_index            = BWA_INDEX
         ciri_bwa_extra_parameters = BWA_PARAMS
         ciri_script               = CIRI
+
+        bowtie2_index = BOWTIE2_INDEX
     
         sample_dir = os.path.join(samples_dir, sample)
         run_sample = SConscript(os.path.join(sample_dir, 'junk2_sample_circrna_methods'), 
                                 src_dir = SCONSCRIPT_HOME, 
                                 variant_dir = sample_dir, duplicate = 0,
-                                exports = 'env sample_cpus sample_genome_fasta sample_annotation sample_raw_reads sample_segemehl_index ciri_bwa_index ciri_bwa_extra_parameters ciri_script')
+                                exports = 'env sample_cpus sample_genome_fasta sample_annotation sample_raw_reads sample_segemehl_index ciri_bwa_index ciri_bwa_extra_parameters ciri_script bowtie2_index')
         runs.append(run_sample)
 
 ## CLEAN DIRS WHEN CLEANING TARGETS
