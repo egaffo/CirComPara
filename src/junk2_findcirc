@@ -24,6 +24,8 @@ When called from a SConscript it imports the following variables:
  * find_circ_cpus
  * find_circ_bt2_idx
  * find_circ_reads
+ * find_circ_genome
+ * find_circ_sample
 
 '''
 import os
