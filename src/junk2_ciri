@@ -79,7 +79,6 @@ except NameError:
 
 bwa_cpus = CPUS
 
-#make_out_dir = env.Command('ciri_out', [], Mkdir('$TARGET'))
 out_dir = 'ciri_out'
 
 ## Make alignment file with BWA-MEM
@@ -89,7 +88,7 @@ if len(READS)==2:
     read_bwa_par = read_bwa_par + ' ${SOURCES[1]}'
     ciri_parameters = ''
 
-bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + '$) -M ' + BWA_PARAMS + ' ' + BWA_INDEX +\
+bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + ' -v 2 $) -M ' + BWA_PARAMS + ' ' + BWA_INDEX +\
           ' ' + read_bwa_par + ' > $TARGET' 
 bwa = env.Command([os.path.join(out_dir, SAMPLE + '_bwa.sam')], 
                   [READS], bwa_cmd)
