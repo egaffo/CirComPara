@@ -67,10 +67,10 @@ read_bowtie2_par = '-U ${SOURCE}'
 if len(READS)==2:
     read_bowtie2_par = '-1 ${SOURCES[0]} -2 ${SOURCES[1]}'
 
-find_circ_cmd = ''
+split_fasta_genome_cmd = ''
 if os.path.isfile(GENOME_FASTA):
     tmp_findcirc_dir = os.path.join(Dir('.').abspath, out_dir, 'tmp_findcirc')
-    find_circ_cmd = ' mkdir -p ' + tmp_findcirc_dir + ' && cat ' + GENOME_FASTA +\
+    split_fasta_genome_cmd = ' mkdir -p ' + tmp_findcirc_dir + ' && cat ' + GENOME_FASTA +\
                     ''' | awk 'BEGIN { CHROM="" } { if ($1~"^>") CHROM=substr($1,2); '''\
                     '''print $0 > "''' + tmp_findcirc_dir + '''/"CHROM".fa" }' && '''
     GENOME_FASTA = tmp_findcirc_dir
@@ -78,19 +78,25 @@ if os.path.isfile(GENOME_FASTA):
 bt2_firstpass   = os.path.join(Dir('.').abspath, out_dir, 'bt2_firstpass.log')
 bt2_secondpass  = os.path.join(Dir('.').abspath, out_dir, 'bt2_secondpass.log')
 find_circ_log   = os.path.join(Dir('.').abspath, out_dir, 'find_circ.log')
-find_circ_cmd = find_circ_cmd + 'bowtie2 $(-p'+ CPUS +\
+
+map_reads_cmd   = split_fasta_genome_cmd + 'bowtie2 $(-p'+ CPUS +\
                 '$) --very-sensitive --score-min=C,-15,0 -x ' +\
                 BOWTIE2_INDEX + ' -q ' + read_bowtie2_par + ' 2> '+ bt2_firstpass +\
-                ' | samtools view -hu - | samtools sort -O "sam" -T $('''+ SAMPLE +\
-                '$) - | samtools view -hf 4 - | samtools view -b - | unmapped2anchors.py - |'+\
+                ' | samtools view -hu - | samtools sort -O "bam" -T $( findcirc_'+ SAMPLE +\
+                ' -@ ' + CPUS + '$) - > $TARGET'
+map_reads = env.Command([os.path.join(out_dir, SAMPLE+'_bt2.bam')],
+                        READS,
+                        map_reads_cmd)
+
+find_circ_cmd = 'samtools view $(-@ ' + CPUS + '$) -hbf 4 $SOURCE | unmapped2anchors.py - |'+\
                 ' bowtie2 --reorder --score-min=C,-15,0 -q -x ' +\
                 BOWTIE2_INDEX + ' -U - 2> ' + bt2_secondpass + ' | find_circ.py '+\
                 ' -G ' + GENOME_FASTA + ' -p ' + SAMPLE + '_ -s '+\
-                find_circ_log + ' > ${TARGETS[0]} 2> ${TARGETS[1]} && rm -r ' + tmp_findcirc_dir
+                find_circ_log + ' > ${TARGETS[0]} 2> ${TARGETS[1]} && rm -rf ' + tmp_findcirc_dir
 
 find_circ = env.Command([os.path.join(out_dir, 'sites.bed'), 
                          os.path.join(out_dir, 'sites.reads')], 
-                        READS, 
+                        map_reads, 
                         find_circ_cmd)
 
 # To get a reasonable set of circRNA candidates try:
