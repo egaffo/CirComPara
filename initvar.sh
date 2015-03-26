@@ -5,7 +5,7 @@ export JUNK2_HOME="/home/enrico/tools/junk2"
 export TRIMMOMATIC="/home/enrico/tools/trimmomatic/trimmomatic-0.32.jar"
 
 SEGEMEHL_HOME="/home/enrico/tools/segemehl/"
-SRATOOLKIT_HOME="/home/enrico/tools/sra/sratoolkit.2.3.5-2-ubuntu64/bin/"
+SRATOOLKIT_HOME="/home/enrico/tools/sra/bin/"
 SAMTOOLS_HOME="/home/enrico/tools/samtools/"
 FASTX_TOOLKIT="$HOME/tools/fastx_toolkit/bin"
 CUFFLINKS_HOME="/home/enrico/tools/cufflinks"

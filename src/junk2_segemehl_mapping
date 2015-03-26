@@ -74,7 +74,7 @@ make_segemehl_mapping_dir = env.Command(Dir(segemehl_mapping_dir), [], Mkdir('$T
 ## MAP READS
 sam_sort_cmd = ''' samtools view -u $(-@''' + CPUS +\
                             '''$) - | samtools sort -@$(''' + CPUS +\
-                            '''$) -O 'bam' -T $('''+ SAMPLE +\
+                            '''$) -O 'bam' -T $(segemehl_'''+ SAMPLE +\
                             '''$) > ${TARGETS[0]}'''
 
 if len(READS)>1:
