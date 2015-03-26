@@ -18,6 +18,12 @@ When called from a SConscript it imports the following variables:
  * tophat_index
  * tophat_extra_params
 
+Returns:
+    ['accepted_hits.bam', 
+     'junctions.bed',
+     'insertions.bed',
+     'deletions.bed',
+     'unmapped.bam']
 '''
 
 import os
@@ -57,12 +63,15 @@ except NameError:
     TOPHAT_PARAMS = env['TOPHAT_PARAMS']
  
 tophat_out_dir = 'tophat_out'
-tophat_cmd = '''tophat -o ''' + tophat_out_dir + ''' ''' + TOPHAT_PARAMS +\
+chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, tophat_out_dir) 
+tophat_cmd = '''tophat -o . ''' + TOPHAT_PARAMS +\
              ''' $(-p '''  + CPUS + '''$) ''' + TOPHAT_INDEX
 if len(READS)>1:
     tophat_cmd = tophat_cmd + ''' ${SOURCES[0]} ${SOURCES[1]} '''
 else:
     tophat_cmd = tophat_cmd + ''' $SOURCE '''
+
+chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
 tophat_targets = [os.path.join(tophat_out_dir, f) for f in ['accepted_hits.bam', 
                                                             'junctions.bed',
@@ -70,7 +79,9 @@ tophat_targets = [os.path.join(tophat_out_dir, f) for f in ['accepted_hits.bam',
                                                             'deletions.bed',
                                                             'unmapped.bam']]
 
-tophat = env.Command(tophat_targets, READS, tophat_cmd)
+tophat = env.Command(tophat_targets, READS, [chdir_working_cmd + ' && '+\
+                                             tophat_cmd + ' && ' +\
+                                             chdir_parent_cmd])
 
 env.Precious(tophat[0]) # do not delete old alignment file untill the new one has been computed
 

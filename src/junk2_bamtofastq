@@ -9,10 +9,14 @@ Software dependencies:
 
 When called from a SConscript it imports the following variables:
  * env
- * cpus
- * bamfile
- * prefix_id
+ * bam2fq_cpus
+ * bam2fq_bamfile
+ * bam2fq_prefix_id
+ * bam2fq_paired
 
+Returns:
+ [ID_1.fq.gz] or
+ [ID_1.fq.gz, ID_2.fq.gz] if paired-end
 '''
 
 import os
@@ -22,9 +26,10 @@ Import('*')
 try:
     # these are the variables passed with 'exports' from a calling SConscript
     env = env
-    CPUS = cpus
-    BAM = bamfile
-    ID = prefix_id
+    CPUS = bam2fq_cpus
+    BAM = bam2fq_bamfile
+    ID = bam2fq_prefix_id
+    PAIRED = bam2fq_paired
 
 except NameError:
     vars = Variables('vars.py')
@@ -50,17 +55,23 @@ except NameError:
     ID = env['ID']
     PAIRED = env['PAIRED']
 
-convert_cmd = '''samtools sort -n $(-l 0 -@ ''' + CPUS + ''' -O 'bam' -T ''' + ID + '''$) $SOURCE | '''\
-              '''bedtools bamtofastq -i - -fq ${TARGETS[0].base} '''
+chdir_working_cmd = '''cd ''' + Dir('.').abspath
+chdir_parent_cmd  = '''cd ''' + Dir('#').abspath
+convert_cmd = '''samtools sort -n $(-l 0 -@ ''' + CPUS + ''' -O 'bam' -T ''' + ID +\
+              '''$) ${SOURCE.abspath} | bedtools bamtofastq -i - -fq ${TARGETS[0].filebase} '''
 convert_targets = [ID + '_1.fq.gz']
 
 if PAIRED.lower() in ['yes', 'y', '1', 'true', 't']:
-    convert_cmd = convert_cmd + ''' -fq2 ${TARGETS[1].base}'''
+    convert_cmd = convert_cmd + ''' -fq2 ${TARGETS[1].filebase}'''
     convert_targets.append(ID + '_2.fq.gz')
-convert_cmd = convert_cmd + ''' && gzip ${TARGETS[0].base} ''' 
+convert_cmd = convert_cmd + ''' && gzip ${TARGETS[0].filebase} ''' 
 if PAIRED.lower() in ['yes', 'y', '1', 'true', 't']:
-    convert_cmd = convert_cmd + '''&& gzip ${TARGETS[1].base}'''
+    convert_cmd = convert_cmd + '''&& gzip ${TARGETS[1].filebase}'''
 
-convert = env.Command(convert_targets, BAM, convert_cmd, chdir=1)
+convert = env.Command(convert_targets, BAM, ' && '.join([chdir_working_cmd, 
+                                                         convert_cmd,
+                                                         chdir_parent_cmd]
+                                                       )
+                     )
 
 Return('convert')
