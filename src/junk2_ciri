@@ -28,6 +28,9 @@ When called from a SConscript it imports the following variables:
  * ciri_annotation
  * ciri_script
 
+Returns: 
+ [sampleid_bwa.sam.gz, sampleid_ciri.out]
+
 '''
 
 import os
@@ -76,39 +79,44 @@ except NameError:
     CIRI            = env['CIRI']
     CIRI_ANNOTATION = env['CIRI_ANNOTATION']
 
-
 bwa_cpus = CPUS
 
 out_dir = 'ciri_out'
 chdir_working_cmd  = 'cd ' + os.path.join(Dir('.').abspath, out_dir)
 chdir_previous_cmd = 'cd ' + Dir('#').abspath
 
-## Make alignment file with BWA-MEM
+## Single-end reads case
 read_bwa_par = ' ${SOURCES[0].abspath} '
 ciri_parameters = ' -S '
+## Adjust for paired-end reads
 if len(READS)==2:
     read_bwa_par = read_bwa_par + ' ${SOURCES[1].abspath}'
     ciri_parameters = ''
 
-bwa_target = os.path.join(out_dir, SAMPLE + '_bwa.sam')
-bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + '$) -M ' + BWA_PARAMS + ' ' + BWA_INDEX +\
-          ' ' + read_bwa_par + ' > ${TARGET.file}' 
-bwa = env.Command(bwa_target, 
-                  READS, 
-                  ' && '.join([chdir_working_cmd, bwa_cmd, chdir_previous_cmd]))
-
-## Parse BWA-MEM generated SAM file with CIRI
 if CIRI_ANNOTATION:
     ciri_parameters = ciri_parameters + ' -A ' + CIRI_ANNOTATION
 
 ciri_target = os.path.join(out_dir, SAMPLE + '_ciri.out')
-ciri_cmd = 'perl ' + CIRI + ' -I ${SOURCES[0].abspath} -O ${TARGET.file} -F ' + GENOME_FASTA +\
-           ' ' + ciri_parameters
+bwa_target = os.path.join(out_dir, SAMPLE + '_bwa.sam.gz')
 
-ciri = env.Command([ciri_target],
-                   [bwa], 
-                   ' && '.join([chdir_working_cmd, ciri_cmd, chdir_previous_cmd]))
+## Map the reads
+bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + '$) -M ' + BWA_PARAMS + ' ' + BWA_INDEX +\
+          ' ' + read_bwa_par + ' > ${TARGETS[0].filebase}'
+## Run CIRI on mappings
+ciri_cmd = 'perl ' + CIRI + ' -I ${TARGETS[0].filebase} -O ${TARGETS[1].file} -F ' +\
+           GENOME_FASTA + ' ' + ciri_parameters
+## Compress the mapping file to save disk space
+compress_cmd = 'gzip ${TARGETS[0].filebase}'
 
+## Combine the commands
+bwa_ciri_cmd = bwa_cmd + ' && ' + ciri_cmd + ' && ' + compress_cmd
+
+## Run the commands
+ciri = env.Command([bwa_target, ciri_target],
+                   READS, 
+                   ' && '.join([chdir_working_cmd, bwa_ciri_cmd, chdir_previous_cmd]))
+
+## Clean log files, etc.
 Clean(ciri, [ciri_target + '.log', os.path.join(Dir('.').abspath, 'CIRIerror.log')])
 
-Return('bwa ciri')
+Return('ciri')
