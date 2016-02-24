@@ -33,6 +33,8 @@ try:
     CIRI         = ciri_script
 
     BOWTIE2_INDEX = bowtie2_index
+    #TODO
+    PRE_FILTER  = False
 
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
@@ -50,6 +52,7 @@ except NameError:
 
     vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''', 
              '/path/to/bowtie2/index')
+    #TODO vars.Add('PRE_FILTER', 'Does a preliminary mapping of the reads have to be done?', False)
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -71,6 +74,8 @@ except NameError:
     CIRI = env['CIRI']
 
     BOWTIE2_INDEX = env['BOWTIE2_INDEX']
+    #TODO
+    PRE_FILTER = False
 
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -83,27 +88,29 @@ sample_name = os.path.basename(Dir('.').path)
 if sample_name=='.':
     sample_name = os.path.basename(Dir('.').abspath)
 
-## RETIRIEVE CANONICALLY UNMAPPED READS
+### RETIRIEVE CANONICALLY UNMAPPED READS
 unmapped_reads_dir = 'unmapped_reads'
-tophat_cpus     = CPUS
-reads_to_map    = raw_reads
-tophat_index    = BOWTIE2_INDEX
-tophat_extra_params = ' --no-mixed --no-discordant --max-multihits 5 '
-tophat = env.SConscript(os.path.join(unmapped_reads_dir, 'junk2_tophat'),
-                          variant_dir = unmapped_reads_dir, src_dir = SRC_DIR,
-                          duplicate = 0, exports = '''env tophat_cpus reads_to_map '''\
-                                                   '''tophat_index tophat_extra_params''')
 
-bam2fq_cpus     = CPUS
-bam2fq_bamfile  = tophat[4].abspath
-bam2fq_prefix_id= sample_name
-bam2fq_paired   = str(len(raw_reads)>1)
-bam2fq          = env.SConscript(os.path.join(unmapped_reads_dir, 'junk2_bamtofastq'),
-                                 variant_dir = unmapped_reads_dir, src_dir = SRC_DIR,
-                                 duplicate = 0, exports = '''env bam2fq_cpus bam2fq_bamfile '''\
-                                                          '''bam2fq_prefix_id bam2fq_paired ''')
-
-raw_reads       = [File(f).abspath for f in bam2fq]
+if PRE_FILTER:
+    tophat_cpus     = CPUS
+    reads_to_map    = raw_reads
+    tophat_index    = BOWTIE2_INDEX
+    tophat_extra_params = ' --no-mixed --no-discordant --max-multihits 5 '
+    tophat = env.SConscript(os.path.join(unmapped_reads_dir, 'junk2_tophat'),
+                              variant_dir = unmapped_reads_dir, src_dir = SRC_DIR,
+                              duplicate = 0, exports = '''env tophat_cpus reads_to_map '''\
+                                                       '''tophat_index tophat_extra_params''')
+    
+    bam2fq_cpus     = CPUS
+    bam2fq_bamfile  = tophat[4].abspath
+    bam2fq_prefix_id= sample_name
+    bam2fq_paired   = str(len(raw_reads)>1)
+    bam2fq          = env.SConscript(os.path.join(unmapped_reads_dir, 'junk2_bamtofastq'),
+                                     variant_dir = unmapped_reads_dir, src_dir = SRC_DIR,
+                                     duplicate = 0, exports = '''env bam2fq_cpus bam2fq_bamfile '''\
+                                                              '''bam2fq_prefix_id bam2fq_paired ''')
+    
+    raw_reads       = [File(f).abspath for f in bam2fq]
 
 build_dir = 'circRNAs'
 
