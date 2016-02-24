@@ -1,22 +1,70 @@
+'''
+This SConscript runs the cuffquant utility from the Cufflinks software suite.
+It quantifies the expression from BAM files.
+
+Software dependencies:
+ * cuffquant
+When called from a SConscript it imports the following variables:
+ * cuffquant_alignments
+ * cuffquant_annotation
+ * cuffquant_genome_fasta
+ * cuffquant_cpus
+
+Returns:
+ [al_1.cbx, al_2.cbx]
+
+'''
 import os, itertools, zipfile
 
 Import('*')
 
-CPUS = env['CPUS']
+try:
+    # these are the variables passed with 'exports' from a calling SConscript
+    env             = env
+    CPUS            = cuffquant_cpus
+    GENOME_FASTA    = cuffquant_genome_fasta
+    ALIGNMENTS      = cuffquant_alignments
+    ANNOTATION      = cuffquant_annotation
+
+except NameError:
+    vars = Variables('vars.py')
+    vars.Add('CPUS', 'Max parallel jobs to execute', '4')
+    vars.Add('GENOME_FASTA', '', '')
+    vars.Add('ALIGNMENTS', 'Comma separated list of BAM files', 'al_1.bam,al_2.bam')
+    vars.Add('ANNOTATION', 'Annotation GTF file such as from cuffmerge', 'merged.gtf')
+    
+    cmdline_env = Environment(ENV=os.environ,variables=vars)
+
+    Help(vars.GenerateHelpText(cmdline_env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
+
+    # These are the variables given from the command line when the SConscript is called
+    # standalone
+    env = cmdline_env
+    CPUS = env['CPUS']
+    GENOME_FASTA = env['GENOME_FASTA']
+    ALIGNMENTS = env['ALIGNMENTS'].split(',')
+    ANNOTATION = env['ANNOTATION']
+
+    ALIGNMENTS = [File(f) for f in ALIGNMENTS]
 
 ## MERGE TRANSCRIPTS.GTF FILES
-add_options = ' --seed 0 --frag-bias-correct ' + env['GENOME_FASTA'] +\
+add_options = ' --seed 0 --frag-bias-correct ' + GENOME_FASTA +\
               ' --multi-read-correct --max-bundle-frags 9999999 '
 
-
-transcripts_annotation = cuffquant_annotation
-cuffquant_cmd = 'cuffquant -q $(--no-update-check -p ' + CPUS + '$) -o ${TARGET.dir} ' + add_options +\
+cuffquant_cmd = 'cuffquant -q $(--no-update-check -p ' + CPUS +\
+                '$) -o ${TARGET.dir} ' + add_options +\
                 ' ${SOURCES[0]} ${SOURCES[1]}'
-samples_abundances = []
-for alignment in alignments:
 
+samples_abundances = []
+for alignment in ALIGNMENTS:
+    #filebase = os.path.splitext(os.path.basename(alignment))[0]
+    #cuffquant = env.Command(os.path.join(filebase, 'abundances.cxb'), 
     cuffquant = env.Command(os.path.join('${SOURCES[1].filebase}', 'abundances.cxb'), 
-                            [transcripts_annotation, alignment], 
+                            [ANNOTATION, alignment], 
                             cuffquant_cmd)
     samples_abundances.append(cuffquant)
 
