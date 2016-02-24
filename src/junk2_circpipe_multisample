@@ -187,8 +187,14 @@ circRNA_collect_dir = 'circRNA_collection'
 samples = sorted(samples.keys())
 
 segecirc_nodes = [] 
+find_circ_nodes = []
+ciri_nodes = []
 for sample in samples:
     segecirc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*splicesites\.bed'))
+    find_circ_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*circ_candidates\.bed'))
+    ciri_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*_ciri\.out'))
+
+## collect segecirc
 segecirc_files = ','.join([f.path for f in flatten(segecirc_nodes)])
 segecirc_labels = ','.join(samples)
 segecirc_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
@@ -199,6 +205,30 @@ segecirc_compared = env.Command(segecirc_comapared_target,
                                 segecirc_nodes, 
                                 segecirc_comapared_cmd)
 Depends(segecirc_compared, segecirc_nodes)
+
+## collect find_circ
+find_circ_files = ','.join([f.path for f in flatten(find_circ_nodes)])
+find_circ_labels = ','.join(samples)
+find_circ_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                         '''findcirc_compare.R -l ''' + find_circ_labels +\
+                         ''' -i ''' + find_circ_files + ''' -o $TARGET''')
+find_circ_comapared_target = os.path.join(circRNA_collect_dir, 'find_circ_compared.csv')
+find_circ_compared = env.Command(find_circ_comapared_target, 
+                                find_circ_nodes, 
+                                find_circ_comapared_cmd)
+Depends(find_circ_compared, find_circ_nodes)
+
+## collect CIRI
+ciri_files = ','.join([f.path for f in flatten(ciri_nodes)])
+ciri_labels = ','.join(samples)
+ciri_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                         '''ciri_compare.R -l ''' + ciri_labels +\
+                         ''' -i ''' + ciri_files + ''' -o $TARGET''')
+ciri_comapared_target = os.path.join(circRNA_collect_dir, 'ciri_compared.csv')
+ciri_compared = env.Command(ciri_comapared_target, 
+                                ciri_nodes, 
+                                ciri_comapared_cmd)
+Depends(ciri_compared, ciri_nodes)
 
 ## CLEAN DIRS WHEN CLEANING TARGETS
 Clean('.', samples_dir)
