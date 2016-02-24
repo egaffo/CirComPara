@@ -181,6 +181,25 @@ deseq = SConscript(os.path.join(deseq_dir, 'junk2_DESeq'),
                    exports = 'env deseq_annotation deseq_alignments metafile deseq_cpus')
 Depends(deseq, [cuffmerge, alignments])
 
+## COLLECT CIRCRNA RESULTS
+circRNA_collect_dir = 'circRNA_collection'
+
+samples = sorted(samples.keys())
+
+segecirc_nodes = [] 
+for sample in samples:
+    segecirc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*splicesites\.bed'))
+segecirc_files = ','.join([f.path for f in flatten(segecirc_nodes)])
+segecirc_labels = ','.join(samples)
+segecirc_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                         '''segecirc_compare.R -l ''' + segecirc_labels +\
+                         ''' -i ''' + segecirc_files + ''' -o $TARGET''')
+segecirc_comapared_target = os.path.join(circRNA_collect_dir, 'segecirc_compared.csv')
+segecirc_compared = env.Command(segecirc_comapared_target, 
+                                segecirc_nodes, 
+                                segecirc_comapared_cmd)
+Depends(segecirc_compared, segecirc_nodes)
+
 ## CLEAN DIRS WHEN CLEANING TARGETS
 Clean('.', samples_dir)
 Clean('.', cuffmerge_dir)
@@ -188,3 +207,4 @@ Clean('.', transcript_sequences_dir)
 Clean('.', cuffquant_dir)
 Clean('.', cuffdiff_dir)
 Clean('.', deseq_dir)
+Clean('.', circRNA_collect_dir)
