@@ -11,6 +11,23 @@ Software dependencies are inherited from the JUNK2-SConscripts used:
  * junk2_hisat2
  * junk2_expression
  * junk2_sample_circrna_methods
+ * junk2_bamtofastq
+
+
+When called from a SConscript it imports the following variables:
+ * env
+ * sample_cpus
+ * sample_genome_index
+ * sample_genome_fasta
+ * sample_preprocessor
+ * sample_adapter_file
+ * sample_annotation
+ * sample_raw_reads
+ * segemehl_index
+ * bwa_index
+ * bwa_params
+ * ciri
+ * bowtie2_index
 
 '''
 
@@ -23,6 +40,7 @@ junk2_preprocess      = 'junk2_preprocess'
 junk2_mapping         = 'junk2_hisat2'
 junk2_expression      = 'junk2_expression'
 junk2_circrnas        = 'junk2_sample_circrna_methods'
+junk2_bamtofastq      = 'junk2_bamtofastq'
 
 Import('*')
 
@@ -33,23 +51,32 @@ try:
     GENOME_FASTA = sample_genome_fasta
     PREPROCESSOR = sample_preprocessor
     ADAPTER_FILE = sample_adapter_file
-    #MAPPER       = 'hisat2'
     ANNOTATION   = sample_annotation
     READS        = sample_raw_reads
+
+    SEGEMEHL_INDEX = segemehl_index
+    BWA_INDEX      = bwa_index
+    BWA_PARAMS     = bwa_params
+    CIRI           = ciri
+    BOWTIE2_INDEX  = bowtie2_index
 
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
     vars.Add('CPUS', 'Set number of CPUs', '4')
-    #vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl') 
     vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
     vars.Add('ADAPTER_FILE', 'FASTA file full path of the adapter sequence', '')
     vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
     vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
-    vars.Add('GENOME_INDEX', '''The index of the reference genome. Depends on the mapper used; '''
-                             '''e.g. genome.idx if using segemehl''', 'genome.idx')
+    vars.Add('GENOME_INDEX', '''The index of the reference genome for HISAT2''', '/path/to/index')
     vars.Add('READS', 'RNA-seq reads. Comma separated list if paired-end', 'reads.fa')
-    
+
+    vars.Add('SEGEMEHL_INDEX', '''The .idx index for segemehl''', 'genome.idx')
+    vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','/path/to/index')
+    vars.Add('BWA_PARAMS','Extra parameters for BWA','')
+    vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
+    vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','/path/to/index')
+   
     env = Environment(variables = vars,
                       ENV = os.environ)
     Help(vars.GenerateHelpText(env))
@@ -63,9 +90,15 @@ except NameError:
     GENOME_FASTA = env['GENOME_FASTA']
     PREPROCESSOR = env['PREPROCESSOR']
     ADAPTER_FILE = env['ADAPTER_FILE']
-    #MAPPER = env['MAPPER']
     ANNOTATION = env['ANNOTATION']
     READS = env['READS'].split(',')
+
+    SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
+    BWA_INDEX      = env['BWA_INDEX']
+    BWA_PARAMS     = env['BWA_PARAMS']
+    CIRI           = env['CIRI']
+    BOWTIE2_INDEX = env['BOWTIE2_INDEX']
+
 
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -127,7 +160,7 @@ if sample_name=='.':
 hisat2_index = GENOME_INDEX
 #genome_fasta = GENOME_FASTA
 sample_id = sample_name
-hisat2_extra_params = ''
+hisat2_extra_params = ' --dta --dta-cufflinks --rg-id ' + sample_name + ' '
 hisat2_cpus = CPUS
 reads_to_map = clean_reads
 mappings    = env.SConscript(os.path.join(build_dir, junk2_mapping), 
@@ -137,21 +170,88 @@ mappings    = env.SConscript(os.path.join(build_dir, junk2_mapping),
                              '''hisat2_cpus''')
 results.append(mappings)
 
-### EXPRESSION ANALYSIS
-#expression_cpus = CPUS
-#expression_genome_fasta = GENOME_FASTA 
-#expression_annotation = ANNOTATION
-#mappings
-#mapping_file = mappings#[0][0]
-#expression  = env.SConscript(os.path.join(build_dir, junk2_expression), 
-#                             variant_dir = build_dir, src_dir = SRC_DIR, 
-#                             duplicate = 0, exports = '''env mapping_file '''
-#                             '''sample_name expression_cpus expression_genome_fasta '''
-#                             '''expression_annotation''')
-#results.append(expression)
-##print  [e.path for node in expression for e in node]
-#
+## EXPRESSION ANALYSIS
+expression_cpus = CPUS
+expression_genome_fasta = GENOME_FASTA 
+expression_annotation = ANNOTATION
+mapping_file = mappings[0]
+expression  = env.SConscript(os.path.join(build_dir, junk2_expression), 
+                             variant_dir = build_dir, src_dir = SRC_DIR, 
+                             duplicate = 0, exports = '''env mapping_file '''
+                             '''sample_name expression_cpus expression_genome_fasta '''
+                             '''expression_annotation''')
+results.append(expression)
+
+## CIRCRNA DETECTION
+# get unmapped reads. Distinguish between unmapped pairs 
+# (SAM flag 4+8=12 unmapped and mate unmapped) and 
+# unmapped single (SAM flag -f 4 -F 8)
+unmapped_dir = os.path.join(build_dir, 'unmapped_reads')
+
+keep_unmapped_cmd = '''samtools view -hb -f 12 $SOURCE > $TARGET'''
+unmapped_bam_target = os.path.join(unmapped_dir, sample_name + '_unmapped.bam')
+unmapped_bam    = env.Command(unmapped_bam_target, mapping_file.abspath, keep_unmapped_cmd)
+
+results.append(unmapped_bam)
+
+keep_unmapped_single_cmd = '''samtools view -hb -f 4 -F 8 $SOURCE > $TARGET '''
+unmapped_single_bam_target = os.path.join(unmapped_dir, sample_name + '_unmapped_single.bam')
+unmapped_single_bam    = env.Command(unmapped_single_bam_target, 
+                              mapping_file.abspath, keep_unmapped_single_cmd)
+
+results.append(unmapped_single_bam)
+
+# tranform unmapped read BAM into FASTQ file(s) (paired)
+bam2fq_cpus = CPUS
+bam2fq_bamfile  = unmapped_bam
+bam2fq_prefix_id    = sample_name + '_unmapped'
+bam2fq_paired   = str(len(READS)>1)
+
+unmapped_fq  = env.SConscript(os.path.join(unmapped_dir, junk2_bamtofastq), 
+                             variant_dir = unmapped_dir, src_dir = SRC_DIR, 
+                             duplicate = 0, exports = '''env bam2fq_cpus '''
+                             '''bam2fq_bamfile bam2fq_prefix_id bam2fq_paired''')
+results.append(unmapped_fq)
+
+# tranform unmapped read BAM into FASTQ file(s) (unpaired)
+bam2fq_bamfile  = unmapped_single_bam
+bam2fq_prefix_id    = sample_name + '_unmapped_single'
+bam2fq_paired   = 'False'
+
+unmapped_single_fq  = env.SConscript(os.path.join(unmapped_dir, junk2_bamtofastq), 
+                             variant_dir = unmapped_dir, src_dir = SRC_DIR, 
+                             duplicate = 0, exports = '''env bam2fq_cpus '''
+                             '''bam2fq_bamfile bam2fq_prefix_id bam2fq_paired''')
+results.append(unmapped_single_fq)
+
+# run circRNA detection pipeline 
+sample_cpus         = CPUS
+sample_genome_fasta = GENOME_FASTA
+sample_annotation   = ANNOTATION
+if(len(READS)>1):
+    sample_raw_reads    = [f.abspath for f in unmapped_fq]
+else:
+    sample_raw_reads    = [f.abspath for f in unmapped_single_fq]
+
+sample_segemehl_index     = SEGEMEHL_INDEX
+ciri_bwa_index            = BWA_INDEX
+ciri_bwa_extra_parameters = BWA_PARAMS
+ciri_script               = CIRI
+
+bowtie2_index = BOWTIE2_INDEX
+
+circrnas = env.SConscript(os.path.join(build_dir, junk2_circrnas), 
+                        src_dir = SRC_DIR, 
+                        variant_dir = build_dir, duplicate = 0,
+                        exports = '''env sample_cpus sample_genome_fasta '''
+                        '''sample_annotation sample_raw_reads sample_segemehl_index '''
+                        '''ciri_bwa_index ciri_bwa_extra_parameters '''
+                        '''ciri_script bowtie2_index''')
+results.append(circrnas)
+
+## CLEAN COMMANDS
 Clean('.', read_statistics_dir)
 Clean('.', build_dir)
+Clean('.', unmapped_dir)
 
 Return('results')
