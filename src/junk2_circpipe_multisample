@@ -26,7 +26,6 @@ from collections import defaultdict
 vars = Variables('vars.py')
 vars.Add('META', 'The metadata table file where you specify the project samples, etc.', 'meta.csv')
 vars.Add('CPUS', 'Set number of CPUs', '4')
-#vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl') 
 vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
 vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
 vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
@@ -50,7 +49,6 @@ CPUS         = env['CPUS']
 GENOME_INDEX = env['GENOME_INDEX']
 GENOME_FASTA = env['GENOME_FASTA']
 PREPROCESSOR = env['PREPROCESSOR']
-#MAPPER       = env['MAPPER']
 ANNOTATION   = env['ANNOTATION']
 
 SEGEMEHL_INDEX = env['SEGEMEHL_INDEX'] 
@@ -82,7 +80,6 @@ for sample in sorted(samples.keys()):
     sample_genome_fasta = GENOME_FASTA
     sample_preprocessor = PREPROCESSOR
     sample_adapter_file = adapters[sample]
-#    sample_mapper       = MAPPER
     sample_annotation   = ANNOTATION
     sample_raw_reads    = samples[sample]
 
@@ -157,9 +154,6 @@ cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
                        '''cuffquant_genome_fasta cuffquant_cpus''')
 
 Depends(cuffquant, [cuffmerge, alignments])
-
-## COMPUTE NORMALIZED EXPRESSION: CUFFNORM
-# TODO
 
 ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
 cuffdiff_cpus = CPUS
