@@ -62,9 +62,10 @@ except NameError:
     SAMPLE = env['SAMPLE']
  
 hisat2_out_dir = 'hisat2_out'
-chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, hisat2_out_dir) 
+chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, hisat2_out_dir)
 hisat2_cmd = '''hisat2 -x ''' + HISAT2_INDEX + ' ' + HISAT2_PARAMS +\
              ''' $(-p '''  + CPUS + '''$) '''
+
 if len(READS)>1:
     hisat2_cmd = hisat2_cmd + ''' -1 ${SOURCES[0].abspath} -2 ${SOURCES[1].abspath} '''
 else:
@@ -72,7 +73,8 @@ else:
 
 chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
-hisat2_targets = [os.path.join(Dir('.').abspath, hisat2_out_dir, f) for f in [SAMPLE + '_hisat2.bam', 
+hisat2_targets = [os.path.join(Dir('.').abspath, 
+                               hisat2_out_dir, f) for f in [SAMPLE + '_hisat2.bam', 
                                                             SAMPLE + '_hisat2.log']
                  ]
 
