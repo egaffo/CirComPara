@@ -190,9 +190,12 @@ segecirc_nodes = []
 find_circ_nodes = []
 ciri_nodes = []
 for sample in samples:
-    segecirc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*splicesites\.bed'))
-    find_circ_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*circ_candidates\.bed'))
-    ciri_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*_ciri\.out'))
+    segecirc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+                                             os.path.sep + 'splicesites\.bed'))
+    find_circ_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+                                              os.path.sep + 'circ_candidates\.bed'))
+    ciri_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+                                         os.path.sep + '.*_ciri\.out'))
 
 ## collect segecirc
 segecirc_files = ','.join([f.path for f in flatten(segecirc_nodes)])
