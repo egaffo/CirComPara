@@ -1,0 +1,138 @@
+'''
+This SConscript detects and annotates circular RNAs from RNA-seq data according to the
+CIRCExplorer [1] protocol.
+
+Software dependencies are inherited from the JUNK2-SConscripts used:
+* junk2_tophat
+
+When called from a SConscript it imports the following variables:
+* circexplorer_env
+* circexplorer_cpus
+* circexplorer_genome_index
+* circexplorer_genome_fasta
+* circexplorer_reads
+* circexplorer_annotation
+* gene_pred_annotation
+* circexplorer_aligner
+
+References:
+1. Zhang, X.-O., Wang, H.-B., Zhang, Y., Lu, X., Chen, L.-L., and Yang, L. (2014). Complementary Sequence-Mediated Exon Circularization. Cell 159, 134-147.
+
+'''
+
+import os 
+
+## SET SCRIPT NAMES. 
+junk2_tophat      = 'junk2_tophat'
+
+Import('*')
+
+try:
+    env          = circexplorer_env
+    CPUS         = circexplorer_cpus
+    GENOME_INDEX = circexplorer_genome_index
+    GENOME_FASTA = circexplorer_genome_fasta
+    ANNOTATION   = circexplorer_annotation
+    READS        = circexplorer_reads
+    GENEPRED     = gene_pred_annotation
+    ALIGNER      = circexplorer_aligner
+
+except NameError:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('ANNOTATION', 'Gene annotation (Ensembl GTF)', '')
+    vars.Add('GENEPRED', 'Gene annotation in GenePred format', 'ref.txt')
+    vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
+    vars.Add('GENOME_INDEX', '''The index of the reference genome for Bowtie1 or directory'''\
+             ''' where to find Star index''', '/path/to/index')
+    vars.Add('READS', 'RNA-seq reads. Comma separated list if paired-end', 'reads.fa')
+    vars.Add('ALIGNER', 'The aligner to use. CIRCexplorer v1.1.7 supports either Star or TopHat',\
+             'Star')
+
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+    CPUS         = env['CPUS']
+    GENOME_INDEX = env['GENOME_INDEX']
+    GENOME_FASTA = env['GENOME_FASTA']
+    ANNOTATION   = env['ANNOTATION']
+    GENEPRED     = env['GENEPRED']
+    READS        = env['READS'].split(',')
+    ALIGNER      = env['ALIGNER']
+    
+SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+## GET INPUT READ FILE FULL PATH
+raw_reads = [File(f) for f in READS]
+
+out_dir = 'CIRCexplorer'
+fusion_mappings_dir = out_dir #'CIRCexplorer_fusion_mappings'
+
+CIRCexplorer_sources = [File(GENOME_FASTA), File(GENEPRED)]
+
+if ALIGNER.lower() == 'tophat':
+
+    ## ALIGN WITH TOPHAT-FUSION OR TOPHAT2, WITH FUSION SEARCH ENABLED
+    tophat_cpus = CPUS
+    reads_to_map = raw_reads
+    tophat_index = GENOME_INDEX
+    ## set TopHat parameters to enable fusion search
+    tophat_extra_params = ''' --fusion-search -a 6 --microexon-search '''\
+                          '''-m 2 --bowtie1 --no-coverage-search --fusion-min-dist 500 '''
+    
+    tophat = env.SConscript(os.path.join(fusion_mappings_dir, 'junk2_tophat'),
+                              variant_dir = fusion_mappings_dir, src_dir = SRC_DIR,
+                              duplicate = 0, exports = '''env tophat_cpus reads_to_map '''\
+                                                       '''tophat_index tophat_extra_params''')
+    CIRCexplorer_aligner_param = ' -f '
+    CIRCexplorer_sources.append(tophat[0]) 
+
+elif ALIGNER.lower() == 'star':
+    ## ALIGN WITH STAR, WITH FUSION SEARCH ENABLED
+    star_env            = env
+    star_cpus           = CPUS
+    star_reads_to_map   = [File(f) for f in READS]
+    star_index          = GENOME_INDEX
+    star_annotation     = ANNOTATION
+    ## set Star parameters to enable fusion search
+    star_extra_params   = ''' --chimSegmentMin 20 --chimOutType WithinBAM '''
+    
+    star = env.SConscript(os.path.join(fusion_mappings_dir, 'junk2_star'),
+                              variant_dir = fusion_mappings_dir, src_dir = SRC_DIR,
+                              duplicate = 0, exports = '''star_env star_cpus '''\
+                                                       '''star_reads_to_map '''\
+                                                       '''star_index star_extra_params '''\
+                                                       '''star_annotation''')
+    
+    ## convert Chimeric.out.junction to fusion_junction.txt
+    star_parse_target = os.path.join(fusion_mappings_dir, 'fusion_junction.txt')
+    star_parse_cmd    = 'star_parse.py $SOURCE.abspath $TARGET.abspath'
+    star_parse        = env.Command(star_parse_target, 
+                                    star[1], ## star[1] is 'Chimeric.out.junction'
+                                    star_parse_cmd)
+    
+    CIRCexplorer_aligner_param = ' -j '
+    CIRCexplorer_sources.append(star_parse[0])
+
+chdir_working_cmd  = 'cd ' + os.path.join(Dir('.').abspath, out_dir)
+chdir_previous_cmd = 'cd ' + Dir('#').abspath
+   
+CIRCexplorer_cmd = 'CIRCexplorer.py -g ${SOURCES[0].abspath} -r ${SOURCES[1].abspath} ' +\
+                   CIRCexplorer_aligner_param + '${SOURCES[2].abspath}'
+CIRCexplorer_targets = os.path.join(out_dir, 'CIRCexplorer_circ.txt')
+CIRCexplorer = env.Command([CIRCexplorer_targets], 
+                           CIRCexplorer_sources, 
+                           ' && '.join([chdir_working_cmd, CIRCexplorer_cmd, chdir_previous_cmd])
+                          )
+
+Return('CIRCexplorer')
+
+#Clean('.', fusion_mappings_dir)
+Clean('.', out_dir)
+
