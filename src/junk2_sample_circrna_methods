@@ -8,6 +8,21 @@ Software dependencies are inherited from the JUNK2-SConscripts used:
  * junk2_findcirc
  * junk2_tophat
  * junk2_bamtofastq
+ * junk2_CIRCExplorer
+
+Imports:
+ * env
+ * sample_cpus
+ * sample_genome_fasta
+ * sample_annotation
+ * sample_raw_reads
+ * sample_segemehl_index
+ * ciri_bwa_index
+ * ciri_bwa_extra_parameters
+ * ciri_script
+ * bowtie2_index
+ * star_index
+ * gene_pred
 
 '''
 
@@ -33,26 +48,37 @@ try:
     CIRI         = ciri_script
 
     BOWTIE2_INDEX = bowtie2_index
-    #TODO
+
+    STAR_INDEX = star_index
+    GENEPRED   = gene_pred
+
+   #TODO
     PRE_FILTER  = False
 
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
     vars.Add('CPUS', 'Set number of CPUs', '4')
-    vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
+    vars.Add('ANNOTATION', 'Gene annotation (Ensembl GTF)', '')
     vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
     vars.Add('READS', 'RNA-seq reads. Comma separated list if paired-end', 'reads.fa')
-
+    ## parameters for Segemehl/testrealign
     vars.Add('SEGEMEHL_INDEX', '''The .idx index for segemehl''', 'genome.idx')
-
+    ## parameters for CIRI 
     vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','/path/to/bwa/index')
     vars.Add('BWA_PARAMS','Extra parameters for BWA','')
     vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
-
+    ## parameters for find_circ
     vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''', 
              '/path/to/bowtie2/index')
-    #TODO vars.Add('PRE_FILTER', 'Does a preliminary mapping of the reads have to be done?', False)
+    ## parameters for CIRCexplorer
+    vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', 
+             '/path/to/Star/index/dir')
+    vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
+
+    # TODO 
+    #vars.Add('PRE_FILTER', 'Does a preliminary mapping of the reads have to be done?', 
+    #                False)
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -66,14 +92,22 @@ except NameError:
     GENOME_FASTA = env['GENOME_FASTA']
     ANNOTATION = env['ANNOTATION']
     READS = env['READS'].split(',')
-
+    
+    ## parameters for Segemehl/testrealign
     SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
 
+    ## parameters for CIRI
     BWA_INDEX = env['BWA_INDEX']
     BWA_PARAMS = env['BWA_PARAMS']
     CIRI = env['CIRI']
-
+    
+    ## parameters for find_circ
     BOWTIE2_INDEX = env['BOWTIE2_INDEX']
+    
+    ## parameters for CIRCexplorer
+    STAR_INDEX = env['STAR_INDEX']
+    GENEPRED   = env['GENEPRED']
+
     #TODO
     PRE_FILTER = False
 
@@ -162,8 +196,29 @@ find_circ_sample  = sample_name
 find_circ = env.SConscript(os.path.join(build_dir, junk2_findcirc),
                            variant_dir = build_dir, src_dir = SRC_DIR, 
                            duplicate = 0, 
-                           exports = 'env find_circ_cpus find_circ_bt2_idx find_circ_reads find_circ_genome find_circ_sample')
+                           exports = '''env find_circ_cpus find_circ_bt2_idx find_circ_reads '''\
+                                     '''find_circ_genome find_circ_sample''')
 results.append(find_circ)
+
+## CIRCexplorer
+junk2_circexplorer  = 'junk2_CIRCExplorer'
+circexplorer_env    = env
+circexplorer_cpus   = CPUS
+circexplorer_reads  = raw_reads
+circexplorer_genome_index   = STAR_INDEX
+circexplorer_genome_fasta   = GENOME_FASTA
+circexplorer_annotation     = ANNOTATION
+gene_pred_annotation        = GENEPRED
+circexplorer_aligner        = 'Star'
+
+circexplorer = env.SConscript(os.path.join(build_dir, junk2_circexplorer),
+                              variant_dir = build_dir, src_dir = SRC_DIR,
+                              duplicate = 0,
+                              exports = '''circexplorer_env circexplorer_cpus '''\
+                                        '''circexplorer_reads circexplorer_genome_index '''\
+                                        '''circexplorer_genome_fasta circexplorer_annotation '''\
+                                        '''gene_pred_annotation circexplorer_aligner''')
+results.append(circexplorer)
 
 Clean('.', build_dir)
 Clean('.', unmapped_reads_dir)
