@@ -66,10 +66,13 @@ tophat_out_dir = 'tophat_out'
 chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, tophat_out_dir) 
 tophat_cmd = '''tophat -o . ''' + TOPHAT_PARAMS +\
              ''' $(-p '''  + CPUS + '''$) ''' + TOPHAT_INDEX
+
+READS = [File(f) for f in READS]
+
 if len(READS)>1:
-    tophat_cmd = tophat_cmd + ''' ${SOURCES[0]} ${SOURCES[1]} '''
+    tophat_cmd = tophat_cmd + ''' ${SOURCES[0].abspath} ${SOURCES[1].abspath} '''
 else:
-    tophat_cmd = tophat_cmd + ''' $SOURCE '''
+    tophat_cmd = tophat_cmd + ''' $SOURCE.abspath '''
 
 chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
