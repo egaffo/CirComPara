@@ -60,6 +60,9 @@ try:
     CIRI           = ciri
     BOWTIE2_INDEX  = bowtie2_index
 
+    STAR_INDEX = star_index
+    GENEPRED   = gene_pred
+
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
@@ -76,6 +79,10 @@ except NameError:
     vars.Add('BWA_PARAMS','Extra parameters for BWA','')
     vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
     vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','/path/to/index')
+
+    vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', 
+             '/path/to/Star/index/dir')
+    vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
    
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -98,6 +105,9 @@ except NameError:
     BWA_PARAMS     = env['BWA_PARAMS']
     CIRI           = env['CIRI']
     BOWTIE2_INDEX = env['BOWTIE2_INDEX']
+
+    STAR_INDEX = env['STAR_INDEX']
+    GENEPRED   = env['GENEPRED']
 
 
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
@@ -160,7 +170,8 @@ if sample_name=='.':
 hisat2_index = GENOME_INDEX
 #genome_fasta = GENOME_FASTA
 sample_id = sample_name
-hisat2_extra_params = ' --dta --dta-cufflinks --rg-id ' + sample_name + ' '
+hisat2_extra_params = ' --dta --dta-cufflinks --rg-id ' + sample_name +\
+                      ' --no-discordant --no-mixed --no-overlap '
 hisat2_cpus = CPUS
 reads_to_map = clean_reads
 mappings    = env.SConscript(os.path.join(build_dir, junk2_mapping), 
@@ -240,13 +251,16 @@ ciri_script               = CIRI
 
 bowtie2_index = BOWTIE2_INDEX
 
+star_index  = STAR_INDEX
+gene_pred   = GENEPRED
+
 circrnas = env.SConscript(os.path.join(build_dir, junk2_circrnas), 
                         src_dir = SRC_DIR, 
                         variant_dir = build_dir, duplicate = 0,
                         exports = '''env sample_cpus sample_genome_fasta '''
                         '''sample_annotation sample_raw_reads sample_segemehl_index '''
                         '''ciri_bwa_index ciri_bwa_extra_parameters '''
-                        '''ciri_script bowtie2_index''')
+                        '''ciri_script bowtie2_index star_index gene_pred''')
 results.append(circrnas)
 
 ## CLEAN COMMANDS
