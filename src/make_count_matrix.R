@@ -23,6 +23,10 @@ if(length(arguments$input)>0){
     raw.counts <- as.data.frame(counts(ddsHTSeq))
 
     write.csv(raw.counts, file = arguments$output)
+    
+    writeLines(capture.output(sessionInfo()), 
+               file.path(dirname(arguments$output), "make_count_matrix.sessionInfo"))
+    
 }else{
     cat("Please give a valid input table file\n")
     print_help(parser)

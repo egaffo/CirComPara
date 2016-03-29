@@ -45,6 +45,9 @@ if(length(arguments$input) > 0){
             reportDir = reportDirectory)
   finish(des2Report)
   
+  writeLines(capture.output(sessionInfo()), 
+             file.path(dirname(arguments$output), "DESeq2_diffexp.sessionInfo"))
+  
 }else{
   cat("Please give a valid input table file\n")
   print_help(parser)

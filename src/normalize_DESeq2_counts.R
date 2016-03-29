@@ -82,6 +82,9 @@ if(length(arguments$input)>0){
   print(pca.plot)
   dev.off()
   
+  writeLines(capture.output(sessionInfo()), 
+             file.path(dirname(arguments$output), "normalize_DESeq2_counts.sessionInfo"))
+  
 }else{
   cat("Please give a valid input table file\n")
   print_help(parser)
