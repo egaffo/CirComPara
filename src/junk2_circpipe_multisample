@@ -35,7 +35,10 @@ vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','/path/to/
 vars.Add('BWA_PARAMS','Extra parameters for BWA','')
 vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
 vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','/path/to/index')
-
+vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', 
+         '/path/to/Star/index/dir')
+vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
+ 
 env = Environment(ENV=os.environ,
                   variables=vars)
 Help(vars.GenerateHelpText(env))
@@ -56,6 +59,9 @@ BWA_INDEX      = env['BWA_INDEX']
 BWA_PARAMS     = env['BWA_PARAMS']
 CIRI           = env['CIRI']
 BOWTIE2_INDEX  = env['BOWTIE2_INDEX']
+    
+STAR_INDEX = env['STAR_INDEX']
+GENEPRED   = env['GENEPRED']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -89,6 +95,9 @@ for sample in sorted(samples.keys()):
     ciri                = CIRI          
     bowtie2_index       = BOWTIE2_INDEX 
 
+    star_index  = STAR_INDEX 
+    gene_pred   = GENEPRED
+
     sample_dir = os.path.join(samples_dir, sample)
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'), 
                             src_dir = SCONSCRIPT_HOME, 
@@ -97,7 +106,7 @@ for sample in sorted(samples.keys()):
                             '''sample_genome_fasta sample_preprocessor '''
                             '''sample_adapter_file sample_annotation '''
                             '''sample_raw_reads segemehl_index bwa_index bwa_params '''
-                            '''ciri bowtie2_index''')
+                            '''ciri bowtie2_index star_index gene_pred''')
     runs.append(run_sample)
 
 ## MERGE SAMPLE TRANSCRIPTOMES
@@ -189,6 +198,7 @@ samples = sorted(samples.keys())
 segecirc_nodes = [] 
 find_circ_nodes = []
 ciri_nodes = []
+CIRCexplorer_nodes = []
 for sample in samples:
     segecirc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                              os.path.sep + 'splicesites\.bed'))
@@ -196,6 +206,8 @@ for sample in samples:
                                               os.path.sep + 'circ_candidates\.bed'))
     ciri_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                          os.path.sep + '.*_ciri\.out'))
+    CIRCexplorer_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+                                                os.path.sep + '.*CIRCexplorer_circ\.txt'))
 
 ## collect segecirc
 segecirc_files = ','.join([f.path for f in flatten(segecirc_nodes)])
@@ -232,6 +244,19 @@ ciri_compared = env.Command(ciri_comapared_target,
                                 ciri_nodes, 
                                 ciri_comapared_cmd)
 Depends(ciri_compared, ciri_nodes)
+
+## collect CIRCexplorer
+CIRCexplorer_files = ','.join([f.path for f in flatten(CIRCexplorer_nodes)])
+CIRCexplorer_labels = ','.join(samples)
+CIRCexplorer_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                         '''CIRCexplorer_compare.R -l ''' + CIRCexplorer_labels +\
+                         ''' -i ''' + CIRCexplorer_files + ''' -o $TARGET''')
+CIRCexplorer_comapared_target = os.path.join(circRNA_collect_dir, 'CIRCexplorer_compared.csv')
+CIRCexplorer_compared = env.Command(CIRCexplorer_comapared_target, 
+                                CIRCexplorer_nodes, 
+                                CIRCexplorer_comapared_cmd)
+Depends(CIRCexplorer_compared, CIRCexplorer_nodes)
+
 
 ## CLEAN DIRS WHEN CLEANING TARGETS
 Clean('.', samples_dir)
