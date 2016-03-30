@@ -28,6 +28,9 @@ When called from a SConscript it imports the following variables:
  * bwa_params
  * ciri
  * bowtie2_index
+ * star_index
+ * gene_pred
+
 
 '''
 
