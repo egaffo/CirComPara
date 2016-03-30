@@ -69,7 +69,7 @@ hisat2_cmd = '''hisat2 -x ''' + HISAT2_INDEX + ' ' + HISAT2_PARAMS +\
 if len(READS)>1:
     hisat2_cmd = hisat2_cmd + ''' -1 ${SOURCES[0].abspath} -2 ${SOURCES[1].abspath} '''
 else:
-    hisat2_cmd = hisat2_cmd + ''' -U $SOURCE '''
+    hisat2_cmd = hisat2_cmd + ''' -U $SOURCE.abspath '''
 
 chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
