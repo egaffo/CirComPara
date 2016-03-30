@@ -22,15 +22,16 @@ import os, itertools
 Import('*')
 
 try:
-    env = env
-    CPUS = trimmomatic_cpus
-    ADAPTER_FILE = trimmomatic_adapter_file
-    TRIMMOMATIC_PARAMS = trimmomatic_extra_params
-    READS = trimmomatic_reads
+    env                 = env
+    CPUS                = trimmomatic_cpus
+    ADAPTER_FILE        = trimmomatic_adapter_file
+    TRIMMOMATIC_PARAMS  = trimmomatic_extra_params
+    READS               = trimmomatic_reads
 except NameError:
     vars = Variables('vars.py')
-    vars.Add('CPUS', 'Number of parallel jobs to execute', '4')
-    vars.Add('ADAPTER_FILE', 'The file with 3\' adapter. Leave empty if no adapter trimming needed', '')
+    vars.Add('CPUS', '''Number of parallel jobs to execute''', '4')
+    vars.Add('ADAPTER_FILE', 
+             '''The file with 3' adapter. Leave empty if no adapter trimming needed''', '')
     vars.Add('TRIMMOMATIC_PARAMS', 
              '''Trimmomatic parameters. Note that you must declare the steps to perform '''
              '''(e.g. in default value)''', 
@@ -38,8 +39,7 @@ except NameError:
     vars.Add('READS', '''Reads to process. Gzipped (.gz) files accepted.'''
                       ''' Comma separated list for paired-end''', 'reads.fa')
 
-    env = Environment(ENV=os.environ,
-                              variables=vars)
+    env = Environment(ENV=os.environ, variables=vars)
     
     Help(vars.GenerateHelpText(env))
     unknown = vars.UnknownVariables()
@@ -49,13 +49,12 @@ except NameError:
 
     # These are the variables given from the command line when the SConscript is called
     # standalone
-    CPUS = env['CPUS']
-    ADAPTER_FILE = env['ADAPTER_FILE']
-    TRIMMOMATIC_PARAMS = env['TRIMMOMATIC_PARAMS']
-    READS = env['READS'].split(',')
+    CPUS                = env['CPUS']
+    ADAPTER_FILE        = env['ADAPTER_FILE']
+    TRIMMOMATIC_PARAMS  = env['TRIMMOMATIC_PARAMS']
+    READS               = env['READS'].split(',')
 
 trimmomatic_dir = 'trimmomatic'
-make_trimmomatic_dir = env.Command(Dir(trimmomatic_dir), [], Mkdir('$TARGET'))
 
 if not ADAPTER_FILE.strip() == '':
     adapter_removal = ' ILLUMINACLIP:' + ADAPTER_FILE + ':2:30:10 '
@@ -87,11 +86,10 @@ else:
     read1_filebase = os.path.splitext(os.path.basename(reads[0].replace('.gz', '')))[0]
     targets = [os.path.join(trimmomatic_dir, '{}.fq.SE.fq.gz'.format(read1_filebase))]
     trimmomatic_cmd = 'java -jar ' + TRIMMOMATIC_JAR + ' SE $(-threads ' +\
-                      CPUS + '$) ${SOURCES[0]} '\
-                      '${TARGETS[0]} ' + \
+                      CPUS + '$) ${SOURCES[0]} ${TARGETS[0]} ' + \
                       adapter_removal + trimmomatic_steps
 
 clean_reads = env.Command(targets, reads, trimmomatic_cmd)
 
-Clean('.', make_trimmomatic_dir[0].path)
+Clean('.', trimmomatic_dir)
 Return('clean_reads')
