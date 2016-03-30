@@ -92,7 +92,10 @@ find_circ_cmd = 'samtools view $(-@ ' + CPUS + '$) -hbf 4 $SOURCE | unmapped2anc
                 ' bowtie2 --reorder --score-min=C,-15,0 -q -x ' +\
                 BOWTIE2_INDEX + ' -U - 2> ' + bt2_secondpass + ' | find_circ.py '+\
                 ' -G ' + GENOME_FASTA + ' -p ' + SAMPLE + '_ -s '+\
-                find_circ_log + ' > ${TARGETS[0]} 2> ${TARGETS[1]} && rm -rf ' + tmp_findcirc_dir
+                find_circ_log + ' > ${TARGETS[0]} 2> ${TARGETS[1]}'
+
+if not split_fasta_genome_cmd == '':
+    find_circ_cmd = find_circ_cmd + ' && rm -rf ' + tmp_findcirc_dir
 
 find_circ = env.Command([os.path.join(out_dir, 'sites.bed'), 
                          os.path.join(out_dir, 'sites.reads')], 
