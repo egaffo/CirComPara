@@ -43,6 +43,14 @@ vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','/
 vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', 
          '/path/to/Star/index/dir')
 vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
+vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner fixed '''\
+         '''parameters '--dta --dta-cufflinks --rg-id <SAMPLE> --no-discordant '''\
+         '''--no-mixed --no-overlap'. For instance, '--rna-strandness FR' if stranded reads'''\
+         ''' are used.''', '')
+vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
+        '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
+        '''for the sequencing''', '')
+
  
 env = Environment(ENV=os.environ,
                   variables=vars)
@@ -68,6 +76,9 @@ BOWTIE2_INDEX  = env['BOWTIE2_INDEX']
     
 STAR_INDEX = env['STAR_INDEX']
 GENEPRED   = env['GENEPRED']
+
+HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
+CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -105,6 +116,9 @@ for sample in sorted(samples.keys()):
     star_index  = STAR_INDEX 
     gene_pred   = GENEPRED
 
+    hisat2_extra_params = HISAT2_EXTRA_PARAMS 
+    cufflinks_params    = CUFFLINKS_PARAMS
+
     sample_dir = os.path.join(samples_dir, sample)
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'), 
                             src_dir = SCONSCRIPT_HOME, 
@@ -114,7 +128,8 @@ for sample in sorted(samples.keys()):
                             '''sample_preprocessor_params '''
                             '''sample_adapter_file sample_annotation '''
                             '''sample_raw_reads segemehl_index bwa_index bwa_params '''
-                            '''ciri bowtie2_index star_index gene_pred''')
+                            '''ciri bowtie2_index star_index gene_pred '''
+                            '''hisat2_extra_params cufflinks_params''')
     runs.append(run_sample)
 
 ## MERGE SAMPLE TRANSCRIPTOMES

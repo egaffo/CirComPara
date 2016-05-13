@@ -17,6 +17,7 @@ Variables to export when calling from a SConscript:
  * sample_name
  * cufflinks_annotation
  * cufflinks_cpus
+ * cufflinks_params
 
 '''
 import os
@@ -25,10 +26,11 @@ Import('*')
 
 try:
     env = env
-    mapfile = mapping_file
+    mapfile     = mapping_file
     mapfile_basename = sample_name
-    annotation = cufflinks_annotation
-    CPUS = cufflinks_cpus
+    annotation  = cufflinks_annotation
+    CPUS        = cufflinks_cpus
+    CUFFLINKS_PARAMS = cufflinks_params
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
@@ -36,6 +38,9 @@ except NameError:
     vars.Add('ANNOTATION', 'The GFF/GTF file with gene annotation (e.g. from Ensembl)', 'exons.gtf') 
     vars.Add('ALIGNMENTS', 'The read alignment file in SAM/BAM format', 'sample.bam')
     vars.Add('SAMPLE', 'The sample name', 'sample')
+    vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
+             '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
+             '''for the sequencing''', '')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -49,16 +54,20 @@ except NameError:
     mapfile = env['ALIGNMENTS']
     annotation = env['ANNOTATION']
     CPUS = env['CPUS']
+    CUFFLINKS_PARAMS = env['CUFFLINKS_PARAMS']
 
 if os.path.splitext(annotation)[1] == '.gz':
     annotation = env.Command(os.path.basename(os.path.splitext(annotation)[0]), 
                              annotation, 'zcat $SOURCE > $TARGET')
-cufflinks_cmd = "cufflinks -q --no-update-check $(-p " + CPUS +\
+
+cufflinks_cmd = "cufflinks -q --no-update-check " + CUFFLINKS_PARAMS + " $(-p " + CPUS +\
                 "$) --seed 0 -g ${SOURCES[1]} ${SOURCES[0]} -o " + Dir('.').path
+
 cufflinks_targets = ['transcripts.gtf', 
                      'isoforms.fpkm_tracking', 
                      'genes.fpkm_tracking', 
                      'skipped.gtf']
+
 cufflinks = env.Command(cufflinks_targets, [mapfile, annotation], cufflinks_cmd)
 
 Return('cufflinks')
