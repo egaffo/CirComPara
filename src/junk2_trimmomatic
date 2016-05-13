@@ -76,18 +76,20 @@ if len(reads)>1:
     targets = [os.path.join(trimmomatic_dir, '{}.fq.P.qtrim.gz'.format(read1_filebase)),
                os.path.join(trimmomatic_dir, '{}.fq.U.qtrim.gz'.format(read1_filebase)),
                os.path.join(trimmomatic_dir, '{}.fq.P.qtrim.gz'.format(read2_filebase)),
-               os.path.join(trimmomatic_dir, '{}.fq.U.qtrim.gz'.format(read2_filebase))]
+               os.path.join(trimmomatic_dir, '{}.fq.U.qtrim.gz'.format(read2_filebase)),
+               os.path.join(trimmomatic_dir, 'trimmomatic.log')]
     trimmomatic_cmd = 'java -jar ' + TRIMMOMATIC_JAR + ' PE $(-threads ' +\
                       CPUS + '$) ${SOURCES[0]} ${SOURCES[1]} '\
                       '${TARGETS[0]} ${TARGETS[1]} ${TARGETS[2]} ${TARGETS[3]} ' +\
-                      adapter_removal + trimmomatic_steps
+                      adapter_removal + trimmomatic_steps + ' 2> ${TARGETS[4]}'
 else:
     ## MANAGE SINGLE END READS
     read1_filebase = os.path.splitext(os.path.basename(reads[0].replace('.gz', '')))[0]
-    targets = [os.path.join(trimmomatic_dir, '{}.fq.SE.fq.gz'.format(read1_filebase))]
+    targets = [os.path.join(trimmomatic_dir, '{}.fq.SE.fq.gz'.format(read1_filebase)),
+               os.path.join(trimmomatic_dir, 'trimmomatic.log')]
     trimmomatic_cmd = 'java -jar ' + TRIMMOMATIC_JAR + ' SE $(-threads ' +\
                       CPUS + '$) ${SOURCES[0]} ${TARGETS[0]} ' + \
-                      adapter_removal + trimmomatic_steps
+                      adapter_removal + trimmomatic_steps + ' 2> ${TARGETS[1]}'
 
 clean_reads = env.Command(targets, reads, trimmomatic_cmd)
 
