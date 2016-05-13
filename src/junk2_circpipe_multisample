@@ -27,6 +27,11 @@ vars = Variables('vars.py')
 vars.Add('META', 'The metadata table file where you specify the project samples, etc.', 'meta.csv')
 vars.Add('CPUS', 'Set number of CPUs', '4')
 vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
+vars.Add('PREPROCESSOR_PARAMS', 
+        '''Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string '''\
+        '''defaults to '''\
+        '''MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ''', 
+        '')
 vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
 vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
 vars.Add('GENOME_INDEX', '''The index of the reference genome for HISAT2''', '/path/to/index')
@@ -52,6 +57,7 @@ CPUS         = env['CPUS']
 GENOME_INDEX = env['GENOME_INDEX']
 GENOME_FASTA = env['GENOME_FASTA']
 PREPROCESSOR = env['PREPROCESSOR']
+PREPROCESSOR_PARAMS = env['PREPROCESSOR_PARAMS']
 ANNOTATION   = env['ANNOTATION']
 
 SEGEMEHL_INDEX = env['SEGEMEHL_INDEX'] 
@@ -85,6 +91,7 @@ for sample in sorted(samples.keys()):
     sample_genome_index = GENOME_INDEX
     sample_genome_fasta = GENOME_FASTA
     sample_preprocessor = PREPROCESSOR
+    sample_preprocessor_params = PREPROCESSOR_PARAMS
     sample_adapter_file = adapters[sample]
     sample_annotation   = ANNOTATION
     sample_raw_reads    = samples[sample]
@@ -104,6 +111,7 @@ for sample in sorted(samples.keys()):
                             variant_dir = sample_dir, duplicate = 0,
                             exports = '''env sample_cpus sample_genome_index '''
                             '''sample_genome_fasta sample_preprocessor '''
+                            '''sample_preprocessor_params '''
                             '''sample_adapter_file sample_annotation '''
                             '''sample_raw_reads segemehl_index bwa_index bwa_params '''
                             '''ciri bowtie2_index star_index gene_pred''')
