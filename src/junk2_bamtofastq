@@ -57,21 +57,33 @@ except NameError:
 
 chdir_working_cmd = '''cd ''' + Dir('.').abspath
 chdir_parent_cmd  = '''cd ''' + Dir('#').abspath
-convert_cmd = '''samtools sort -n $(-l 0 -@ ''' + CPUS + ''' -O 'bam' -T ''' + ID +\
-              '''$) ${SOURCE.abspath} | bedtools bamtofastq -i - -fq ${TARGETS[0].filebase} '''
+#convert_cmd = '''samtools sort -n $(-l 0 -@ ''' + CPUS + ''' -O 'bam' -T ''' + ID +\
+#              '''$) ${SOURCE.abspath} | bedtools bamtofastq -i - -fq ${TARGETS[0].filebase} '''
 convert_targets = [ID + '_1.fq.gz']
 
+#if PAIRED.lower() in ['yes', 'y', '1', 'true', 't']:
+#    convert_cmd = convert_cmd + ''' -fq2 ${TARGETS[1].filebase}'''
+#    convert_targets.append(ID + '_2.fq.gz')
+#convert_cmd = convert_cmd + ''' && gzip ${TARGETS[0].filebase} ''' 
+#if PAIRED.lower() in ['yes', 'y', '1', 'true', 't']:
+#    convert_cmd = convert_cmd + '''&& gzip ${TARGETS[1].filebase}'''
+
+if env['SHELL'] == 'sh':
+    env['SHELL'] = env['ENV']['SHELL']
+
+convert_cmd = '''samtools sort -n $(-l 0 -@ ''' + CPUS + ''' -O 'bam' -T ''' + ID +\
+               '''$) ${SOURCE.abspath} | bedtools bamtofastq -i - -fq /dev/stdout '''
 if PAIRED.lower() in ['yes', 'y', '1', 'true', 't']:
-    convert_cmd = convert_cmd + ''' -fq2 ${TARGETS[1].filebase}'''
+    convert_cmd = convert_cmd + '''| paste - - - - - - - - | tee >(cut -f 1-4 | '''\
+                                '''tr '\\t' '\\n' | gzip -c > ${TARGETS[0].file} ) | '''\
+                                '''cut -f 5-8 | tr '\\t' '\\n' | gzip -c > ${TARGETS[1].file}'''
     convert_targets.append(ID + '_2.fq.gz')
-convert_cmd = convert_cmd + ''' && gzip ${TARGETS[0].filebase} ''' 
-if PAIRED.lower() in ['yes', 'y', '1', 'true', 't']:
-    convert_cmd = convert_cmd + '''&& gzip ${TARGETS[1].filebase}'''
+else:
+    convert_cmd = convert_cmd + ''' | gzip -c > ${TARGETS[0].file}'''
 
 convert = env.Command(convert_targets, BAM, ' && '.join([chdir_working_cmd, 
                                                          convert_cmd,
-                                                         chdir_parent_cmd]
-                                                       )
+                                                         chdir_parent_cmd])
                      )
 
 Return('convert')

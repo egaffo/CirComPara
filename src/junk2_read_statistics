@@ -3,9 +3,11 @@
 This is a SConscript script that performs various scripts to analyse FASTQ files.
 It relies on FASTX-Toolkit (http://hannonlab.cshl.edu/fastx_toolkit/) and custom
 R scripts.
+Moreover, it executes quality cehck with FASTQC
 
 Software dependencies:
  * FASTX-Toolkit v0.0.14
+ * FASTQC
  * JUNK2 custom R scripts
 
 When called from a SConscript it imports the following variables:
@@ -24,7 +26,8 @@ try:
     readset = read_statistics_readset
 except NameError:
     vars = Variables('vars.py')
-    vars.Add('READS', 'FASTQ read file to process, either in plain text or gzipped (.gz)', 'reads.fq')
+    vars.Add('READS', 'FASTQ read file to process, either in plain text or gzipped (.gz)', 
+             'reads.fq')
     
     env = Environment(ENV=os.environ,
                       variables=vars)
@@ -37,6 +40,8 @@ except NameError:
     # These are the variables given from the command line when the SConscript is called
     # standalone
     readset = env['READS']
+
+SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
 statistics_dir = 'fastx_stats'
 
@@ -69,10 +74,20 @@ length_plot = env.Command(os.path.join(statistics_dir, readset_basename + '.leng
 stats.append(length_plot)
 
 nucleotide_plot_cmd = 'fastx_stats_make_nucleotide_plot.R -i $SOURCE -o $TARGET'
-nucleotide_plot = env.Command(os.path.join(statistics_dir, readset_basename + '.nucleotide_plot.svg'),
+nucleotide_plot = env.Command(os.path.join(statistics_dir, 
+                                           readset_basename + '.nucleotide_plot.svg'),
                               fastx_quality_stats, nucleotide_plot_cmd)
 stats.append(nucleotide_plot)
 
 Clean('.', statistics_dir)
 
-Return('stats')
+## perform also FASTQC analyses
+fastqc_dir   = 'fastqc_stats'
+fastqc_readset = File(readset)
+junk2_fastqc = env.SConscript(os.path.join(fastqc_dir, 'junk2_fastqc'), 
+                              src_dir = SRC_DIR,
+                              variant_dir = fastqc_dir, duplicate = 0,
+                              exports = 'env fastqc_readset')
+Clean('.', fastqc_dir)
+
+Return('stats junk2_fastqc')

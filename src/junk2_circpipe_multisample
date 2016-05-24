@@ -52,7 +52,7 @@ vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
         '''for the sequencing''', '')
 
  
-env = Environment(ENV=os.environ,
+env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
 Help(vars.GenerateHelpText(env))
 unknown = vars.UnknownVariables()
@@ -132,6 +132,7 @@ for sample in sorted(samples.keys()):
                             '''hisat2_extra_params cufflinks_params''')
     runs.append(run_sample)
 
+
 ## MERGE SAMPLE TRANSCRIPTOMES
 def flatten(l):
     for el in l:
@@ -163,7 +164,8 @@ cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
 transcript_sequences_annotation = cuffmerge
 transcript_sequences_genome = GENOME_FASTA
 transcript_sequences_dir = 'transcript_sequences'
-transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 'junk2_transcript_fastas'), 
+transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
+                                               'junk2_transcript_fastas'), 
                                   src_dir = SCONSCRIPT_HOME,
                                   variant_dir = transcript_sequences_dir, duplicate = 0,
                                   exports = '''env transcript_sequences_annotation '''
@@ -206,11 +208,17 @@ deseq_annotation = cuffmerge
 deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
 metafile = File(META).abspath
 deseq_cpus = CPUS
+deseq_stranded = 'no'
+if 'fr-firststrand' in CUFFLINKS_PARAMS:
+    deseq_stranded = 'yes'
+else:
+    deseq_stranded = 'no'
 deseq_dir = 'deseq'
 deseq = SConscript(os.path.join(deseq_dir, 'junk2_DESeq'),
                    src_dir = SCONSCRIPT_HOME,
                    variant_dir = deseq_dir, duplicate = 0,
-                   exports = 'env deseq_annotation deseq_alignments metafile deseq_cpus')
+                   exports = '''env deseq_annotation deseq_alignments '''
+                             '''metafile deseq_cpus deseq_stranded ''')
 Depends(deseq, [cuffmerge, alignments])
 
 ## COLLECT CIRCRNA RESULTS
@@ -281,6 +289,17 @@ CIRCexplorer_compared = env.Command(CIRCexplorer_comapared_target,
 Depends(CIRCexplorer_compared, CIRCexplorer_nodes)
 
 
+## collect read processing statistics
+clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
+mapped_reads_linear_stats_files = get_matching_nodes(runs, 'processings.*_hisat2\.log')
+read_stats_collect_dir = 'read_stats_collect'
+reads_stats_collect_cmd = '''grep Input `find . -name "*trimmomatic.log"` > $TARGET;'''\
+                      '''grep .* `find . -name "*hisat2.log"` >> $TARGET'''
+reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_stats_collect.txt'), 
+                              [clean_reads_stats_files, mapped_reads_linear_stats_files],
+                              reads_stats_collect_cmd)
+
+
 ## CLEAN DIRS WHEN CLEANING TARGETS
 Clean('.', samples_dir)
 Clean('.', cuffmerge_dir)
@@ -289,3 +308,4 @@ Clean('.', cuffquant_dir)
 Clean('.', cuffdiff_dir)
 Clean('.', deseq_dir)
 Clean('.', circRNA_collect_dir)
+Clean('.', read_stats_collect_dir)

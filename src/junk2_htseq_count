@@ -18,6 +18,7 @@ Variables to export when calling from a SConscript:
  * sample_name
  * htseq_count_annotation
  * htseq_count_cpus
+ * htseq_count_stranded
 
 '''
 
@@ -27,17 +28,22 @@ Import('*')
 
 try:
     env = env
-    mapfile = mapping_file
+    mapfile          = mapping_file
     mapfile_basename = sample_name
-    annotation = htseq_count_annotation
-    CPUS = htseq_count_cpus
-except NameError:
+    annotation       = htseq_count_annotation
+    CPUS             = htseq_count_cpus
+    STRANDED         = htseq_count_stranded
+except NameError as ne:
+    print 'junk2_htseq_count: cannot import', ne, '. Assume command line script call.'
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
     vars.Add('CPUS', 'Set number of CPUs', '4')
-    vars.Add('ANNOTATION', 'The GFF/GTF file with gene annotation (e.g. from Ensembl)', 'exons.gtf') 
+    vars.Add('ANNOTATION', 'The GFF/GTF file with gene annotation (e.g. from Ensembl)', 
+             'exons.gtf') 
     vars.Add('ALIGNMENTS', 'The read alignment file in SAM/BAM format', 'sample.bam')
     vars.Add('SAMPLE', 'The sample name', 'sample')
+    vars.Add('STRANDED', '''Tells whether strand orientation should be considedred in '''\
+             '''expression read count. ['no', 'yes'] ''', 'no')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -48,9 +54,15 @@ except NameError:
         Exit(1)
 
     mapfile_basename = env['SAMPLE']
-    mapfile = env['ALIGNMENTS']
-    annotation = env['ANNOTATION']
-    CPUS = env['CPUS']
+    mapfile          = env['ALIGNMENTS']
+    annotation       = env['ANNOTATION']
+    CPUS             = env['CPUS']
+    STRANDED         = env['STRANDED']
+
+if STRANDED.lower() not in ['yes', 'no']:
+    print "WARNING: unrecognized option \'" + STRANDED + "\' for htseq-count strand parameter."\
+          "Use either \'yes\' or \'no\'. Will continue setting \'no\'"
+    STRANDED = 'no'
 
 ## SORT SAM/BAM AND PIPE TO HTSEQ-COUNT
 ## WE PREFER TO SORT BY READ NAME TO REDUCE THE BUFFER USED BY HTSEQ-COUNT (RIGTH?)
@@ -61,7 +73,7 @@ except NameError:
 htseq_count_cmd = "samtools sort -n $(-@{}$) ".format(CPUS) + \
                   "-O 'sam' -T $({}$) ".format(mapfile_basename) + \
                   "${SOURCES[0]} |"\
-                  "htseq-count -f sam -r name -s no - ${SOURCES[1]} > $TARGET"
+                  "htseq-count -f sam -r name -s " + STRANDED + " - ${SOURCES[1]} > $TARGET"
 
 htseq_count = env.Command(["{}.htseq_count.txt".format(mapfile_basename)], 
                            [mapfile, annotation], 
