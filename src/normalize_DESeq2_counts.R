@@ -45,6 +45,7 @@ if(length(arguments$input)>0){
   ## compute PC variance explained % and plot
   percentVar.df <- data.frame(PCs = paste0("PC", 1:length(percentVar)), 
                               Variation_percentage = percentVar*100)
+  percentVar.df$PCs <- factor(percentVar.df$PCs, levels = percentVar.df$PCs, ordered = T)
   pc.var.explained.plot <- ggplot(data = percentVar.df, aes(x = PCs, y = Variation_percentage)) + 
     geom_bar(stat = "identity") + 
     geom_text(aes(label = round(Variation_percentage, 2)), vjust = -.5) + 
