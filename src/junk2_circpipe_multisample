@@ -226,10 +226,11 @@ circRNA_collect_dir = 'circRNA_collection'
 
 samples = sorted(samples.keys())
 
-segecirc_nodes = [] 
-find_circ_nodes = []
-ciri_nodes = []
+segecirc_nodes     = [] 
+find_circ_nodes    = []
+ciri_nodes         = []
 CIRCexplorer_nodes = []
+
 for sample in samples:
     segecirc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                              os.path.sep + 'splicesites\.bed'))
@@ -287,6 +288,28 @@ CIRCexplorer_compared = env.Command(CIRCexplorer_comapared_target,
                                 CIRCexplorer_nodes, 
                                 CIRCexplorer_comapared_cmd)
 Depends(CIRCexplorer_compared, CIRCexplorer_nodes)
+
+##COLLECT CIRCRNA ALIGNMENT NUMBER
+# segecirc mapped reads
+segecirc_mappings_pattern = '.*segemehl_mapped_reads_count\.txt'
+# find_circ mapped reads
+find_circ_mappings_pattern = '.*find_circ_mapped_reads_count\.txt'
+# CIRI mapped reads
+CIRI_mappings_pattern = '.*CIRI_mapped_reads_count\.txt'
+# CIRCexplorer mapped reads
+CIRCexplorer_mappings_pattern = '.*CIRCExplorer_mapped_reads_count\.txt'
+
+segecirc_mappings     = get_matching_nodes(runs, segecirc_mappings_pattern)
+find_circ_mappings    = get_matching_nodes(runs, find_circ_mappings_pattern)
+ciri_mappings         = get_matching_nodes(runs, CIRI_mappings_pattern)
+CIRCexplorer_mappings = get_matching_nodes(runs, CIRCexplorer_mappings_pattern)
+
+collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
+collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir, 
+                                                       'circrna_maps_counts.txt'), 
+                                          [segecirc_mappings, find_circ_mappings, 
+                                          ciri_mappings, CIRCexplorer_mappings], 
+                                          collect_circrna_maps_counts_cmd)
 
 
 ## collect read processing statistics

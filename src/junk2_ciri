@@ -120,4 +120,12 @@ ciri = env.Command([bwa_target, ciri_target],
 ## Clean log files, etc.
 Clean(ciri, [ciri_target + '.log', os.path.join(Dir('.').abspath, 'CIRIerror.log')])
 
-Return('ciri')
+## COUNT AND REPORT MAPPED READS
+mappings_file = ciri[0]
+mapped_reads_target = os.path.join(out_dir, 'CIRI_mapped_reads_count.txt')
+mapped_reads_cmd    = '''zcat ${SOURCE} | samtools view -F 4 - '''\
+                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
+mapped_reads        = env.Command(mapped_reads_target, mappings_file, mapped_reads_cmd)
+
+
+Return('ciri mapped_reads')

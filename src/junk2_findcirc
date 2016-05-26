@@ -114,4 +114,11 @@ filter_circ = env.Command([os.path.join(out_dir, 'circ_candidates.bed')],
 Clean(find_circ, [find_circ_log, bt2_firstpass, bt2_secondpass])
 Clean('.', out_dir)
 
-Return('find_circ filter_circ')
+##
+mappings_file = map_reads[0]
+mapped_reads_target = os.path.join(out_dir, 'find_circ_mapped_reads_count.txt')
+mapped_reads_cmd    = '''samtools view -F 4 ${SOURCE} '''\
+                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
+mapped_reads        = env.Command(mapped_reads_target, mappings_file, mapped_reads_cmd)
+
+Return('find_circ filter_circ mapped_reads')

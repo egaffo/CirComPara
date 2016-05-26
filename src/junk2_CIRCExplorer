@@ -131,7 +131,14 @@ CIRCexplorer = env.Command([CIRCexplorer_targets],
                            ' && '.join([chdir_working_cmd, CIRCexplorer_cmd, chdir_previous_cmd])
                           )
 
-Return('CIRCexplorer')
+## COUNT AND REPORT MAPPED READS
+mappings_file = star[0] if ALIGNER.lower() == 'star' else tophat[0]
+mapped_reads_target = os.path.join(fusion_mappings_dir, 'CIRCExplorer_mapped_reads_count.txt')
+mapped_reads_cmd    = '''samtools view -F 4 ${SOURCE} '''\
+                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
+mapped_reads        = env.Command(mapped_reads_target, mappings_file, mapped_reads_cmd)
+
+Return('CIRCexplorer mapped_reads')
 
 #Clean('.', fusion_mappings_dir)
 Clean('.', out_dir)

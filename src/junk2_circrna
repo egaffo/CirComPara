@@ -71,4 +71,10 @@ extract_circular_cmd = "grep ':C:' ${SOURCES[0]} | cut -f 4 | cut -f 2 -d: |"\
 extract_circular = env.Command(["{}_circular.junction.stats.txt".format(mapfile_basename)], 
                                 [collect_splice], extract_circular_cmd)
 
-Return('sort_alignments', 'collect_splice', 'extract_circular')
+## COUNT AND REPORT MAPPED READS
+mapped_reads_target = 'segemehl_mapped_reads_count.txt'
+mapped_reads_cmd    = '''zcat ${SOURCE} | samtools view -F 4 - '''\
+                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
+mapped_reads        = env.Command(mapped_reads_target, sort_alignments, mapped_reads_cmd) 
+
+Return('sort_alignments', 'collect_splice', 'extract_circular', 'mapped_reads')
