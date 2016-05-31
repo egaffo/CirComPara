@@ -75,8 +75,10 @@ convert_cmd = '''samtools sort -n $(-l 0 -@ ''' + CPUS + ''' -O 'bam' -T ''' + I
                '''$) ${SOURCE.abspath} | bedtools bamtofastq -i - -fq /dev/stdout '''
 if PAIRED.lower() in ['yes', 'y', '1', 'true', 't']:
     convert_cmd = convert_cmd + '''| paste - - - - - - - - | tee >(cut -f 1-4 | '''\
+                                '''sed "s@\(.*\)[\./][12]\\t@\\1\\t@"| '''\
                                 '''tr '\\t' '\\n' | gzip -c > ${TARGETS[0].file} ) | '''\
-                                '''cut -f 5-8 | tr '\\t' '\\n' | gzip -c > ${TARGETS[1].file}'''
+                                '''cut -f 5-8 | sed "s@\(.*\)[\./][12]\\t@\\1\\t@" | '''\
+                                '''tr '\\t' '\\n' | gzip -c > ${TARGETS[1].file}'''
     convert_targets.append(ID + '_2.fq.gz')
 else:
     convert_cmd = convert_cmd + ''' | gzip -c > ${TARGETS[0].file}'''
