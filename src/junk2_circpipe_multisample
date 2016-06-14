@@ -323,6 +323,18 @@ reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_sta
                               reads_stats_collect_cmd)
 
 
+## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
+qre_dir = 'qre'
+qre_GTF = cuffmerge
+qre_GENOME = GENOME_FASTA
+qre = SConscript(os.path.join(qre_dir, 'junk2_QRE_finder'),
+                 src_dir = SCONSCRIPT_HOME,
+                 variant_dir = qre_dir, duplicate = 0,
+                 exports = '''env qre_GTF qre_GENOME''')
+
+Depends(qre, [cuffmerge, alignments])
+
+
 ## CLEAN DIRS WHEN CLEANING TARGETS
 Clean('.', samples_dir)
 Clean('.', cuffmerge_dir)
@@ -332,3 +344,4 @@ Clean('.', cuffdiff_dir)
 Clean('.', deseq_dir)
 Clean('.', circRNA_collect_dir)
 Clean('.', read_stats_collect_dir)
+Clean('.', qre_dir)
