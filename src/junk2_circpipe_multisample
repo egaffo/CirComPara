@@ -311,6 +311,21 @@ collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir,
                                           ciri_mappings, CIRCexplorer_mappings], 
                                           collect_circrna_maps_counts_cmd)
 
+## ANALYZE COLLECTED CIRCRNA RESULTS
+circrna_analyze_dir = circRNA_collect_dir
+circrna_analyze_circexplorer = CIRCexplorer_compared
+circrna_analyze_ciri         = ciri_compared
+circrna_analyze_findcirc     = find_circ_compared
+circrna_analyze_segecirc     = segecirc_compared
+circrna_analyze_GTF          = cuffmerge
+circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 'junk2_circrna_collect_analyze'), 
+                            src_dir = SCONSCRIPT_HOME, 
+                            variant_dir = circrna_analyze_dir, duplicate = 0,
+                            exports = '''env circrna_analyze_circexplorer '''
+                                      '''circrna_analyze_ciri circrna_analyze_findcirc '''
+                                      '''circrna_analyze_segecirc circrna_analyze_GTF''')
+Depends(circrna_analyze, [cuffmerge, CIRCexplorer_compared, ciri_compared, 
+                          find_circ_compared, segecirc_compared])
 
 ## collect read processing statistics
 clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
