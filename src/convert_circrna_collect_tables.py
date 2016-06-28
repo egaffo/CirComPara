@@ -10,7 +10,7 @@ def format_gtf_line(chrom, source, feature, start, end, score, strand, frame,
     return line
 
 def format_circexplorer(line, outformat):
-    fields = line.rstrip().replace('"', '').split(',')
+    fields = line 
     if outformat == 'gtf':
         gene_id = fields[1] + ':' + fields[2] + '-' + fields[3] + ':' + fields[6]
         sample = fields[0]
@@ -29,7 +29,7 @@ def format_circexplorer(line, outformat):
     return outline
 
 def format_ciri(line, outformat):
-    fields = line.rstrip().replace('"', '').split(',')
+    fields = line
     if outformat == 'gtf':
         gene_id = fields[2] + ':' + fields[3] + '-' + fields[4] + ':' + fields[11]
         sample = fields[0]
@@ -48,7 +48,7 @@ def format_ciri(line, outformat):
     return outline
 
 def format_findcirc(line, outformat):
-    fields = line.rstrip().replace('"', '').split(',')
+    fields = line
     if outformat == 'gtf':
         gene_id = fields[1] + ':' + fields[2] + '-' + fields[3] + ':' + fields[6]
         sample = fields[0]
@@ -68,7 +68,7 @@ def format_findcirc(line, outformat):
     return outline
 
 def format_segecirc(line, outformat):
-    fields = line.rstrip().replace('"', '').split(',')
+    fields = line
     if outformat == 'gtf':
         gene_id = fields[1] + ':' + fields[2] + '-' + fields[3] + ':' + fields[5]
         sample = fields[0]
@@ -110,7 +110,8 @@ if __name__ == '__main__':
     
     next(f) # skip header line
 
-    for line in f:
+    linefields = csv.reader(f, delimiter=',', quotechar='"')
+    for line in linefields:
   
         outline = ''
         
@@ -124,5 +125,4 @@ if __name__ == '__main__':
             outline = format_segecirc(line, args.outformat)
 
         print outline
-
 
