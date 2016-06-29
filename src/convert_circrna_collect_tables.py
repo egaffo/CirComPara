@@ -13,13 +13,13 @@ def format_circexplorer(line, outformat):
     fields = line 
     if outformat == 'gtf':
         sample = fields[0]
-        transcript_id = gene_id + '.' + sample
         chrom   = fields[1]
         start   = str(int(fields[2]) + 1) # CIRCexplorer gives BED12 coordinates
         end     = fields[3]
         strand  = fields[6]
         score   = fields[13]
         gene_id = chrom + ':' + start + '-' + end + ':' + strand
+        transcript_id = gene_id + '.' + sample
         
         outline = format_gtf_line(chrom, 'circexplorer', 'backsplice', 
                                   start, end, score, strand, '.', 
@@ -32,13 +32,13 @@ def format_ciri(line, outformat):
     fields = line
     if outformat == 'gtf':
         sample = fields[0]
-        transcript_id = gene_id + '.' + sample
         chrom   = fields[2]
         start   = fields[3] # CIRI gives GFF coordinates
         end     = fields[4]
         strand  = fields[11]
         score   = fields[5]
         gene_id = chrom + ':' + start + '-' + end + ':' + strand
+        transcript_id = gene_id + '.' + sample
         
         outline = format_gtf_line(chrom, 'ciri', 'backsplice', 
                                   start, end, score, strand, '.', 
@@ -51,13 +51,13 @@ def format_findcirc(line, outformat):
     fields = line
     if outformat == 'gtf':
         sample = fields[0]
-        transcript_id = gene_id + '.' + sample
         chrom   = fields[1]
         start   = str(int(fields[2]) + 1) # findcirc gives BED coordinates
         end     = fields[3]
         strand  = fields[6]
         score   = fields[5]
         gene_id = chrom + ':' + start + '-' + end + ':' + strand
+        transcript_id = gene_id + '.' + sample
         
         outline = format_gtf_line(chrom, 'findcirc', 'backsplice', 
                                   start, end, score, strand, '.', 
@@ -71,13 +71,13 @@ def format_segecirc(line, outformat):
     fields = line
     if outformat == 'gtf':
         sample = fields[0]
-        transcript_id = gene_id + '.' + sample
         chrom   = fields[1]
         start   = str(int(fields[2]) + 1) # segecirc gives BED coordinates
         end     = fields[3]
         strand  = fields[5]
         score   = fields[6]
         gene_id = chrom + ':' + start + '-' + end + ':' + strand
+        transcript_id = gene_id + '.' + sample
         
         outline = format_gtf_line(chrom, 'segecirc', 'backsplice', 
                                   start, end, score, strand, '.', 
