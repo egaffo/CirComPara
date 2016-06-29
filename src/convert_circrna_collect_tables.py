@@ -12,7 +12,6 @@ def format_gtf_line(chrom, source, feature, start, end, score, strand, frame,
 def format_circexplorer(line, outformat):
     fields = line 
     if outformat == 'gtf':
-        gene_id = fields[1] + ':' + fields[2] + '-' + fields[3] + ':' + fields[6]
         sample = fields[0]
         transcript_id = gene_id + '.' + sample
         chrom   = fields[1]
@@ -20,6 +19,7 @@ def format_circexplorer(line, outformat):
         end     = fields[3]
         strand  = fields[6]
         score   = fields[13]
+        gene_id = chrom + ':' + start + '-' + end + ':' + strand
         
         outline = format_gtf_line(chrom, 'circexplorer', 'backsplice', 
                                   start, end, score, strand, '.', 
@@ -31,7 +31,6 @@ def format_circexplorer(line, outformat):
 def format_ciri(line, outformat):
     fields = line
     if outformat == 'gtf':
-        gene_id = fields[2] + ':' + fields[3] + '-' + fields[4] + ':' + fields[11]
         sample = fields[0]
         transcript_id = gene_id + '.' + sample
         chrom   = fields[2]
@@ -39,6 +38,7 @@ def format_ciri(line, outformat):
         end     = fields[4]
         strand  = fields[11]
         score   = fields[5]
+        gene_id = chrom + ':' + start + '-' + end + ':' + strand
         
         outline = format_gtf_line(chrom, 'ciri', 'backsplice', 
                                   start, end, score, strand, '.', 
@@ -50,7 +50,6 @@ def format_ciri(line, outformat):
 def format_findcirc(line, outformat):
     fields = line
     if outformat == 'gtf':
-        gene_id = fields[1] + ':' + fields[2] + '-' + fields[3] + ':' + fields[6]
         sample = fields[0]
         transcript_id = gene_id + '.' + sample
         chrom   = fields[1]
@@ -58,6 +57,7 @@ def format_findcirc(line, outformat):
         end     = fields[3]
         strand  = fields[6]
         score   = fields[5]
+        gene_id = chrom + ':' + start + '-' + end + ':' + strand
         
         outline = format_gtf_line(chrom, 'findcirc', 'backsplice', 
                                   start, end, score, strand, '.', 
@@ -70,7 +70,6 @@ def format_findcirc(line, outformat):
 def format_segecirc(line, outformat):
     fields = line
     if outformat == 'gtf':
-        gene_id = fields[1] + ':' + fields[2] + '-' + fields[3] + ':' + fields[5]
         sample = fields[0]
         transcript_id = gene_id + '.' + sample
         chrom   = fields[1]
@@ -78,6 +77,7 @@ def format_segecirc(line, outformat):
         end     = fields[3]
         strand  = fields[5]
         score   = fields[6]
+        gene_id = chrom + ':' + start + '-' + end + ':' + strand
         
         outline = format_gtf_line(chrom, 'segecirc', 'backsplice', 
                                   start, end, score, strand, '.', 
