@@ -1,0 +1,185 @@
+'''
+This SConscript performs differential expression analysis by means of 
+DESeq [1]
+
+[1]
+
+Software dependencies:
+ * 
+
+Variables and functions required to export when calling from a SConscript:
+ * metafile
+ * deseq_alignments
+ * deseq_annotation
+ * deseq_cpus
+ * deseq_stranded
+
+'''
+
+import os, itertools, collections, re, csv
+from collections import defaultdict
+
+Import('*')
+
+## AUXILIARY FUNCTIONS
+
+def flatten(l):
+    for el in l:
+        if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
+            for sub in flatten(el):
+                yield sub
+        else:
+            yield el
+
+def get_matching_nodes(nodelist, rexpression):
+    files = []
+    for node in flatten(nodelist):
+        if re.match(rexpression, node.path):
+            files.append(node)
+    return files
+
+def get_node_sample(node, samples):
+    s = None
+    for sample in samples:
+        if re.match('.*'+sample+'.*', node.path):
+            s = sample
+            break
+    return s
+
+def get_node_condition(node, conditions):
+    condition = None
+    for c,samples in conditions.iteritems():
+        s = get_node_sample(node, samples)
+        if s:
+            condition = c
+            break
+    return condition
+
+try:
+    env = env
+    CPUS        = deseq_cpus
+    META        = metafile
+    ANNOTATION  = deseq_annotation
+    QUANTITIES  = deseq_alignments
+    STRANDED    = deseq_stranded
+
+except NameError as ne:
+    print 'junk2_DESeq: cannot import', ne, '. Assume command line script call.'
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('QUANTITIES', 'Comma separated list of alignment files (SAM/BAM)', 
+             'cond1_1.bam,cond1_2.bam,cond2_1.bam,cond2_2.bam') 
+    vars.Add('ANNOTATION', 'Gene annotation (a.i. an Ensembl GFF)', 'merged.gtf')
+    vars.Add('META', '''Conditions to test differential expression in a comma separated '''\
+             '''values (CSV) table. Required colums are 'sample','condition','file' ''', 
+             'meta.csv')
+    vars.Add('STRANDED', '''Tells whether strand orientation should be considedred in '''\
+             '''expression read count. ['no', 'fr-firststrand'] ''', 'no')
+
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+    CPUS       = env['CPUS']
+    QUANTITIES = env['QUANTITIES'].split(',')
+    ANNOTATION = env['ANNOTATION']
+    META       = env['META']
+    STRANDED   = env['STRANDED']
+
+SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
+htseq_count_annotation = ANNOTATION
+htseq_counts_dir = 'htseq_counts'
+htseq_counts = []
+for algn in QUANTITIES:
+    ## GET SAMPLE NAME
+    #sample_name = os.path.splitext(os.path.basename(File(algn).path))[0]
+    sample_name = os.path.splitext(File(algn).name)[0]
+    mapping_file = algn
+    htseq_count_cpus = CPUS
+    htseq_count_stranded = STRANDED
+    ## GET READ COUNTS
+    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'junk2_htseq_count'), 
+                             src_dir = SCONSCRIPT_HOME, 
+                             variant_dir = htseq_counts_dir, duplicate = 0, 
+                             exports = '''env mapping_file sample_name '''
+                                       '''htseq_count_annotation htseq_count_cpus '''
+                                       '''htseq_count_stranded ''')
+    htseq_counts.append(htseq_count)
+
+
+## Define an action to write a DESeq friendly sample count table
+def writeDESeqSampleTable(target, source, env):
+    ''' Generate a DESeq friendly sample count table. 
+    :param source: the project metafile, followed by the read count files computed by 
+    htseq-count.
+    :param target: name of the table file to be written.'''
+    
+    samples     = defaultdict(list)
+    conditions  = defaultdict(set)
+    with open(source[0].abspath, 'r') as metafile:
+        reader = csv.DictReader(metafile)
+        for row in reader:
+            samples[row['sample']].append(os.path.abspath(row['file']))
+            conditions[row['condition']].add(row['sample'])
+
+    with open(target[0].path, 'w') as csvfile:
+        headers = ['sampleName', 'fileName', 'condition']
+        writer = csv.DictWriter(csvfile, fieldnames=headers)
+        writer.writeheader()
+        for hc in source[1:len(source)]:
+            writer.writerow({'sampleName': get_node_sample(hc, samples),
+                             'fileName': hc.abspath, 
+                             'condition': get_node_condition(hc, conditions)})
+    return None
+
+## Define a Builder for the writeDESeqSampleTable action
+MakeDESeqSampleTable = Builder(action = writeDESeqSampleTable, suffix = '.csv')
+
+### WRITE "SAMPLE TABLE" FOR DESEQ
+env = Environment(BUILDERS = {'MakeDESeqSampleTable' : MakeDESeqSampleTable})
+deseq_sample_table = env.MakeDESeqSampleTable('deseq_sample_table', [META, htseq_counts])
+
+
+## MAKE RAW COUNT MATRIX
+raw_count_matrix_file = 'htseq_raw_counts.csv'
+raw_count_matrix_cmd = os.path.join(SCONSCRIPT_HOME, 
+                                    'make_count_matrix.R -i ${SOURCE} -o $TARGET')
+raw_count_matrix = env.Command(raw_count_matrix_file, deseq_sample_table, raw_count_matrix_cmd)
+
+## MAKE NORMALISED COUNT MATRIX
+norm_count_matrix_file = 'DESeq2_norm_counts.csv'
+norm_count_matrix_plots_dir = 'plots'
+norm_count_matrix_cmd = os.path.join(SCONSCRIPT_HOME, 
+                                    '''normalize_DESeq2_counts.R -i ${SOURCES[0]} '''
+                                    '''-o ${TARGETS[0]} -s ${SOURCES[1]} -d ${TARGETS[1].dir}''')
+norm_count_matrix = env.Command([norm_count_matrix_file, 
+                                os.path.join(norm_count_matrix_plots_dir, 
+                                             'pc_variation_plot.svg')], 
+                                [raw_count_matrix, deseq_sample_table],
+                                norm_count_matrix_cmd)
+
+## RUN DESEQ
+deTests_file = 'DESeq2_diff.csv'
+deTests_report_dir = 'DESeq2_HTMLReport'
+deTests_report_file = os.path.join(deTests_report_dir, 'RNAseq_analysis_with_DESeq2.html')
+deTests_cmd = os.path.join(SCONSCRIPT_HOME, 
+                           '''DESeq2_diffexp.R -i ${SOURCES[0]} -o ${TARGETS[0]} '''
+                           '''-s ${SOURCES[1]} -d ${TARGETS[1].dir}''')
+deTests = env.Command([deTests_file, deTests_report_file], 
+                      [raw_count_matrix, deseq_sample_table], 
+                      deTests_cmd)
+
+Clean('.', deseq_sample_table)
+Clean('.', raw_count_matrix)
+Clean('.', norm_count_matrix)
+Clean('.', deTests_file)
+Clean('.', deTests_report_dir)
+
+Return('htseq_counts raw_count_matrix norm_count_matrix deTests')

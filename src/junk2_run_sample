@@ -1,0 +1,146 @@
+'''
+This SConscript performs several analyses on a RNA-seq sample.
+It composes a pipeline that gives statistics on the raw data and
+also processes the raw reads to map them on a reference genome, 
+estimates gene/trnascript expression, etc.
+
+Software dependencies are inherited from the JUNK2-SConscripts used:
+ * junk2_read_statistics
+ * junk2_preprocess
+ * junk2_mapping
+ * junk2_expression
+
+'''
+
+import os, itertools
+
+## SET (DISPATCHER) SCRIPT NAMES. THESE ARE THE MAIN PIPELINE STEPS, EACH OF THEM MIGHT FIRE
+## DIFFERENT ACTIONS/SCONSCRIPTS
+junk2_read_statistics = 'junk2_read_statistics'
+junk2_preprocess      = 'junk2_preprocess'
+junk2_mapping         = 'junk2_mapping'
+junk2_expression      = 'junk2_expression'
+
+Import('*')
+
+try:
+    env = env
+    CPUS         = sample_cpus
+    GENOME_INDEX = sample_genome_index
+    GENOME_FASTA = sample_genome_fasta
+    PREPROCESSOR = sample_preprocessor
+    ADAPTER_FILE = sample_adapter_file
+    MAPPER       = sample_mapper
+    ANNOTATION   = sample_annotation
+    READS        = sample_raw_reads
+
+except NameError:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('MAPPER', 'The aligner to map reads to the genome', 'segemehl') 
+    vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
+    vars.Add('ADAPTER_FILE', 'FASTA file full path of the adapter sequence', '')
+    vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
+    vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
+    vars.Add('GENOME_INDEX', '''The index of the reference genome. Depends on the mapper used; '''
+                             '''e.g. genome.idx if using segemehl''', 'genome.idx')
+    vars.Add('READS', 'RNA-seq reads. Comma separated list if paired-end', 'reads.fa')
+    
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+    CPUS = env['CPUS']
+    GENOME_INDEX = env['GENOME_INDEX']
+    GENOME_FASTA = env['GENOME_FASTA']
+    PREPROCESSOR = env['PREPROCESSOR']
+    ADAPTER_FILE = env['ADAPTER_FILE']
+    MAPPER = env['MAPPER']
+    ANNOTATION = env['ANNOTATION']
+    READS = env['READS'].split(',')
+
+SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+results = []
+
+## GET INPUT READ FILE FULL PATH
+raw_reads = [File(f).abspath for f in READS]
+
+## COMPUTE STATISTICS ON RAW READS
+read_statistics_dir = 'read_statistics'
+raw_read_stats = []
+for readset in raw_reads:
+    read_statistics_readset = readset
+    stat = SConscript(os.path.join(read_statistics_dir, junk2_read_statistics), 
+                      src_dir=SRC_DIR, variant_dir=read_statistics_dir, duplicate=0,
+                      exports='env read_statistics_readset')
+    raw_read_stats.append(stat)
+
+results.append(raw_read_stats)
+
+build_dir = 'processings'
+## EXECUTE SCRIPTS: 
+## READ PREPROCESSING
+preprocess_raw_reads    = raw_reads
+preprocess_adapter_file = ADAPTER_FILE
+preprocess_preprocessor = PREPROCESSOR 
+preprocess_cpus         = CPUS
+preprocess  = env.SConscript(os.path.join(build_dir, junk2_preprocess), 
+                             variant_dir = build_dir, src_dir = SRC_DIR, 
+                             duplicate = 0, exports='env preprocess_raw_reads preprocess_adapter_file preprocess_preprocessor preprocess_cpus')
+results.append(preprocess)
+## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript).
+## Implementation note: here you should know what the preprocess SConscript returns to handle it 
+## properly. For instance: Trimmomatic with paired-end reads gives four output read files and 
+## you probably want to use the 0 and 2 indexed files of the returned list (i.e. the processed 
+## reads with mate read). Instead, if no preprocessing was performed, the clean reads are the raw
+## reads and the list is only two elements (for paired-end reads)
+
+## get first in pair or the single end preprocessed read file
+clean_reads = [preprocess[0][0]]
+## paired end case: add the second in pair clean read file
+if len(preprocess[0])>1:
+    ## case: Trimmomatic paired-end
+    if env['PREPROCESSOR']=='trimmomatic':
+        clean_reads.append(preprocess[0][2])
+    ## case: no preprocessing was performed
+    else:
+        clean_reads.append(preprocess[0][1])
+
+#env['SAMPLE'] = os.path.basename(Dir('.').path)
+sample_name = os.path.basename(Dir('.').path)
+if sample_name=='.':
+    sample_name = os.path.basename(Dir('.').abspath)
+
+## ALIGN TO GENOME
+mapper = MAPPER
+genome_index = GENOME_INDEX
+genome_fasta = GENOME_FASTA
+sample_id = sample_name
+mapper_extra_params = ''
+mapper_cpus = CPUS
+mappings    = env.SConscript(os.path.join(build_dir, junk2_mapping), 
+                             variant_dir = build_dir, src_dir = SRC_DIR, 
+                             duplicate = 0, exports = 'env clean_reads mapper genome_index genome_fasta sample_id mapper_extra_params mapper_cpus')
+results.append(mappings)
+
+## EXPRESSION ANALYSIS
+expression_cpus = CPUS
+expression_genome_fasta = GENOME_FASTA 
+expression_annotation = ANNOTATION
+mapping_file = mappings[0][0]
+expression  = env.SConscript(os.path.join(build_dir, junk2_expression), 
+                             variant_dir = build_dir, src_dir = SRC_DIR, 
+                             duplicate = 0, exports = 'env mapping_file sample_name expression_cpus expression_genome_fasta expression_annotation')
+results.append(expression)
+#print  [e.path for node in expression for e in node]
+
+Clean('.', read_statistics_dir)
+Clean('.', build_dir)
+
+Return('results')

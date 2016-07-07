@@ -1,0 +1,48 @@
+'''
+The purpose of this script is to rename FASTQ reads.
+Current implementation eliminates trailing '.1's and '.2's (or '/1's '/2's) from the read
+names.
+This comes useful when paired-end read files are named with .1 .2 notation to distinguish 
+mates, but programs raise errors because the names are different and read pairs are not
+recognized as such.
+'''
+
+import os
+Import('*')
+
+try:
+    env
+    fix_read_names_READS
+except NameError as ne:
+    print 'fix_read_names: command line mode'
+    vars = Variables('vars.py')
+    vars.Add('READS' , 'The FASTQ reads to be fixed. Either plain text or Gzipped',
+             'reads.fastq.gz')
+    cmdline_env = Environment(ENV=os.environ,
+                              variables=vars)
+    
+    Help(vars.GenerateHelpText(cmdline_env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
+
+    env = cmdline_env
+    fix_read_names_READS = [File(f) for f in env['READS'].split(',')]
+ 
+target = '${SOURCE.filebase}_fixednames.gz'
+
+cmd_prefix = '''cat '''
+
+fixed_read_names = []
+for reads in fix_read_names_READS:
+    
+    if reads.name.endswith('.gz'):
+        cmd_prefix = '''zcat '''
+
+    cmd = cmd_prefix + ''' $SOURCE | paste - - - - | '''\
+          '''sed "s@\(.*\)[\./][12]\\t@\\1\\t@"| sed "s/\\t/\\n/g" | gzip -c > $TARGET'''
+
+    fixed_read_names.append(env.Command(target, reads, cmd))
+
+Return('fixed_read_names')
