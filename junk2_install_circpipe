@@ -1,0 +1,4 @@
+#!/bin/bash
+
+export JUNK2_HOME=$(dirname $(readlink -f $0))
+scons -i -f $JUNK2_HOME/src/junk2_install_tools_circpipe $1 
