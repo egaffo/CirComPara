@@ -68,7 +68,8 @@ FASTQC_target = [os.path.join(tools_dir, FASTQC_zip),
                  os.path.join(tools_dir, 'FastQC', 'fastqc')]
 #FASTQC_source = 
 FASTQC = env.Command(FASTQC_target, [], ['wget -O $TARGET  ' + FASTQC_link,
-                                         'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
+                                         'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]} '\
+                                         '&& chmod +x ${TARGETS[1]}'])
 
 
 # BEDTOOLS
