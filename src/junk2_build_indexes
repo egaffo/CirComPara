@@ -10,30 +10,43 @@ Currently supported are:
 
 import os
 
-vars = Variables('vars.py')
-vars.Add('INDEXES', 'A comma separated list of read aligner programs for which'\
-                    ' the genome index has to be built', 
-         'HISAT2,BWA,BOWTIE2,SEGEMEHL,STAR')
-vars.Add('CPUS', 'Number of cpus to use for multi thread run', '1')
-vars.Add('GENOME', 'The list of input FASTA files composing the genome sequence. '\
-                   'Comma separated.', '')
-vars.Add('HISAT2_EXTRA_PARAMS', 'Extra parameters for htseq2-build', '')
-vars.Add('BWA_EXTRA_PARAMS', 'Extra parameters for bwa index', '')
-vars.Add('BOWTIE2_EXTRA_PARAMS', 'Extra parameters for bowtie22-build', '')
-vars.Add('SEGEMEHL_EXTRA_PARAMS', 'Extra parameters for segemehl.x -x', '')
-vars.Add('STAR_EXTRA_PARAMS', 'Extra parameters for STAR --genomeGenerate', '')
+Import('*')
+try:
+    env = env_build_indexes
+except NameError as ne:
+    print 'junk2_build_indexes: command line execution.'
 
-
-env = Environment(ENV=os.environ, SHELL = '/bin/bash',
-                  variables=vars)
-Help(vars.GenerateHelpText(env))
-unknown = vars.UnknownVariables()
-if unknown:
-    print "Unknown variables", unknown.keys()
-    Exit(1)
+    vars = Variables('vars.py')
+    vars.Add('INDEXES', 'A comma separated list of read aligner programs for which'\
+                        ' the genome index has to be built', 
+             'HISAT2,BWA,BOWTIE2,SEGEMEHL,STAR')
+    vars.Add('CPUS', 'Number of cpus to use for multi thread run', '1')
+    vars.Add('GENOME', 'The list of input FASTA files composing the genome sequence. '\
+                       'Comma separated.', '')
+    vars.Add('HISAT2_EXTRA_PARAMS', 'Extra parameters for htseq2-build', '')
+    vars.Add('BWA_EXTRA_PARAMS', 'Extra parameters for bwa index', '')
+    vars.Add('BOWTIE2_EXTRA_PARAMS', 'Extra parameters for bowtie22-build', '')
+    vars.Add('SEGEMEHL_EXTRA_PARAMS', 'Extra parameters for segemehl.x -x', '')
+    vars.Add('STAR_EXTRA_PARAMS', 'Extra parameters for STAR --genomeGenerate', '')
+    
+    
+    env = Environment(ENV=os.environ, SHELL = '/bin/bash',
+                      variables=vars)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables", unknown.keys()
+        Exit(1)
 
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+## SET DEFAULT VALUES FOR (OPTIONAL) EXTRA PARAMETERS
+env.SetDefault(HISAT2_EXTRA_PARAMS  = '')
+env.SetDefault(BWA_EXTRA_PARAMS     = '')
+env.SetDefault(BOWTIE2_EXTRA_PARAMS = '')
+env.SetDefault(SEGEMEHL_EXTRA_PARAMS = '')
+env.SetDefault(STAR_EXTRA_PARAMS    = '')
 
 indexes_dir = 'indexes'
 indexes = {}
