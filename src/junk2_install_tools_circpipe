@@ -186,6 +186,13 @@ HTSeq = env.Command(HTSeq_target, [],
                     ' && python setup.py install --prefix ' + HTSeq_dir,
                     'cd ' + Dir('#').abspath])
 
+# gtfToGenePred
+gtfToGenePred_link = 'http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred'
+gtfToGenePred_target = [os.path.join(tools_dir, 'gtfToGenePred')]
+gtfToGenePred = env.Command(gtfToGenePred_target, [], 
+                            ['wget -O $TARGET ' + gtfToGenePred_link, 
+                            Chmod('$TARGET', 0775)])
+
 ##TODO: link installed tools to JUNK_HOME/bin
 #Symlink(, HTSeq[2])
 
