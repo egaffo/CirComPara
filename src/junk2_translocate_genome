@@ -1,0 +1,78 @@
+'''
+'''
+
+import os, re
+
+Import('*')
+try:
+    env = env_translocate_genome
+    env['TRANSLOCATIONS'] = ','.join(env['TRANSLOCATIONS'])
+except NameError as ne:
+    print 'junk2_translocate_genome: command line execution.'
+
+    vars = Variables('vars.py')
+    vars.Add('CPUS', 'Number of cpus to use for multi thread run', '1')
+    vars.Add('GENOME', 'The FASTA file composing the genome sequence.', '')
+    vars.Add('ANNOTATION', 'The GTF file with genome annotation.', '')
+    vars.Add('TRANSLOCATIONS', 'Comma separated list of translocations:'\
+            ' the two coordinates must be separated by an & character. '\
+            'E.g: 1:10-200:+&3:300-409:-,10:10-2001:+&13:1300-409:-', '')
+    
+    
+    env = Environment(ENV=os.environ, SHELL = '/bin/bash',
+                      variables=vars)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables", unknown.keys()
+        Exit(1)
+
+## DEFINE TRANSLOCATED PARTS AS BED6 FILE(S)
+translocated_chromosomes = []
+translocated_annotation = []
+for TRANSLOCATION in env['TRANSLOCATIONS'].split(','):
+    if TRANSLOCATION:
+        file_prefix = 'zz_' + re.sub(r'[:\-&]', '_', 
+                             re.sub(r':\+', '_0', 
+                                    re.sub(r':-', '_1', TRANSLOCATION)))
+        trbed_target = file_prefix + '.bed'
+        coordsToBed6 = '''sed -e 's/\([^:]*\):\([^-]*\)-\([^:]*\):\(.*\)$/'''\
+                       '''\\1\\t\\2\\t\\3\\t.\\t.\\t\\4/' '''
+        trbed_cmd = '''echo ''' + TRANSLOCATION.split('&')[0]  + ''' | ''' +\
+                    coordsToBed6 + ''' > ${TARGET} && '''\
+                    '''echo ''' + TRANSLOCATION.split('&')[1]  + ''' | ''' +\
+                    coordsToBed6 + ''' >> ${TARGET}'''
+        trbed = env.Command(trbed_target, File(env['GENOME']), trbed_cmd)
+
+        ## EXTRACT SEQUENCES OF THE TRANSLOCATED PARTS AND COMBINE SEQUENCES INTO ONE SINGLE FASTA
+        trseq_target = file_prefix + '.fa'
+        trseq_cmd = '''echo -e ">''' + file_prefix + '''\\n"'''\
+                    '''`bedtools getfasta -s -fi ${SOURCES[0]} -bed ${SOURCES[1]} -fo - | '''\
+                    '''grep -v ">" | tr -d '[:space:]'` > $TARGET'''
+        trseq = env.Command(trseq_target, [File(env['GENOME']), trbed], trseq_cmd)
+
+        translocated_chromosomes.append(trseq[0])
+
+        ## EXTRACT ANNOTATION WITHIN THE TRANSLOCATED REGIONS AND
+        ## RENAME CHROMOSOME OF THE EXTRACTED PARTS TO COMPOSE THE NEW TRANSLOCATED ANNOTATION
+        trgtf_target = file_prefix + '.gtf'
+        trgtf_cmd = '''bedtools intersect -a ${SOURCES[0]} -b ${SOURCES[1]} -wa -f 1.0 | '''\
+                    '''fix_trans_annotation.py - -b ${SOURCES[1]} -n ''' +\
+                    file_prefix + ''' > ${TARGETS[0]}'''
+        trgtf = env.Command(trgtf_target, [File(env['ANNOTATION']), trbed], trgtf_cmd)
+        translocated_annotation.append(trgtf[0])
+
+## CONCATENATE ORIGINAL GENOME AND TRANSLOCATION FASTA
+genome_target = '${SOURCES[0].filebase}_withTranslocations.fa'
+genome_cmd = 'cat ${SOURCES} | fold -w 60 > $TARGET'
+genome = env.Command(genome_target, [File(env['GENOME']), translocated_chromosomes], genome_cmd)
+
+
+# APPEND TRANSLOCATION ANNOTATION TO ORIGINAL ANNOTATION
+annotation_target = '${SOURCES[0].filebase}_withTranslocations.gtf'
+annotation_cmd = 'cat ${SOURCES} > $TARGET'
+annotation = env.Command(annotation_target, 
+                         [File(env['ANNOTATION']), translocated_annotation], 
+                         annotation_cmd)
+
+Return('genome annotation')
