@@ -1,0 +1,24 @@
+#!/bin/bash
+
+export JUNK2_HOME=$(dirname $(readlink -f $0))
+TOOLS_DIR=$JUNK2_HOME/tools
+
+#SAMTOOLS_HOME=$TOOLS_DIR/samtools
+#FASTX_TOOLKIT=$TOOLS_DIR/fastx_toolkit/bin
+#SEGEMEHL_HOME=$TOOLS_DIR/segemehl
+#CUFFLINKS_HOME=$TOOLS_DIR/cufflinks
+#BWA_HOME=$TOOLS_DIR/bwa.kit
+#BOWTIE2_HOME=$TOOLS_DIR/bowtie2
+#HISAT2_HOME=$TOOLS_DIR/hisat2-2.0.1-beta
+#STAR=$TOOLS_DIR/star-2.5/STAR/bin/Linux_x86_64
+#CIRCEXPLORER=$TOOLS_DIR/CIRCexplorer/bin
+#FASTQC=$TOOLS_DIR/FastQC
+
+export TRIMMOMATIC=$TOOLS_DIR/Trimmomatic-0.36/trimmomatic-0.36.jar
+
+#export PATH=$CIRCEXPLORER:$STAR:$HISAT2_HOME:$BOWTIE2_HOME:$BWA_HOME:$CUFFLINKS_HOME:$SEGEMEHL_HOME:$FASTX_TOOLKIT:$SAMTOOLS_HOME:$JUNK2_HOME/bin:$FASTQC:$PATH
+export PATH=$JUNK2_HOME/bin:$PATH
+
+export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/CIRCexplorer/lib/python2.7/site-packages/"
+
+scons -f $JUNK2_HOME/src/junk2_circpipe_multisample $1 
