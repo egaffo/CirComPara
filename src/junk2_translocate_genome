@@ -64,7 +64,7 @@ for TRANSLOCATION in env['TRANSLOCATIONS'].split(','):
 
 ## CONCATENATE ORIGINAL GENOME AND TRANSLOCATION FASTA
 genome_target = '${SOURCES[0].filebase}_withTranslocations.fa'
-genome_cmd = 'cat ${SOURCES} | fold -w 60 > $TARGET'
+genome_cmd = 'cat ${SOURCES} | fold_fasta.py - > $TARGET'
 genome = env.Command(genome_target, [File(env['GENOME']), translocated_chromosomes], genome_cmd)
 
 
