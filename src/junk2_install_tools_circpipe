@@ -56,13 +56,15 @@ SEGEMEHL_tar = 'segemehl_0_2_0.tar.gz'
 SEGEMEHL_dir = os.path.join(tools_dir, 'segemehl_0_2_0', 'segemehl')
 SEGEMEHL_link = 'http://www.bioinf.uni-leipzig.de/Software/segemehl/' + SEGEMEHL_tar
 SEGEMEHL_target = [os.path.join(tools_dir, SEGEMEHL_tar),
-                   os.path.join(SEGEMEHL_dir, 'segemehl.x')]
+                   os.path.join(SEGEMEHL_dir, 'segemehl.x'),
+                   os.path.join(SEGEMEHL_dir, 'testrealign.x')]
 #SEGEMEHL_source = 
 SEGEMEHL = env.Command(SEGEMEHL_target, [], ['wget -O $TARGET  ' + SEGEMEHL_link,
                                              'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
                                              'cd ${TARGETS[1].dir} && make',
                                              'cd ' + Dir('.').abspath])
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), SEGEMEHL[1], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), SEGEMEHL[2], SymLink)
 
 # TRIMMOMATIC
 TRIMMOMATIC_zip = 'Trimmomatic-0.36.zip'
