@@ -1,0 +1,234 @@
+import os
+
+def SymLink(target, source, env):
+    os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+
+env = Environment(ENV=os.environ, SHELL = '/bin/bash')
+tools_dir = os.path.join(env['ENV']['JUNK2_HOME'], 'tools')
+junk2_bin_dir = os.path.join(env['ENV']['JUNK2_HOME'], 'bin')
+
+# HISAT2
+HISAT2_zip = 'hisat2-2.0.4-Linux_x86_64.zip'
+HISAT2_link = 'ftp://ftp.ccb.jhu.edu/pub/infphilo/hisat2/downloads/' + HISAT2_zip
+HISAT2_target = [os.path.join(tools_dir, HISAT2_zip), 
+                 os.path.join(tools_dir, 'hisat2-2.0.4', 'hisat2'),
+                 os.path.join(tools_dir, 'hisat2-2.0.4', 'hisat2-build')]
+#HISAT2_source = HISAT2_link
+HISAT2 = env.Command(HISAT2_target, [], ['wget -O ${TARGETS[0]} ' + HISAT2_link,
+                                         'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), HISAT2[1], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), HISAT2[2], SymLink)
+
+# BOWTIE2
+BOWTIE2_zip = 'bowtie2-2.2.9-linux-x86_64.zip'
+BOWTIE2_link = 'http://downloads.sourceforge.net/project/bowtie-bio/bowtie2/2.2.9/' + BOWTIE2_zip
+BOWTIE2_target = [os.path.join(tools_dir, BOWTIE2_zip), 
+                  os.path.join(tools_dir, 'bowtie2-2.2.9', 'bowtie2'),
+                  os.path.join(tools_dir, 'bowtie2-2.2.9', 'bowtie2-build')]
+#BOWTIE2_source = 
+BOWTIE2 = env.Command(BOWTIE2_target, [], ['wget -O ${TARGETS[0]} ' + BOWTIE2_link,
+                                           'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE2[1], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE2[2], SymLink)
+
+## BWA-MEM
+BWAMEM_tar = 'bwakit-0.7.15_x64-linux.tar.bz2'
+BWAMEM_link = 'https://sourceforge.net/projects/bio-bwa/files/bwakit/' + BWAMEM_tar
+BWAMEM_target = [os.path.join(tools_dir, BWAMEM_tar),
+                 os.path.join(tools_dir, 'bwa.kit', 'bwa')]
+#BWAMEM_source = 
+BWAMEM = env.Command(BWAMEM_target, [], ['wget -O ${TARGETS[0]}  ' + BWAMEM_link,
+                                         'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BWAMEM[1], SymLink)
+
+# STAR
+STAR_tar = '2.5.2a.tar.gz'
+STAR_link = 'https://github.com/alexdobin/STAR/archive/' + STAR_tar
+STAR_target = [os.path.join(tools_dir, 'STAR_' + STAR_tar), 
+               os.path.join(tools_dir, 'STAR-2.5.2a', 'bin', 'Linux_x86_64_static', 'STAR')]
+#STAR_source = 
+STAR = env.Command(STAR_target, [], ['wget -O ${TARGETS[0]} ' + STAR_link,
+                                     'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), STAR[1], SymLink)
+
+# SEGEMEHL
+SEGEMEHL_tar = 'segemehl_0_2_0.tar.gz'
+SEGEMEHL_dir = os.path.join(tools_dir, 'segemehl_0_2_0', 'segemehl')
+SEGEMEHL_link = 'http://www.bioinf.uni-leipzig.de/Software/segemehl/' + SEGEMEHL_tar
+SEGEMEHL_target = [os.path.join(tools_dir, SEGEMEHL_tar),
+                   os.path.join(SEGEMEHL_dir, 'segemehl.x')]
+#SEGEMEHL_source = 
+SEGEMEHL = env.Command(SEGEMEHL_target, [], ['wget -O $TARGET  ' + SEGEMEHL_link,
+                                             'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                                             'cd ${TARGETS[1].dir} && make',
+                                             'cd ' + Dir('.').abspath])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), SEGEMEHL[1], SymLink)
+
+# TRIMMOMATIC
+TRIMMOMATIC_zip = 'Trimmomatic-0.36.zip'
+TRIMMOMATIC_link = 'http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/' + TRIMMOMATIC_zip
+TRIMMOMATIC_target = [os.path.join(tools_dir, TRIMMOMATIC_zip), 
+                      os.path.join(tools_dir, 'Trimmomatic-0.36', 'trimmomatic-0.36.jar')]
+#TRIMMOMATIC_source = 
+TRIMMOMATIC = env.Command(TRIMMOMATIC_target, [], ['wget -O $TARGET  ' + TRIMMOMATIC_link,
+                                                   'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), TRIMMOMATIC[1], SymLink)
+
+
+# FASTQC
+FASTQC_zip = 'fastqc_v0.11.5.zip'
+FASTQC_link = 'http://www.bioinformatics.babraham.ac.uk/projects/fastqc/' + FASTQC_zip
+FASTQC_target = [os.path.join(tools_dir, FASTQC_zip), 
+                 os.path.join(tools_dir, 'FastQC', 'fastqc')]
+#FASTQC_source = 
+FASTQC = env.Command(FASTQC_target, [], ['wget -O $TARGET  ' + FASTQC_link,
+                                         'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]} '\
+                                         '&& chmod +x ${TARGETS[1]}'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FASTQC[1], SymLink)
+
+
+# BEDTOOLS
+BEDTOOLS_tar = 'bedtools-2.25.0.tar.gz'
+BEDTOOLS_dir = os.path.join(tools_dir, 'bedtools2')
+BEDTOOLS_link = 'https://github.com/arq5x/bedtools2/releases/download/v2.25.0/' + BEDTOOLS_tar
+BEDTOOLS_target = [os.path.join(tools_dir, BEDTOOLS_tar), 
+                   os.path.join(BEDTOOLS_dir, 'bin', 'bedtools')]
+#BEDTOOLS_source = 
+BEDTOOLS = env.Command(BEDTOOLS_target, [], 
+                       ['wget -O $TARGET ' + BEDTOOLS_link, 
+                        'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}', 
+                        'cd ' + BEDTOOLS_dir + ' && make', 
+                        'cd ' + Dir('.').abspath])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BEDTOOLS[1], SymLink)
+
+# SAMTOOLS
+SAMTOOLS_tar = 'samtools-1.3.1.tar.bz2'
+SAMTOOLS_dir = os.path.join(tools_dir, 'samtools-1.3.1')
+SAMTOOLS_link = 'https://github.com/samtools/samtools/releases/download/1.3.1/' + SAMTOOLS_tar
+SAMTOOLS_target = [os.path.join(tools_dir, 'samtools-1.3.1.tar.bz2'),
+                   os.path.join(SAMTOOLS_dir, 'samtools')]
+#SAMTOOLS_source = 
+SAMTOOLS = env.Command(SAMTOOLS_target, [], ['wget -O $TARGET  ' + SAMTOOLS_link,
+                                             'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                                             'cd ' + SAMTOOLS_dir + ' && '\
+                                             'make prefix=' + SAMTOOLS_dir + ' install',
+                                             'cd ' + Dir('.').abspath])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), SAMTOOLS[1], SymLink)
+
+# CUFFLINKS
+CUFFLINKS_tar = 'cufflinks-2.2.1.Linux_x86_64.tar.gz'
+CUFFLINKS_link = 'http://cole-trapnell-lab.github.io/cufflinks/assets/downloads/' + CUFFLINKS_tar
+CUFFLINKS_target = [os.path.join(tools_dir, CUFFLINKS_tar), 
+                    os.path.join(tools_dir, 'cufflinks-2.2.1.Linux_x86_64', 'cufflinks'),
+                    os.path.join(tools_dir, 'cufflinks-2.2.1.Linux_x86_64', 'cuffcompare'),
+                    os.path.join(tools_dir, 'cufflinks-2.2.1.Linux_x86_64', 'cuffdiff'),
+                    os.path.join(tools_dir, 'cufflinks-2.2.1.Linux_x86_64', 'cuffmerge'),
+                    os.path.join(tools_dir, 'cufflinks-2.2.1.Linux_x86_64', 'cuffnorm'),
+                    os.path.join(tools_dir, 'cufflinks-2.2.1.Linux_x86_64', 'cuffquant'),
+                    os.path.join(tools_dir, 'cufflinks-2.2.1.Linux_x86_64', 'gffread'),
+                    os.path.join(tools_dir, 'cufflinks-2.2.1.Linux_x86_64', 'gtf_to_sam')]
+#CUFFLINKS_source = 
+CUFFLINKS = env.Command(CUFFLINKS_target, [], ['wget -O $TARGET  ' + CUFFLINKS_link,
+                                               'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
+for t2link in CUFFLINKS[1:]:
+    env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), t2link, SymLink)
+
+
+# CIRI
+CIRI_zip = 'CIRI_v2.0.2.zip'
+CIRI_link = 'http://downloads.sourceforge.net/project/ciri/CIRI2/' + CIRI_zip
+CIRI_target = [os.path.join(tools_dir, CIRI_zip), 
+               os.path.join(tools_dir, 'CIRI_v2.0.2', 'CIRI_v2.0.2.pl')]
+#CIRI_source = 
+CIRI = env.Command(CIRI_target, [], ['wget -O ${TARGETS[0]} ' + CIRI_link,
+                                     'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRI[1], SymLink)
+
+
+# FIND-CIRC
+FINDCIRC_tar = 'find_circ.tar.gz'
+FINDCIRC_link = 'http://www.circbase.org/download/' + FINDCIRC_tar
+FINDCIRC_target = [os.path.join(tools_dir, FINDCIRC_tar),
+                   os.path.join(tools_dir, 'find_circ', 'find_circ.py')]
+#FINDCIRC_source = 
+FINDCIRC = env.Command(FINDCIRC_target, [], ['wget -O $TARGET  ' + FINDCIRC_link,
+                                            'tar -xf ${TARGETS[0]} -C ${TARGETS[1].dir}'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FINDCIRC[1], SymLink)
+
+# CIRCEXPLORER
+#CIRCEXPLORER_zip = 'CIRCexplorer_v1.1.9.zip'
+#CIRCEXPLORER_link = 'https://github.com/YangLab/CIRCexplorer/archive/1.1.9.zip'
+CIRCEXPLORER_dir = os.path.join(tools_dir, 'CIRCexplorer')
+CIRCEXPLORER_target = [os.path.join(CIRCEXPLORER_dir, 'bin', 'CIRCexplorer.py'), 
+                       os.path.join(CIRCEXPLORER_dir, 'bin', 'star_parse.py')]
+#CIRCEXPLORER_source = 
+CIRCEXPLORER = env.Command(CIRCEXPLORER_target, [], 
+                           ['pip install --install-option="--prefix=' +\
+                           os.path.abspath(CIRCEXPLORER_dir) +\
+                           '" CIRCexplorer'])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER[0], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER[1], SymLink)
+
+# FASTX-TOOLKIT
+libgtextutils_tar   = 'libgtextutils-0.7.tar.gz'
+libgtextutils_link  = 'https://github.com/agordon/libgtextutils/releases/download/0.7/' +\
+                     libgtextutils_tar
+libgtextutils_dir   = os.path.join(tools_dir, 'libgtextutils-0.7')
+libgtextutils_target = [os.path.join(tools_dir, libgtextutils_tar), 
+                        os.path.join(libgtextutils_dir, 'lib', 'libgtextutils.so'),
+                        os.path.join(libgtextutils_dir, 'lib', 'pkgconfig', 'gtextutils.pc')]
+libgtextutils = env.Command(libgtextutils_target, [], 
+                            ['wget -O $TARGET ' + libgtextutils_link, 
+                            'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}', 
+                            'cd ' + libgtextutils_dir + ' && ./configure --prefix=`pwd`'\
+                            ' && make && make install',
+                            'cd ' + Dir('#').abspath])
+
+FASTXTOOLKIT_tar = 'fastx_toolkit-0.0.14.tar.bz2'
+FASTXTOOLKIT_link = 'https://github.com/agordon/fastx_toolkit/releases/download/0.0.14/' +\
+                    FASTXTOOLKIT_tar
+FASTXTOOLKIT_dir = os.path.join(tools_dir, 'fastx_toolkit-0.0.14')
+FASTXTOOLKIT_target = [os.path.join(tools_dir, FASTXTOOLKIT_tar),
+                       os.path.join(FASTXTOOLKIT_dir, 'bin', 'fastx_quality_stats')]
+FASTXTOOLKIT = env.Command(FASTXTOOLKIT_target, libgtextutils[2], 
+                           ['wget -O $TARGET ' + FASTXTOOLKIT_link,
+                            'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                            'cd ' + FASTXTOOLKIT_dir + ' && ./configure --prefix=' +\
+                            FASTXTOOLKIT_dir + ' PKG_CONFIG_PATH=${os.path.dirname('\
+                            'SOURCES[0].abspath)}:$$PKG_CONFIG_PATH '\
+                            ' && make && make install', 
+                            'cd ' + Dir('#').abspath])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FASTXTOOLKIT[1], SymLink)
+
+# HTSeq
+HTSeq_tar = 'HTSeq-0.6.1p1.tar.gz'
+HTSeq_link = 'https://pypi.python.org/packages/3c/6e/'\
+             'f8dc3500933e036993645c3f854c4351c9028b180c6dcececde944022992/' + HTSeq_tar
+HTSeq_dir = os.path.join(tools_dir, 'HTSeq-0.6.1p1')
+HTSeq_target = [os.path.join(tools_dir, HTSeq_tar), 
+                os.path.join(HTSeq_dir, 'lib','python2.7','site-packages',
+                'HTSeq-0.6.1p1-py2.7-linux-x86_64.egg', 'EGG-INFO','scripts','htseq-count'),
+                os.path.join(HTSeq_dir, 'bin', 'htseq-count')]
+
+env.PrependENVPath('PYTHONPATH', os.path.join(HTSeq_dir, 'lib','python2.7','site-packages'))
+HTSeq = env.Command(HTSeq_target, [], 
+                    ['wget -O $TARGET ' + HTSeq_link,
+                    'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                    'cd ' + HTSeq_dir +\
+                    ' && python setup.py install --prefix ' + HTSeq_dir,
+                    'cd ' + Dir('#').abspath])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), HTSeq[2], SymLink)
+
+# gtfToGenePred
+gtfToGenePred_link = 'http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred'
+gtfToGenePred_target = [os.path.join(tools_dir, 'gtfToGenePred')]
+gtfToGenePred = env.Command(gtfToGenePred_target, [], 
+                            ['wget -O $TARGET ' + gtfToGenePred_link, 
+                            Chmod('$TARGET', 0775)])
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), gtfToGenePred, SymLink)
+
+#TODO
+## R, RScript
+### OPTPARSE, GGPLOT2, DATA.TABLE, PLYR
+### Bioconductor: DESEQ2
+
