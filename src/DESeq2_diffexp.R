@@ -33,6 +33,8 @@ if(length(arguments$input) > 0){
   res <- results(dds)
   write.csv(as.data.frame(res), file = arguments$output)
   
+  pvalueCutoff <- 0.1
+  if(any(res$padj <= pvalueCutoff, na.rm = T)){ ## if no differentially expressed elements the following would fail
   ## result reporting tool
   suppressPackageStartupMessages(library(ReportingTools))
   
@@ -40,10 +42,14 @@ if(length(arguments$input) > 0){
   des2Report <- HTMLReport(shortName = "RNAseq_analysis_with_DESeq2",
                            title = "RNA-seq analysis of differential expression using DESeq2",
                            reportDirectory = reportDirectory)
-  publish(dds, des2Report, pvalueCutoff = 0.1,
+  publish(dds, des2Report, pvalueCutoff = pvalueCutoff,
             annotation.db = "", factor = colData(dds)$condition,
             reportDir = reportDirectory)
   finish(des2Report)
+  }else{
+    writeChar(paste0("No differentially expressed elements at ", pvalueCutoff, " FDR"), 
+              file.path(arguments$reportDirectory, "RNAseq_analysis_with_DESeq2.html"))
+  }
   
   writeLines(capture.output(sessionInfo()), 
              file.path(dirname(arguments$output), "DESeq2_diffexp.sessionInfo"))
