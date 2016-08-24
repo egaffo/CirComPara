@@ -39,8 +39,9 @@ source  = [File(f).abspath for f in GENOME]
 target_basename = '_'.join([os.path.splitext(os.path.basename(f))[0] for f in GENOME])
 index_suffixes = ['.idx']
 target  = [target_basename + suffix for suffix in index_suffixes]
-command = '''segemehl.x -d ''' + ' '.join(source) +\
-          ''' -x ${TARGET}''' + EXTRA_PARAMS
+command = '''segemehl.x -s -d ''' + ' '.join(source) +\
+          ''' -x ${TARGET} ''' + EXTRA_PARAMS + ''' 2> ${TARGET.dir}'''+\
+          os.path.sep + '''segemehl_indexing.log '''
 index = env.Command(target, source, command)
 
 Return('index')

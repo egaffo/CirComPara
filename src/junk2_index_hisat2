@@ -39,7 +39,7 @@ source  = [File(f).abspath for f in GENOME]
 target_basename = '_'.join([os.path.splitext(os.path.basename(f))[0] for f in GENOME])
 index_suffixes = ['.1.ht2', '.2.ht2', '.3.ht2', '.4.ht2', '.5.ht2', '.6.ht2', '.7.ht2', '.8.ht2']
 target  = [target_basename + suffix for suffix in index_suffixes]
-command = '''hisat2-build -f --seed 1 $(-p ''' + CPUS +\
+command = '''hisat2-build -q -f --seed 1 $(-p ''' + CPUS +\
           ''' $) ''' + ','.join(source) +\
           ''' ${TARGETS[0].dir}''' + os.path.sep + target_basename + ''' ''' + EXTRA_PARAMS
 index = env.Command(target, source, command)

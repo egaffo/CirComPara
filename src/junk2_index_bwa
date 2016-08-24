@@ -43,7 +43,8 @@ index_suffixes = ['.amb', '.ann', '.bwt', '.pac', '.sa']
 target  = [target_basename + suffix for suffix in index_suffixes]
 command = '''bwa index -a ''' + INDEXING_ALGORITHM +\
           ''' -p ${TARGETS[0].dir}''' + os.path.sep + '''${TARGETS[0].filebase} ''' +\
-          EXTRA_PARAMS + ' ' + ' '.join(source)
+          EXTRA_PARAMS + ' ' + ' '.join(source) + ''' 2> ${TARGETS[0].dir}''' +\
+          os.path.sep + '''bwa_indexing.log'''
 index = env.Command(target, source, command)
 
 Return('index')

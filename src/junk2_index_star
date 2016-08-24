@@ -46,7 +46,7 @@ index_files = ['chrLength.txt', 'chrNameLength.txt', 'chrName.txt', 'chrStart.tx
 target  = [os.path.join(target_basename, f) for f in index_files]
 command = '''cd ${TARGETS[0].dir} && STAR --runMode genomeGenerate $(--runThreadN ''' + CPUS +\
           ''' $) --genomeFastaFiles ''' + ' '.join(source) +\
-          ''' --genomeDir . ''' + EXTRA_PARAMS 
+          ''' --genomeDir . ''' + EXTRA_PARAMS  + ''' > star_indexing.log'''
 index = env.Command(target, source, [command, '''cd ''' + Dir('#').abspath])
 
 Clean('.', target_basename)
