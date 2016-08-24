@@ -74,6 +74,17 @@ raw_reads = [File(f) for f in READS]
 out_dir = 'CIRCexplorer'
 fusion_mappings_dir = out_dir #'CIRCexplorer_fusion_mappings'
 
+if GENEPRED == '':
+
+    genePred_targets = ['genePred.transcripts.info', '${SOURCES[0].filebase}.genePred', 
+                        '${SOURCES[0].filebase}.genePred.wgn']
+    genePred = env.Command(genePred_targets, File(ANNOTATION), 
+                           ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
+                            'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
+                            'paste - ${TARGETS[1]} > ${TARGETS[2]}']
+                          )
+    GENEPRED = genePred[2]
+
 CIRCexplorer_sources = [File(GENOME_FASTA), File(GENEPRED)]
 
 if ALIGNER.lower() == 'tophat':

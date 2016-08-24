@@ -4,18 +4,22 @@ In addition, it merges transcript annotation derived from each samples and asses
 gene and transcript expression among the samples.
 The metadata file given as input must be comma separated and must have the following columns:
 
-file        :the path to the reads file. If paired-end use one row per read file, setting the same 
-             sample name
+file        :the path to the reads file. If paired-end use one row per read file, 
+             setting the same sample name
 sample      :the sample name/ID  
 condition   :biological condition, used for differential gene expression. 
 adapter     :read adapter to trim (optional. leave empty string if not applicable)
+translocation:sharp (#) separted list of the coordinates involving fusion genes/translocations, 
+             defined as coords1&coords2 elements (optional)
 
 meta.csv example:
 
-file,sample,condition,adapter
+file,sample,condition,adapter,translocation
 /home/user/data/reads/SRR445566.fastq.gz,SRR445566,TUMOR,
 /home/user/data/reads/SRR534325_1.fastq.gz,SRR534325,CONTROL,/trimmomatic/adapters/TruSeq3-PE-2.fa
 /home/user/data/reads/SRR534325_2.fastq.gz,SRR534325,CONTROL,/trimmomatic/adapters/TruSeq3-PE-2.fa
+/home/user/data/reads/SRR534326_1.fastq.gz,SRR534325,t(4;1)t(1;X),,4:90000-120000:+&11:20-30000:-#1:20-400:+&X:1000-2045:+
+/home/user/data/reads/SRR534326_2.fastq.gz,SRR534325,CONTROL,t(4;1)t(1;X),4:90000-120000:+&11:20-30000:-#1:20-400:+&X:1000-2045:+
 
 '''
 
@@ -43,7 +47,7 @@ vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','')
 vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','')
 vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', '')
 
-vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
+vars.Add('GENEPRED', 'The genome annotation in GenePred format', '')
 vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner fixed '''\
          '''parameters '--dta --dta-cufflinks --rg-id <SAMPLE> --no-discordant '''\
          '''--no-mixed --no-overlap'. For instance, '--rna-strandness FR' if stranded reads'''\
@@ -89,17 +93,43 @@ samples_dir = 'samples'
 samples     = defaultdict(list)
 adapters    = defaultdict(str)
 conditions  = defaultdict(set)
-translocations  = defaultdict(set)
+translocations  = set()
+
 with open(META) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         samples[row['sample']].append(os.path.abspath(row['file']))
         adapters[row['sample']] = row['adapter'] ##NB:last sample adapter row overwrites the previous
         conditions[row['condition']].add(row['sample'])
-#        try:
-#            translocations[row['sample']].add(row['translocation'])
-#        except KeyError as ke:
-#            print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
+        try:
+            for tr in row['translocation'].split('#'): 
+                translocations.add(tr) 
+        except KeyError as ke:
+            print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
+
+annotation_dir = 'junk2_dbs'
+
+## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
+if translocations:
+    ## RESET GENOME INDEXES TO BUILD TRANSLOCATED GENOME ONES
+    GENOME_INDEX = ''
+    SEGEMEHL_INDEX = ''
+    BWA_INDEX == ''
+    BOWTIE2_INDEX = ''
+    STAR_INDEX = ''
+    GENEPRED = ''
+
+    ## COMPUTE TRANSLOCATED GENOME SEQUENCE AND GENE ANNOTATION
+    env_translocate_genome = env
+    env_translocate_genome.Append(TRANSLOCATIONS = list(translocations))
+    env_translocate_genome['GENOME'] = GENOME_FASTA
+    #env_translocated_genome.Append(ANNOTATION = ANNOTATION)
+    translocated_genome = env.SConscript(os.path.join(annotation_dir, 'junk2_translocate_genome'),
+                                         src_dir = SCONSCRIPT_HOME, 
+                                         variant_dir = annotation_dir, duplicate = 0, 
+                                         exports = '''env_translocate_genome ''')
+    GENOME_FASTA = File(translocated_genome[0][0]).abspath
+    ANNOTATION = File(translocated_genome[1][0]).abspath
 
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
 genome_indexes_to_build = []
@@ -109,7 +139,6 @@ if BWA_INDEX == '': genome_indexes_to_build.append('BWA')
 if BOWTIE2_INDEX == '': genome_indexes_to_build.append('BOWTIE2')
 if STAR_INDEX == '': genome_indexes_to_build.append('STAR')
 
-annotation_dir = 'junk2_dbs'
 
 if genome_indexes_to_build:
 
@@ -117,26 +146,46 @@ if genome_indexes_to_build:
     env_build_indexes['INDEXES'] = ','.join(genome_indexes_to_build)
     env_build_indexes['CPUS']    = CPUS
     env_build_indexes['GENOME']  = GENOME_FASTA
-    #env_build_indexes['HISAT2_EXTRA_PARAMS']
-    #env_build_indexes['BWA_EXTRA_PARAMS']
-    #env_build_indexes['BOWTIE2_EXTRA_PARAMS']
-    #env_build_indexes['SEGEMEHL_EXTRA_PARAMS']
-    #env_build_indexes['STAR_EXTRA_PARAMS']
+    env_build_indexes['HISAT2_EXTRA_PARAMS']    = ''
+    env_build_indexes['BWA_EXTRA_PARAMS']       = ''
+    env_build_indexes['BOWTIE2_EXTRA_PARAMS']   = ''
+    env_build_indexes['SEGEMEHL_EXTRA_PARAMS']  = ''
+    env_build_indexes['STAR_EXTRA_PARAMS']      = ''
     
     indexes = SConscript(os.path.join(annotation_dir, 'junk2_build_indexes'), 
                                 src_dir = SCONSCRIPT_HOME, 
                                 variant_dir = annotation_dir, duplicate = 0,
                                 exports = '''env_build_indexes ''')
 
-    if GENOME_INDEX == '':  GENOME_INDEX    = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] 
+    if GENOME_INDEX == '' :GENOME_INDEX   = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] 
                                               #remove the .1.ht2 suffix
-    if SEGEMEHL_INDEX == '':SEGEMEHL_INDEX  = os.path.abspath(str(indexes['SEGEMEHL'][0]))
-    if BWA_INDEX == '':     BWA_INDEX       = os.path.abspath(str(indexes['BWA'][0]))[0:-4] 
+    if SEGEMEHL_INDEX == '':SEGEMEHL_INDEX= os.path.abspath(str(indexes['SEGEMEHL'][0]))
+    if BWA_INDEX    == '' :BWA_INDEX      = os.path.abspath(str(indexes['BWA'][0]))[0:-4] 
                                               #remove the .amb suffix
-    if BOWTIE2_INDEX == '': BOWTIE2_INDEX   = os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
+    if BOWTIE2_INDEX == '':BOWTIE2_INDEX  = os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
                                               #remove .1.bt2 suffix
-    if STAR_INDEX == '':    STAR_INDEX      = os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) 
+    if STAR_INDEX   == '' :STAR_INDEX = os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) 
                                               #index dir
+    Depends(indexes['HISAT2'], translocated_genome[0][0])
+    Depends(indexes['SEGEMEHL'], translocated_genome[0][0])
+    Depends(indexes['BWA'], translocated_genome[0][0])
+    Depends(indexes['BOWTIE2'], translocated_genome[0][0])
+    Depends(indexes['STAR'], translocated_genome[0][0])
+
+## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
+if GENEPRED == '':
+    genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info', 
+                                                           '${SOURCES[0].filebase}.genePred', 
+                                                           '${SOURCES[0].filebase}.genePred.wgn']]
+    genePred = env.Command(genePred_targets, File(ANNOTATION), 
+                           ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
+                            'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
+                            'paste - ${TARGETS[1]} > ${TARGETS[2]}']
+                          )
+    ## slow command
+    #'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
+    #'paste - ${TARGETS[1]} > ${TARGETS[2]}'
+    GENEPRED = genePred[2]
 
 ## PROCESS SAMPLES
 runs = []
@@ -174,6 +223,12 @@ for sample in sorted(samples.keys()):
                             '''ciri bowtie2_index star_index gene_pred '''
                             '''hisat2_extra_params cufflinks_params''')
     runs.append(run_sample)
+    Depends(run_sample, indexes['STAR'])
+    Depends(run_sample, indexes['HISAT2'])
+    Depends(run_sample, indexes['BOWTIE2'])
+    Depends(run_sample, indexes['SEGEMEHL'])
+    Depends(run_sample, indexes['BWA'])
+    Depends(run_sample, genePred[2])
 
 
 ## MERGE SAMPLE TRANSCRIPTOMES
@@ -403,3 +458,4 @@ Clean('.', deseq_dir)
 Clean('.', circRNA_collect_dir)
 Clean('.', read_stats_collect_dir)
 Clean('.', qre_dir)
+Clean('.', annotation_dir)
