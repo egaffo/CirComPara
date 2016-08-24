@@ -103,7 +103,7 @@ with open(META) as csvfile:
         conditions[row['condition']].add(row['sample'])
         try:
             for tr in row['translocation'].split('#'): 
-                translocations.add(tr) 
+                if tr: translocations.add(tr) 
         except KeyError as ke:
             print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
 
@@ -130,6 +130,9 @@ if translocations:
                                          exports = '''env_translocate_genome ''')
     GENOME_FASTA = File(translocated_genome[0][0]).abspath
     ANNOTATION = File(translocated_genome[1][0]).abspath
+else:
+    print "No translocations defined"
+    translocated_genome = [[File(GENOME_FASTA)], [ANNOTATION]]
 
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
 genome_indexes_to_build = []
