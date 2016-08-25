@@ -100,12 +100,13 @@ ciri_target = os.path.join(out_dir, SAMPLE + '_ciri.out')
 bwa_target = os.path.join(out_dir, SAMPLE + '_bwa.sam.gz')
 
 ## Map the reads
-bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + '$) -M ' + BWA_PARAMS + ' ' + BWA_INDEX +\
-          ' ' + read_bwa_par + ' > ${TARGETS[0].filebase}'
+bwa_cmd = 'bwa mem $(-v 0 -t ' + bwa_cpus + '$) -M ' + BWA_PARAMS + ' ' + BWA_INDEX +\
+          ' ' + read_bwa_par + ' > ${TARGETS[0].filebase} 2> ${SOURCES[0].filebase}_bwamem.log '
 ## Run CIRI on mappings
 ## multithread -T option works from v2 of CIRI
-ciri_cmd = 'perl ' + CIRI + ' -T $(' + CPUS + '$) -I ${TARGETS[0].filebase} -O ${TARGETS[1].file} -F ' +\
-           GENOME_FASTA + ' ' + ciri_parameters
+ciri_cmd = 'perl ' + CIRI + ' -T $(' + CPUS + '$) -I ${TARGETS[0].filebase} '\
+           '-O ${TARGETS[1].file} -F ' + GENOME_FASTA + ' ' + ciri_parameters +\
+           ' > ${SOURCES[0].filebase}_ciri.log 2> ${SOURCES[0].filebase}_ciri.err '
 ## Compress the mapping file to save disk space
 compress_cmd = 'gzip ${TARGETS[0].filebase}'
 

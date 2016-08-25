@@ -61,7 +61,8 @@ if os.path.splitext(annotation)[1] == '.gz':
                              annotation, 'zcat $SOURCE > $TARGET')
 
 cufflinks_cmd = "cufflinks -q --no-update-check " + CUFFLINKS_PARAMS + " $(-p " + CPUS +\
-                "$) --seed 0 -g ${SOURCES[1]} ${SOURCES[0]} -o " + Dir('.').path
+                "$) --seed 0 -g ${SOURCES[1]} ${SOURCES[0]} -o " + Dir('.').path +\
+                " 2> ${TARGETS[0].dir}" + os.path.sep + "${SOURCES[1].filebase}_cufflinks.log"
 
 cufflinks_targets = ['transcripts.gtf', 
                      'isoforms.fpkm_tracking', 

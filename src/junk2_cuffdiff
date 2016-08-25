@@ -110,7 +110,8 @@ add_options = ' '
 cuffdiff_cmd = 'cuffdiff -q $(--no-update-check -p ' + CPUS + '$) -o ' + Dir('.').path + ' ' +\
                add_options +\
                ' -L ' + cuffdiff_parameters['LABELS'] + ' ${SOURCES[0]} ' +\
-               cuffdiff_parameters['SAMS']
+               cuffdiff_parameters['SAMS'] + ' 2> ${TARGETS[0].dir}' +\
+               os.path.sep + 'cuffdiff.log'
 
 cuffdiff_targets = ['isoforms.fpkm_tracking', 'genes.fpkm_tracking', 
                     'cds.fpkm_tracking', 'tss_groups.fpkm_tracking',

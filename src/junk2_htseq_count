@@ -69,11 +69,11 @@ if STRANDED.lower() not in ['yes', 'no']:
 #htseq_count_cmd = "samtools sort -n $(-@{}$) ".format(CPUS) + \
 #                  "-O 'sam' -T $({}$) ".format(mapfile_basename) + \
 #                  "${SOURCES[0]} | samtools fixmate -r -O 'sam' - - | awk '!/\\t\*\\t/' - | "\
-#                  "htseq-count -f sam -r name -s no - ${SOURCES[1]} > $TARGET"
+#                  "htseq-count -q -f sam -r name -s no - ${SOURCES[1]} > $TARGET"
 htseq_count_cmd = "samtools sort -n $(-@{}$) ".format(CPUS) + \
                   "-O 'sam' -T $({}$) ".format(mapfile_basename) + \
                   "${SOURCES[0]} |"\
-                  "htseq-count -f sam -r name -s " + STRANDED + " - ${SOURCES[1]} > $TARGET"
+                  "htseq-count -q -f sam -r name -s " + STRANDED + " - ${SOURCES[1]} > $TARGET"
 
 htseq_count = env.Command(["{}.htseq_count.txt".format(mapfile_basename)], 
                            [mapfile, annotation], 

@@ -150,7 +150,8 @@ deseq_sample_table = env.MakeDESeqSampleTable('deseq_sample_table', [META, htseq
 ## MAKE RAW COUNT MATRIX
 raw_count_matrix_file = 'htseq_raw_counts.csv'
 raw_count_matrix_cmd = os.path.join(SCONSCRIPT_HOME, 
-                                    'make_count_matrix.R -i ${SOURCE} -o $TARGET')
+                                    'make_count_matrix.R -i ${SOURCE} -o $TARGET' +\
+                                    ' 2> ${TARGET.dir}' + os.path.sep + 'make_count_matrix.err')
 raw_count_matrix = env.Command(raw_count_matrix_file, deseq_sample_table, raw_count_matrix_cmd)
 
 ## MAKE NORMALISED COUNT MATRIX
@@ -158,7 +159,9 @@ norm_count_matrix_file = 'DESeq2_norm_counts.csv'
 norm_count_matrix_plots_dir = 'plots'
 norm_count_matrix_cmd = os.path.join(SCONSCRIPT_HOME, 
                                     '''normalize_DESeq2_counts.R -i ${SOURCES[0]} '''
-                                    '''-o ${TARGETS[0]} -s ${SOURCES[1]} -d ${TARGETS[1].dir}''')
+                                    '''-o ${TARGETS[0]} -s ${SOURCES[1]} -d '''
+                                    '''${TARGETS[1].dir} 2> ${TARGETS[0].dir}''' +\
+                                    os.path.sep + '''normalize_DESeq2_counts.err ''')
 norm_count_matrix = env.Command([norm_count_matrix_file, 
                                 os.path.join(norm_count_matrix_plots_dir, 
                                              'pc_variation_plot.svg')], 
@@ -171,7 +174,8 @@ deTests_report_dir = 'DESeq2_HTMLReport'
 deTests_report_file = os.path.join(deTests_report_dir, 'RNAseq_analysis_with_DESeq2.html')
 deTests_cmd = os.path.join(SCONSCRIPT_HOME, 
                            '''DESeq2_diffexp.R -i ${SOURCES[0]} -o ${TARGETS[0]} '''
-                           '''-s ${SOURCES[1]} -d ${TARGETS[1].dir}''')
+                           '''-s ${SOURCES[1]} -d ${TARGETS[1].dir} 2> ${TARGETS[0].dir}''' +\
+                           os.path.sep + '''DESeq2_diffexp.err ''')
 deTests = env.Command([deTests_file, deTests_report_file], 
                       [raw_count_matrix, deseq_sample_table], 
                       deTests_cmd)

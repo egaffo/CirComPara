@@ -62,6 +62,8 @@ sort_alignments = env.Command(["{}_sorted.sam.gz".format(mapfile_basename)],
 ## COLLECT SPLICE JUNCTIONS
 collect_splice_cmd = "testrealign.x -d " + GENOME_FASTA + " -q $SOURCE -n "\
                      "-U ${TARGETS[0]} -T ${TARGETS[1]} " + "$(-t {}$)".format(CPUS)
+collect_splice_cmd = collect_splice_cmd + " 2> ${TARGETS[0].dir}" +\
+                     os.path.sep + "${SOURCES[0].filebase}_testrealign.err"
 collect_splice_targets = ["splicesites.bed", "transrealigned.bed"]
 collect_splice = env.Command(collect_splice_targets, sort_alignments[0], collect_splice_cmd)
 

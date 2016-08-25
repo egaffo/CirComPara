@@ -76,6 +76,8 @@ if READS[0].abspath.endswith('.gz'):
 if not ANNOTATION == '':
     star_cmd = star_cmd + ''' --sjdbGTFfile ''' + ANNOTATION
 
+star_cmd = star_cmd + ''' > ${SOURCES[0].filebase}_star.log '''
+
 chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
 star_targets = [os.path.join(star_out_dir, f) for f in ['Aligned.sortedByCoord.out.bam', 

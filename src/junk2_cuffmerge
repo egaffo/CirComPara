@@ -57,8 +57,8 @@ if not ANNOTATION == '':
     add_options = add_options + ' -g ' + ANNOTATION
 
 cuffmerge_out_dir = 'merged'
-cuffmerge_cmd = 'cuffmerge $(-p ' + CPUS + '$) -o ${TARGET.dir} ' +\
-                add_options + ' ${SOURCE}'
+cuffmerge_cmd = 'cuffmerge $(-q --no-update-check -p ' + CPUS + '$) -o ${TARGET.dir} ' +\
+                add_options + ' ${SOURCE} 2> ${TARGET.dir}' + os.path.sep + 'cuffmerge.log'
 cuffmerge = env.Command(os.path.join(cuffmerge_out_dir, 'merged.gtf'), 
                         write_af, cuffmerge_cmd)
 
