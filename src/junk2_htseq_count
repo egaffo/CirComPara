@@ -27,7 +27,7 @@ import os
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     mapfile          = mapping_file
     mapfile_basename = sample_name
     annotation       = htseq_count_annotation
@@ -58,6 +58,12 @@ except NameError as ne:
     annotation       = env['ANNOTATION']
     CPUS             = env['CPUS']
     STRANDED         = env['STRANDED']
+
+log_id = "[HTSEQ-COUNT]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 if STRANDED.lower() not in ['yes', 'no']:
     print "WARNING: unrecognized option \'" + STRANDED + "\' for htseq-count strand parameter."\

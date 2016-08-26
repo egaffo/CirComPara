@@ -17,7 +17,7 @@ import os
 Import('*')
 
 try:
-    env = env_index_star
+    env = env_index_star.Clone()
 except NameError as ne:
     print 'junk2_index_star: command line execution'
     vars = Variables('vars.py')
@@ -32,7 +32,16 @@ except NameError as ne:
     if unknown:
         print "Unknown variables", unknown.keys()
         Exit(1)
-    
+ 
+    env['LOGLEVEL'] = 1
+    env['LOG_PREFIX'] = "[INDEXING STAR]"
+
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + "[INDEXING STAR]"
+except KeyError:
+    env['LOG_PREFIX'] = "[INDEXING STAR]"
+
+   
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
     
 CPUS        = env['CPUS']

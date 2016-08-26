@@ -20,7 +20,7 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env             = env
+    env             = env.Clone()
     CPUS            = cuffquant_cpus
     GENOME_FASTA    = cuffquant_genome_fasta
     ALIGNMENTS      = cuffquant_alignments
@@ -50,6 +50,12 @@ except NameError:
     ANNOTATION = env['ANNOTATION']
 
     ALIGNMENTS = [File(f) for f in ALIGNMENTS]
+
+log_id = "[CUFFQUANT]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 ## MERGE TRANSCRIPTS.GTF FILES
 add_options = ' --seed 0 --frag-bias-correct ' + GENOME_FASTA +\

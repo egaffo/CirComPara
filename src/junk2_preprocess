@@ -15,7 +15,7 @@ import os, itertools
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     CPUS         = preprocess_cpus
     PREPROCESSOR = preprocess_preprocessor
     ADAPTER_FILE = preprocess_adapter_file
@@ -48,6 +48,12 @@ except NameError:
     ADAPTER_FILE = env['ADAPTER_FILE']
     READS = env['READS'].split(',')
     PREPROCESSOR_PARAMS = env['PREPROCESSOR_PARAMS']
+
+log_id = "[READS PREPROCESSING]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 

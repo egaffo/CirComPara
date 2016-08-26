@@ -26,7 +26,7 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env         = star_env
+    env         = star_env.Clone()
     CPUS        = star_cpus
     READS       = star_reads_to_map
     STAR_INDEX  = star_index
@@ -58,7 +58,13 @@ except NameError:
     READS       = env['READS'].split(',')
     STAR_PARAMS = env['STAR_PARAMS']
     ANNOTATION  = env['ANNOTATION']
- 
+
+log_id = "[STAR]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
 star_out_dir = 'star_out'
 chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, star_out_dir) 
 star_cmd = '''STAR --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate ''' +\

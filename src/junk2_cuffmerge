@@ -16,7 +16,7 @@ import os, itertools, zipfile
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     gtf_files = transcripts_gtf_files
     CPUS      = cuffmerge_cpus
     ANNOTATION = cuffmerge_annotation
@@ -42,6 +42,12 @@ except NameError:
     ANNOTATION = env['ANNOTATION']
     gtf_files = [File(f).abspath for f in env['TRANSCRIPT_FILES'].split(',')]
     CPUS = env['CPUS']
+
+log_id = "[CUFFMERGE]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 ## COLLECT TRANSCRIPTS.GTF FILES
 def WriteAssemblies(target, source, env):

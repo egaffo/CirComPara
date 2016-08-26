@@ -41,7 +41,7 @@ Import('*')
 try:
     # these variables can be passed with 'exports' when calling this SConscript
     # from another SConscript
-    env             = env
+    env             = env.Clone()
     CPUS            = ciri_cpus
     BWA_INDEX       = ciri_bwa_index
     READS           = ciri_reads
@@ -78,6 +78,12 @@ except NameError:
     BWA_PARAMS      = env['BWA_PARAMS']
     CIRI            = env['CIRI']
     CIRI_ANNOTATION = env['CIRI_ANNOTATION']
+
+log_id = "[CIRI]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 bwa_cpus = CPUS
 

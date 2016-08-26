@@ -22,7 +22,7 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env
+    env = env.Clone()
     readset = read_statistics_readset
 except NameError:
     vars = Variables('vars.py')
@@ -40,6 +40,12 @@ except NameError:
     # These are the variables given from the command line when the SConscript is called
     # standalone
     readset = env['READS']
+
+log_id = "[READ STATISTICS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 

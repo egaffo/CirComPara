@@ -13,7 +13,7 @@ import os
 Import('*')
 
 try:
-    env = env_index_hisat2
+    env = env_index_hisat2.Clone()
 except NameError as ne:
     print 'junk2_index_hisat2: command line execution'
     vars = Variables('vars.py')
@@ -28,7 +28,15 @@ except NameError as ne:
     if unknown:
         print "Unknown variables", unknown.keys()
         Exit(1)
-    
+
+    env['LOGLEVEL'] = 1
+    env['LOG_PREFIX'] = "[BUILD INDEXES]"
+
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + "[INDEXING HISAT2]"
+except KeyError:
+    env['LOG_PREFIX'] = "[INDEXING HISAT2]"
+   
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
     
 CPUS        = env['CPUS']

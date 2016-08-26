@@ -25,7 +25,7 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env
+    env = env.Clone()
     CPUS = bam2fq_cpus
     BAM = bam2fq_bamfile
     ID = bam2fq_prefix_id
@@ -54,6 +54,12 @@ except NameError:
     BAM = env['BAM']
     ID = env['ID']
     PAIRED = env['PAIRED']
+
+log_id = "[BAM TO FASTQ]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 chdir_working_cmd = '''cd ''' + Dir('.').abspath
 chdir_parent_cmd  = '''cd ''' + Dir('#').abspath

@@ -23,6 +23,7 @@ import os
 Import('*')
 
 try:
+    env = env.Clone()
     CPUS        = expression_cpus
     ANNOTATION  = expression_annotation
     ALIGNMENTS  = mapping_file
@@ -54,6 +55,12 @@ except NameError:
     SAMPLE       = env['SAMPLE']
     CUFFLINKS_PARAMS = env['CUFFLINKS_PARAMS']
 
+log_id = "[EXPRESSION QUANTIF]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+        
 expression_results = []
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 

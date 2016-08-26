@@ -25,10 +25,11 @@ import os
 ## SET SCRIPT NAMES. 
 junk2_tophat      = 'junk2_tophat'
 
+
 Import('*')
 
 try:
-    env          = circexplorer_env
+    env          = circexplorer_env.Clone()
     CPUS         = circexplorer_cpus
     GENOME_INDEX = circexplorer_genome_index
     GENOME_FASTA = circexplorer_genome_fasta
@@ -65,7 +66,13 @@ except NameError:
     GENEPRED     = env['GENEPRED']
     READS        = env['READS'].split(',')
     ALIGNER      = env['ALIGNER']
-    
+ 
+log_id = "[CIRCEXPLORER]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+   
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
 ## GET INPUT READ FILE FULL PATH
@@ -135,7 +142,7 @@ chdir_working_cmd  = 'cd ' + os.path.join(Dir('.').abspath, out_dir)
 chdir_previous_cmd = 'cd ' + Dir('#').abspath
    
 CIRCexplorer_cmd = 'CIRCexplorer.py -g ${SOURCES[0].abspath} -r ${SOURCES[1].abspath} ' +\
-                   CIRCexplorer_aligner_param + '${SOURCES[2].abspath}'
+                   CIRCexplorer_aligner_param + '${SOURCES[2].abspath} > CIRCexplorer.log'
 CIRCexplorer_targets = os.path.join(out_dir, 'CIRCexplorer_circ.txt')
 CIRCexplorer = env.Command([CIRCexplorer_targets], 
                            CIRCexplorer_sources, 

@@ -10,7 +10,7 @@ Currently supported/implemented for:
 Import('*')
 
 try:
-    env
+    env = env.Clone()
     circrna_analyze_circexplorer
     circrna_analyze_ciri        
     circrna_analyze_findcirc    
@@ -38,6 +38,12 @@ except NameError:
     circrna_analyze_findcirc     = csvs[2]
     circrna_analyze_segecirc     = csvs[3]
     GTF = env['GTF']
+
+log_id = "[ANALYZE CIRCRNAS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 cmd = '''{ convert_circrna_collect_tables.py -p circexplorer ${SOURCES[0]}; '''\
    '''convert_circrna_collect_tables.py -p ciri ${SOURCES[1]}; '''\

@@ -22,7 +22,7 @@ import os, itertools
 Import('*')
 
 try:
-    env                 = env
+    env                 = env.Clone()
     CPUS                = trimmomatic_cpus
     ADAPTER_FILE        = trimmomatic_adapter_file
     TRIMMOMATIC_PARAMS  = trimmomatic_extra_params
@@ -54,6 +54,12 @@ except NameError:
     TRIMMOMATIC_PARAMS  = env['TRIMMOMATIC_PARAMS']
     READS               = env['READS'].split(',')
 
+log_id = "[TRIMMOMATIC]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+        
 trimmomatic_dir = 'trimmomatic'
 
 if not ADAPTER_FILE.strip() == '':

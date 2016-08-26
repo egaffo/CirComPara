@@ -2,6 +2,13 @@ import os
 
 Import('*')
 
+env = env.Clone()
+log_id = "[TRANSCRIPT SEQS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
 ## NEEDS: 'gffread' from Cufflinks packages
 #transcript_sequences_annotation: the GFF annotation (e.g. merge.gtf from cuffmerge)
 #transcript_sequences_genome: the genome in FASTA format (single multifasta preferred,not compressed)

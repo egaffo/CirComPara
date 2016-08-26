@@ -27,6 +27,7 @@ import os
 Import('*')
 
 try:
+    env = env.Clone()
     mapfile = mapping_file
     mapfile_basename = sample_name
     CPUS = segemehlcirc_cpus
@@ -51,6 +52,13 @@ except NameError:
     mapfile_basename = env['SAMPLE']
     CPUS = env['CPUS']
     GENOME_FASTA = env['GENOME_FASTA']
+
+log_id = "[TESTREALIGN]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
 
 ## SORT SAM/BAM
 sort_alignments_cmd = "samtools view -u $(-@{0}$) "\

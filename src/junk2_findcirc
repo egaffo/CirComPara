@@ -35,6 +35,7 @@ Import('*')
 try:
     # these variables can be passed with 'exports' when calling this SConscript
     # from another SConscript
+    env = env.Clone()
     CPUS = find_circ_cpus
     BOWTIE2_INDEX = find_circ_bt2_idx
     READS = find_circ_reads
@@ -60,6 +61,12 @@ except NameError:
     READS = env['READS'].split(',')
     GENOME_FASTA = env['GENOME_FASTA']
     SAMPLE = env['SAMPLE']
+
+log_id = "[FINDCIRC]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 out_dir = 'find_circ_out'
 

@@ -23,8 +23,20 @@ file,sample,condition,adapter,translocation
 
 '''
 
-import os, csv, itertools, collections, re
+import os, csv, itertools, collections, re, sys
 from collections import defaultdict
+from datetime import datetime
+
+def print_cmd_line(s, targets, sources, env):
+    if env['LOGLEVEL'] == 1:
+        sys.stdout.write(env['LOG_PREFIX'] + ' ' + str(datetime.now()) +\
+                         " %s ...\n"%(' and '.join([str(x) for x in targets])))
+        # Save real cmd to log file
+        #open(env['CMD_LOGFILE'], 'a').write("%s\n" % s)
+    else:
+        sys.stdout.write("%s\n"%s)
+
+log_id = "[CIRCPIPE MULTI]"
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
@@ -65,6 +77,15 @@ if unknown:
     print "Run sample: unknown variables", unknown.keys()
     Exit(1)
 
+## pretty logging
+env['PRINT_CMD_LINE_FUNC'] = print_cmd_line
+#env['CMD_LOGFILE'] = 'build-log.txt'
+env['LOGLEVEL'] = 1
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
 META         = env['META']
 CPUS         = env['CPUS']
 GENOME_INDEX = env['GENOME_INDEX']
@@ -86,6 +107,7 @@ HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
 CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+env['LOGLEVEL'] = 1
 
 samples_dir = 'samples'
 
@@ -108,6 +130,7 @@ with open(META) as csvfile:
             print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
 
 annotation_dir = 'junk2_dbs'
+
 
 ## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
 if translocations:

@@ -8,11 +8,14 @@ Currently supported are:
     * STAR
 '''
 
-import os
+import os, re
 
 Import('*')
+
+log_id = "[BUILD INDEXES]"
+
 try:
-    env = env_build_indexes
+    env = env_build_indexes.Clone()
 except NameError as ne:
     print 'junk2_build_indexes: command line execution.'
 
@@ -38,6 +41,12 @@ except NameError as ne:
         print "Unknown variables", unknown.keys()
         Exit(1)
 
+    env['LOGLEVEL'] = 1
+
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
