@@ -36,7 +36,6 @@ def print_cmd_line(s, targets, sources, env):
     else:
         sys.stdout.write("%s\n"%s)
 
-log_id = "[CIRCPIPE MULTI]"
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
@@ -67,7 +66,7 @@ vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner
 vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
         '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
         '''for the sequencing''', '')
-
+vars.Add('LOGLEVEL', '''Logging verbosity''', 1)
  
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
@@ -77,10 +76,10 @@ if unknown:
     print "Run sample: unknown variables", unknown.keys()
     Exit(1)
 
+log_id = "[CIRCPIPE MULTI]"
 ## pretty logging
 env['PRINT_CMD_LINE_FUNC'] = print_cmd_line
 #env['CMD_LOGFILE'] = 'build-log.txt'
-env['LOGLEVEL'] = 1
 try:
     env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
 except KeyError:
@@ -107,7 +106,6 @@ HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
 CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
-env['LOGLEVEL'] = 1
 
 samples_dir = 'samples'
 
