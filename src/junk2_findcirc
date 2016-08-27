@@ -68,7 +68,7 @@ if len(READS)==2:
     read_bowtie2_par = '-1 ${SOURCES[0]} -2 ${SOURCES[1]}'
 
 split_fasta_genome_cmd = ''
-if os.path.isfile(GENOME_FASTA):
+if not os.path.isdir(GENOME_FASTA):
     tmp_findcirc_dir = os.path.join(Dir('.').abspath, out_dir, 'tmp_findcirc')
     split_fasta_genome_cmd = ' mkdir -p ' + tmp_findcirc_dir + ' && cat ' + GENOME_FASTA +\
                     ''' | awk 'BEGIN { CHROM="" } { if ($1~"^>") CHROM=substr($1,2); '''\
