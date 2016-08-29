@@ -12,7 +12,6 @@ import os, re
 
 Import('*')
 
-log_id = "[BUILD INDEXES]"
 
 try:
     env = env_build_indexes.Clone()
@@ -41,8 +40,7 @@ except NameError as ne:
         print "Unknown variables", unknown.keys()
         Exit(1)
 
-    env['LOGLEVEL'] = 1
-
+log_id = "[BUILD INDEXES]"
 try:
     env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
 except KeyError:

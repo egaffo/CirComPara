@@ -29,13 +29,11 @@ except NameError as ne:
         print "Unknown variables", unknown.keys()
         Exit(1)
 
-    env['LOGLEVEL'] = 1
-    env['LOG_PREFIX'] = "[BUILD INDEXES]"
-
+log_id = "[INDEXING HISAT2]"
 try:
-    env['LOG_PREFIX'] = env['LOG_PREFIX'] + "[INDEXING HISAT2]"
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
 except KeyError:
-    env['LOG_PREFIX'] = "[INDEXING HISAT2]"
+    env['LOG_PREFIX'] = log_id
    
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
     
@@ -50,6 +48,7 @@ target  = [target_basename + suffix for suffix in index_suffixes]
 command = '''hisat2-build -q -f --seed 1 $(-p ''' + CPUS +\
           ''' $) ''' + ','.join(source) +\
           ''' ${TARGETS[0].dir}''' + os.path.sep + target_basename + ''' ''' + EXTRA_PARAMS
+
 index = env.Command(target, source, command)
 
 Return('index')
