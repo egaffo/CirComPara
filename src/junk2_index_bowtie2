@@ -50,7 +50,8 @@ index_suffixes = ['.1.bt2', '.2.bt2', '.3.bt2', '.4.bt2', '.rev.1.bt2', '.rev.2.
 target  = [target_basename + suffix for suffix in index_suffixes]
 command = '''bowtie2-build -q -f --seed 1 $(--threads ''' + CPUS +\
           ''' $) '''  + EXTRA_PARAMS + ' ' + ','.join(source) +\
-          ''' ${TARGETS[0].dir}''' + os.path.sep + target_basename 
+          ''' ${TARGETS[0].dir}''' + os.path.sep + target_basename +\
+          ''' 2> ${TARGETS[0].dir}''' + os.path.sep + '''bowtie2_indexing.log'''
 index = env.Command(target, source, command)
 
 Return('index')
