@@ -28,14 +28,45 @@ from collections import defaultdict
 from datetime import datetime
 
 def print_cmd_line(s, targets, sources, env):
-    if env['LOGLEVEL'] == 1:
-        sys.stdout.write(env['LOG_PREFIX'] + ' ' + str(datetime.now()) +\
-                         " %s ...\n"%(' and '.join([str(x) for x in targets])))
-        # Save real cmd to log file
-        #open(env['CMD_LOGFILE'], 'a').write("%s\n" % s)
-    else:
-        sys.stdout.write("%s\n"%s)
+    '''This function controls the logging of commands'''
+    try:
+        LOGLEVEL = env['LOGLEVEL']
+    except KeyError:
+        LOGLEVEL = 0 # if not defined set base level as default
 
+    prefix = '\033[96m' + env['LOG_PREFIX'] + ' \033[93m' + str(datetime.now()) + '\033[0m'
+    full_cmd = prefix + " %s\n" % s
+
+    if GetOption("no_exec"): ## when no exec always print full commands
+        outstr = full_cmd
+    else:
+        ## Save real cmd to log file only if actual execution
+        logfile = "circpipe_multi.log"
+        try:
+            logfile = env['CMD_LOGFILE']
+        except KeyError:
+            sys.stderr.write("Log file not defined. Set default " + logfile + "\n")
+        open(logfile, 'a').write(full_cmd)
+    
+        outstr = "%s\n" % s ## log command only by default
+    
+        if LOGLEVEL == 1: ## log script-level only
+            outstr = prefix + '\n'
+        elif LOGLEVEL == 2: ## log script-level and targets 
+            outstr = prefix + " %s ...\n"%(' and '.join([str(x) for x in targets]))
+        elif LOGLEVEL == 3: ## log script-level and full command
+            outstr = full_cmd
+        elif LOGLEVEL == 4:
+            prep = ' Building '
+            if 'end_cmd_log' in s:
+                prep = ' Done '
+            outstr = prefix + '\n'.join([prep + str(x) + '...' for x in targets]) + '\n'
+
+    # print to standard out
+    sys.stdout.write(outstr)
+
+#def end_cmd_log(target, source, env):
+#   return None
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
@@ -67,6 +98,7 @@ vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
         '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
         '''for the sequencing''', '')
 vars.Add('LOGLEVEL', '''Logging verbosity''', 1)
+vars.Add('CMD_LOGFILE', '''Log file''', 'circpipe_multi.log')
  
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
@@ -79,11 +111,12 @@ if unknown:
 log_id = "[CIRCPIPE MULTI]"
 ## pretty logging
 env['PRINT_CMD_LINE_FUNC'] = print_cmd_line
-#env['CMD_LOGFILE'] = 'build-log.txt'
 try:
     env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
 except KeyError:
     env['LOG_PREFIX'] = log_id
+
+env['ENDCMDLOG'] = end_cmd_log
 
 META         = env['META']
 CPUS         = env['CPUS']
@@ -483,3 +516,7 @@ Clean('.', circRNA_collect_dir)
 Clean('.', read_stats_collect_dir)
 Clean('.', qre_dir)
 Clean('.', annotation_dir)
+
+#for t in BUILD_TARGETS:
+#    print t
+#    env.AddPostAction(t, env['ENDCMDLOG'])
