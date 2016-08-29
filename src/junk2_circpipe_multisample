@@ -34,11 +34,21 @@ def print_cmd_line(s, targets, sources, env):
     except KeyError:
         LOGLEVEL = 0 # if not defined set base level as default
 
-    prefix = '\033[96m' + env['LOG_PREFIX'] + ' \033[93m' + str(datetime.now()) + '\033[0m'
+    colors = {}
+    colors['cyan']   = '\033[96m'
+    colors['purple'] = '\033[95m'
+    colors['blue']   = '\033[94m'
+    colors['green']  = '\033[92m'
+    colors['yellow'] = '\033[93m'
+    colors['red']    = '\033[91m'
+    colors['end']    = '\033[0m'
+
+    prefix = colors['purple'] + env['LOG_PREFIX'] + ' ' + colors['green'] +\
+             str(datetime.now()) + colors['end']
     full_cmd = prefix + " %s\n" % s
 
     if GetOption("no_exec"): ## when no exec always print full commands
-        outstr = full_cmd
+        outstr = colors['purple'] + env['LOG_PREFIX'] + colors['end'] +  " %s\n" % s
     else:
         ## Save real cmd to log file only if actual execution
         logfile = "circpipe_multi.log"
@@ -64,9 +74,6 @@ def print_cmd_line(s, targets, sources, env):
 
     # print to standard out
     sys.stdout.write(outstr)
-
-#def end_cmd_log(target, source, env):
-#   return None
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
@@ -116,7 +123,7 @@ try:
 except KeyError:
     env['LOG_PREFIX'] = log_id
 
-env['ENDCMDLOG'] = end_cmd_log
+#env['ENDCMDLOG'] = end_cmd_log
 
 META         = env['META']
 CPUS         = env['CPUS']
@@ -516,7 +523,3 @@ Clean('.', circRNA_collect_dir)
 Clean('.', read_stats_collect_dir)
 Clean('.', qre_dir)
 Clean('.', annotation_dir)
-
-#for t in BUILD_TARGETS:
-#    print t
-#    env.AddPostAction(t, env['ENDCMDLOG'])
