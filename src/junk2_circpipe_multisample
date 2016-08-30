@@ -55,6 +55,12 @@ vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner
 vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
         '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
         '''for the sequencing''', '')
+vars.Add('CUFFQUANT_EXTRA_PARAMS', 
+         'Cuffquant parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
+         ' --multi-read-correct --max-bundle-frags 9999999', '')
+vars.Add('CUFFDIFF_EXTRA_PARAMS', 
+         'Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
+         ' --multi-read-correct', '')
 
  
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
@@ -84,6 +90,8 @@ GENEPRED   = env['GENEPRED']
 
 HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
 CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
+CUFFQUANT_EXTRA_PARAMS = env['CUFFQUANT_EXTRA_PARAMS']
+CUFFDIFF_EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -129,6 +137,7 @@ if translocations:
                                          variant_dir = annotation_dir, duplicate = 0, 
                                          exports = '''env_translocate_genome ''')
     GENOME_FASTA = File(translocated_genome[0][0]).abspath
+    env['GENOME_FASTA'] = GENOME_FASTA
     ANNOTATION = File(translocated_genome[1][0]).abspath
 else:
     print "No translocations defined"
@@ -278,6 +287,7 @@ alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
 alignments = get_matching_nodes(runs, alignment_matching_regexp)
 cuffquant_alignments = alignments
 cuffquant_genome_fasta = GENOME_FASTA
+cuffquant_extra_params = CUFFQUANT_EXTRA_PARAMS
 
 cuffquant_dir = 'cuffquant'
 cuffquant_cpus = CPUS
@@ -286,7 +296,7 @@ cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
                        src_dir = SCONSCRIPT_HOME,
                        variant_dir = cuffquant_dir, duplicate = 0,
                        exports = '''env cuffquant_alignments cuffquant_annotation '''
-                       '''cuffquant_genome_fasta cuffquant_cpus''')
+                       '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
 
 Depends(cuffquant, [cuffmerge, alignments])
 
@@ -295,12 +305,13 @@ cuffdiff_cpus = CPUS
 cuffdiff_conditions = conditions
 cuffdiff_annotation = cuffmerge
 cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
+cuffdiff_extra_params = CUFFDIFF_EXTRA_PARAMS
 cuffdiff_dir = 'cuffdiff'
 cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
                       src_dir = SCONSCRIPT_HOME,
                       variant_dir = cuffdiff_dir, duplicate = 0,
                       exports = '''env cuffdiff_cpus cuffdiff_conditions '''
-                      '''cuffdiff_annotation cuffdiff_quantities''')
+                      '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
 
 Depends(cuffdiff, cuffquant)
 
