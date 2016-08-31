@@ -74,6 +74,7 @@ try:
     CONDITIONS  = cuffdiff_conditions
     ANNOTATION  = cuffdiff_annotation
     QUANTITIES  = cuffdiff_quantities
+    EXTRA_PARAMS = cuffdiff_extra_params
 
     cuffdiff_labels = [get_node_condition(n, cuffdiff_conditions) for n in cuffdiff_quantities]
    
@@ -88,7 +89,10 @@ except NameError:
     vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', 'merged.gtf')
     vars.Add('CONDITIONS', '''Conditions to test differential expression comma separated list ordered as the QUANTITIES parameter''', 
              'CONDITION_1,CONDITION_2')
-    
+    vars.Add('EXTRA_PARAMS', 
+             'Parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
+             ' --multi-read-correct --max-bundle-frags 9999999', '')
+
     env = Environment(variables = vars,
                       ENV = os.environ)
     Help(vars.GenerateHelpText(env))
@@ -101,6 +105,7 @@ except NameError:
     QUANTITIES = ' '.join(env['QUANTITIES'].split('@'))
     ANNOTATION = env['ANNOTATION']
     CONDITIONS = env['CONDITIONS']
+    EXTRA_PARAMS = env['EXTRA_PARAMS']
 
     cuffdiff_parameters = {'LABELS': CONDITIONS, 'SAMS': QUANTITIES}
 
@@ -110,11 +115,8 @@ try:
 except KeyError:
     env['LOG_PREFIX'] = log_id
 
-#TODO add_options
-add_options = ' '
-
 cuffdiff_cmd = 'cuffdiff -q $(--no-update-check -p ' + CPUS + '$) -o ' + Dir('.').path + ' ' +\
-               add_options +\
+               EXTRA_PARAMS +\
                ' -L ' + cuffdiff_parameters['LABELS'] + ' ${SOURCES[0]} ' +\
                cuffdiff_parameters['SAMS'] + ' 2> ${TARGETS[0].dir}' +\
                os.path.sep + 'cuffdiff.log'
