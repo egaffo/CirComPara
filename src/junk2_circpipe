@@ -33,7 +33,7 @@ When called from a SConscript it imports the following variables:
  * gene_pred
  * hisat2_extra_params
  * cufflinks_params
-
+ * ciri_extra_parameters
 
 '''
 
@@ -65,6 +65,7 @@ try:
     BWA_INDEX      = bwa_index
     BWA_PARAMS     = bwa_params
     CIRI           = ciri
+    CIRI_EXTRA_PARAMS = ciri_extra_parameters
     BOWTIE2_INDEX  = bowtie2_index
 
     STAR_INDEX = star_index
@@ -104,7 +105,7 @@ except NameError:
     vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
              '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
              '''for the sequencing''', '')
-
+    vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
    
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -127,6 +128,7 @@ except NameError:
     BWA_INDEX      = env['BWA_INDEX']
     BWA_PARAMS     = env['BWA_PARAMS']
     CIRI           = env['CIRI']
+    CIRI_EXTRA_PARAMS = env['CIRI_EXTRA_PARAMS']
     BOWTIE2_INDEX = env['BOWTIE2_INDEX']
 
     STAR_INDEX = env['STAR_INDEX']
@@ -288,7 +290,8 @@ circrnas = env.SConscript(os.path.join(build_dir, junk2_circrnas),
                         exports = '''env sample_cpus sample_genome_fasta '''
                         '''sample_annotation sample_raw_reads sample_segemehl_index '''
                         '''ciri_bwa_index ciri_bwa_extra_parameters '''
-                        '''ciri_script bowtie2_index star_index gene_pred''')
+                        '''ciri_script bowtie2_index star_index gene_pred '''
+                        '''ciri_extra_parameters''')
 results.append(circrnas)
 
 ## CLEAN COMMANDS

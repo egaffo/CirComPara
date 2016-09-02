@@ -61,7 +61,7 @@ vars.Add('CUFFQUANT_EXTRA_PARAMS',
 vars.Add('CUFFDIFF_EXTRA_PARAMS', 
          'Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
          ' --multi-read-correct', '')
-
+vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
  
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
@@ -83,6 +83,7 @@ SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
 BWA_INDEX      = env['BWA_INDEX']
 BWA_PARAMS     = env['BWA_PARAMS']
 CIRI           = env['CIRI']
+CIRI_EXTRA_PARAMS = env['CIRI_EXTRA_PARAMS']
 BOWTIE2_INDEX  = env['BOWTIE2_INDEX']
     
 STAR_INDEX = env['STAR_INDEX']
@@ -92,6 +93,7 @@ HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
 CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
 CUFFQUANT_EXTRA_PARAMS = env['CUFFQUANT_EXTRA_PARAMS']
 CUFFDIFF_EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS']
+
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -214,7 +216,8 @@ for sample in sorted(samples.keys()):
     segemehl_index      = SEGEMEHL_INDEX
     bwa_index           = BWA_INDEX     
     bwa_params          = BWA_PARAMS    
-    ciri                = CIRI          
+    ciri                = CIRI
+    ciri_extra_parameters = CIRI_EXTRA_PARAMS
     bowtie2_index       = BOWTIE2_INDEX 
 
     star_index  = STAR_INDEX 
@@ -233,7 +236,7 @@ for sample in sorted(samples.keys()):
                             '''sample_adapter_file sample_annotation '''
                             '''sample_raw_reads segemehl_index bwa_index bwa_params '''
                             '''ciri bowtie2_index star_index gene_pred '''
-                            '''hisat2_extra_params cufflinks_params''')
+                            '''hisat2_extra_params cufflinks_params ciri_extra_parameters''')
     runs.append(run_sample)
     Depends(run_sample, indexes['STAR'])
     Depends(run_sample, indexes['HISAT2'])
