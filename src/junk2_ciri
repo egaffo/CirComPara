@@ -50,6 +50,7 @@ try:
     BWA_PARAMS      = ciri_bwa_extra_parameters
     CIRI_ANNOTATION = ciri_annotation
     CIRI            = ciri_script
+    EXTRA_PARAMS    = ciri_extra_parameters
 except NameError:
     vars = Variables('vars.py')
     vars.Add('CPUS', 'Max parallel jobs to execute', '4')
@@ -61,6 +62,7 @@ except NameError:
     vars.Add('SAMPLE', 'Name of the sample', '')
     vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
     vars.Add('CIRI_ANNOTATION', 'The full path to the GTF/GFF annotation file', '')
+    vars.Add('EXTRA_PARAMS', 'CIRI additional parameters', '')
     
     env = Environment(ENV=os.environ,
                       variables=vars)
@@ -78,6 +80,7 @@ except NameError:
     BWA_PARAMS      = env['BWA_PARAMS']
     CIRI            = env['CIRI']
     CIRI_ANNOTATION = env['CIRI_ANNOTATION']
+    EXTRA_PARAMS    = env['EXTRA_PARAMS']
 
 log_id = "[CIRI]"
 try:
@@ -93,11 +96,10 @@ chdir_previous_cmd = 'cd ' + Dir('#').abspath
 
 ## Single-end reads case
 read_bwa_par = ' ${SOURCES[0].abspath} '
-ciri_parameters = ' -S '
+ciri_parameters = EXTRA_PARAMS
 ## Adjust for paired-end reads
 if len(READS)==2:
     read_bwa_par = read_bwa_par + ' ${SOURCES[1].abspath}'
-    ciri_parameters = ''
 
 if CIRI_ANNOTATION:
     ciri_parameters = ciri_parameters + ' -A ' + CIRI_ANNOTATION
