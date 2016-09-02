@@ -24,14 +24,14 @@ def fix_coords_and_name(fields, bed, name, source_name = 'junk2'):
     if chrom == bed2gtf[0][0]:
         # remove translocation offset from coordinates
         start   = str(max(1, (int(fields[3]) - bed2gtf[0][1]) + 1))
-        end     = str(min((int(fields[4]) - bed2gtf[0][1]) + 1, bed2gtf[0][1]))
+        end     = str(min((int(fields[4]) - bed2gtf[0][1]) + 1, tr_offset))
         #strand  = '+' # is the strand preserved after translocation? Leave commented if 'yes'.
         chrom   = name
         source  = source_name
     elif chrom == bed2gtf[1][0]:
         # remove translocation offset from coordinates and add offset of the prepended chromosome
         start   = str(max(1, (int(fields[3]) - bed2gtf[1][1]) + 1) + tr_offset)
-        end     = str(min((int(fields[4]) - bed2gtf[1][1]) + 1, bed2gtf[1][1]) + tr_offset)
+        end     = str(min((int(fields[4]) - bed2gtf[1][1]) + 1, bed2gtf[1][2]) + tr_offset)
         #strand  = '+' 
         chrom   = name
         source  = source_name
