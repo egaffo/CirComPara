@@ -90,9 +90,9 @@ env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FASTQC[1], SymLink)
 
 
 # BEDTOOLS
-BEDTOOLS_tar = 'bedtools-2.25.0.tar.gz'
+BEDTOOLS_tar = 'bedtools-2.26.0.tar.gz'
 BEDTOOLS_dir = os.path.join(tools_dir, 'bedtools2')
-BEDTOOLS_link = 'https://github.com/arq5x/bedtools2/releases/download/v2.25.0/' + BEDTOOLS_tar
+BEDTOOLS_link = 'https://github.com/arq5x/bedtools2/releases/download/v2.26.0/' + BEDTOOLS_tar
 BEDTOOLS_target = [os.path.join(tools_dir, BEDTOOLS_tar), 
                    os.path.join(BEDTOOLS_dir, 'bin', 'bedtools')]
 #BEDTOOLS_source = 
