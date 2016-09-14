@@ -60,7 +60,7 @@ cuffmerge_out_dir = 'merged'
 cuffmerge_cmd = 'cuffmerge $(-p ' + CPUS + '$) -o ${TARGET.dir} ' +\
                 add_options + ' ${SOURCE}'
 cuffmerge = env.Command(os.path.join(cuffmerge_out_dir, 'merged.gtf'), 
-                        write_af, cuffmerge_cmd)
+                        [write_af, gtf_files], cuffmerge_cmd)
 
 ## AMEND DIRECTORY FROM LOG FILES WHEN CLEANING AND THE DIRECTORY ITSELF
 Clean(cuffmerge, os.path.join(cuffmerge_out_dir, 'logs'))
