@@ -263,15 +263,18 @@ def get_matching_nodes(nodelist, rexpression):
     return files
 
 transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
-cuffmerge_cpus = CPUS
-cuffmerge_annotation = ANNOTATION
-cuffmerge_genome_fasta = GENOME_FASTA
 cuffmerge_dir = 'cuffmerge'
-cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
-                       src_dir = SCONSCRIPT_HOME,
-                       variant_dir = cuffmerge_dir, duplicate = 0,
-                       exports = 'env transcripts_gtf_files cuffmerge_cpus '''
-                       '''cuffmerge_annotation cuffmerge_genome_fasta''')
+if len(transcripts_gtf_files) > 1:
+   cuffmerge_cpus = CPUS
+   cuffmerge_annotation = ANNOTATION
+   cuffmerge_genome_fasta = GENOME_FASTA
+   cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
+                           src_dir = SCONSCRIPT_HOME,
+                           variant_dir = cuffmerge_dir, duplicate = 0,
+                           exports = 'env transcripts_gtf_files cuffmerge_cpus '''
+                           '''cuffmerge_annotation cuffmerge_genome_fasta''')
+else:
+    cuffmerge = transcripts_gtf_files
 
 ## RETRIEVE TRANSCRIPT SEQUENCES
 transcript_sequences_annotation = cuffmerge
@@ -284,39 +287,42 @@ transcript_sequences = SConscript(os.path.join(transcript_sequences_dir,
                                   exports = '''env transcript_sequences_annotation '''
                                   '''transcript_sequences_genome''')
 
-## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
-cuffquant_annotation = cuffmerge
 alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
 alignments = get_matching_nodes(runs, alignment_matching_regexp)
-cuffquant_alignments = alignments
-cuffquant_genome_fasta = GENOME_FASTA
-cuffquant_extra_params = CUFFQUANT_EXTRA_PARAMS
 
 cuffquant_dir = 'cuffquant'
-cuffquant_cpus = CPUS
-
-cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
-                       src_dir = SCONSCRIPT_HOME,
-                       variant_dir = cuffquant_dir, duplicate = 0,
-                       exports = '''env cuffquant_alignments cuffquant_annotation '''
-                       '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
-
-Depends(cuffquant, [cuffmerge, alignments])
-
-## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
-cuffdiff_cpus = CPUS
-cuffdiff_conditions = conditions
-cuffdiff_annotation = cuffmerge
-cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
-cuffdiff_extra_params = CUFFDIFF_EXTRA_PARAMS
 cuffdiff_dir = 'cuffdiff'
-cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
-                      src_dir = SCONSCRIPT_HOME,
-                      variant_dir = cuffdiff_dir, duplicate = 0,
-                      exports = '''env cuffdiff_cpus cuffdiff_conditions '''
-                      '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
+if len(samples.keys()) > 1:
 
-Depends(cuffdiff, cuffquant)
+    ## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
+    cuffquant_annotation = cuffmerge
+    cuffquant_alignments = alignments
+    cuffquant_genome_fasta = GENOME_FASTA
+    cuffquant_extra_params = CUFFQUANT_EXTRA_PARAMS
+    
+    cuffquant_cpus = CPUS
+    
+    cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
+                           src_dir = SCONSCRIPT_HOME,
+                           variant_dir = cuffquant_dir, duplicate = 0,
+                           exports = '''env cuffquant_alignments cuffquant_annotation '''
+                           '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
+    
+    Depends(cuffquant, [cuffmerge, alignments])
+
+    ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
+    cuffdiff_cpus = CPUS
+    cuffdiff_conditions = conditions
+    cuffdiff_annotation = cuffmerge
+    cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
+    cuffdiff_extra_params = CUFFDIFF_EXTRA_PARAMS
+    cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
+                          src_dir = SCONSCRIPT_HOME,
+                          variant_dir = cuffdiff_dir, duplicate = 0,
+                          exports = '''env cuffdiff_cpus cuffdiff_conditions '''
+                          '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
+    
+    Depends(cuffdiff, cuffquant)
 
 ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
 deseq_annotation = cuffmerge
