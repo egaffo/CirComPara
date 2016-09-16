@@ -109,9 +109,11 @@ find_circ = env.Command([os.path.join(out_dir, 'sites.bed'),
 
 # Select backsplices just by their tag. Additional filters, like minimum read number
 # and length are not performed
+# NB: the commands within curly braces are to prevent grep to return error status
+# when no match and/or no input
 filter_circ_cmd = "grep CIRCULAR ${SOURCES[0]} | " +\
-                  " grep UNAMBIGUOUS_BP | "+\
-                  " grep ANCHOR_UNIQUE > ${TARGET}"
+                  " { grep UNAMBIGUOUS_BP || true; } | "+\
+                  " { grep ANCHOR_UNIQUE || true; } > ${TARGET}"
 filter_circ = env.Command([os.path.join(out_dir, 'circ_candidates.bed')], 
                           [find_circ[0]], 
                           filter_circ_cmd)
