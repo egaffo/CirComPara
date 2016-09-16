@@ -21,9 +21,10 @@ if(length(arguments$input)>0){
   labels <- unlist(strsplit(arguments$labels, ',', fixed=T))
   inputs <- unlist(strsplit(arguments$input,  ',', fixed=T))
   names(inputs) <- labels
-  colnames <- c("chrom", "start", "end", "name", "n_reads", "strand", "n_uniq", "best_qual_A", "best_qual_B", 
-                "spliced_at_begin", "spliced_at_end", "tissues", "tiss_counts", "edits", "anchor_overlap", 
-                "breakpoints", "unknown")
+  colnames <- c("chrom", "start", "end", "name", "n_reads", "strand", 
+                "n_uniq", "uniq_bridges", "best_qual_left", "best_qual_rigth", 
+                "tissues", "tiss_counts", "edits", "anchor_overlap", 
+                "breakpoints", "signal", "strandmatch", "category")
   
   combined.df <- ldply(inputs, function(x){
     a <- read.table(file=x, sep="\t", header=F, col.names = colnames); a}
@@ -40,3 +41,4 @@ if(length(arguments$input)>0){
   print_help(parser)
   stop()
 }
+

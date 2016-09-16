@@ -37,7 +37,7 @@ When called from a SConscript it imports the following variables:
 
 '''
 
-import os, itertools
+import os, itertools, re
 
 ## SET (DISPATCHER) SCRIPT NAMES. THESE ARE THE MAIN PIPELINE STEPS, EACH OF THEM MIGHT FIRE
 ## DIFFERENT ACTIONS/SCONSCRIPTS
@@ -290,6 +290,12 @@ bowtie2_index = BOWTIE2_INDEX
 star_index  = STAR_INDEX
 gene_pred   = GENEPRED
 
+## set strandness parameter for circRNA detection methods
+## check by HISAT parameters
+strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+if strandness_pattern.search(hisat2_extra_params):
+    ## Environment is propagated to the Sconscript
+    env['FINDCIRC_EXTRA_PARAMS'] = ' --strandpref --stranded '
 circrnas = env.SConscript(os.path.join(build_dir, junk2_circrnas), 
                         src_dir = SRC_DIR, 
                         variant_dir = build_dir, duplicate = 0,
