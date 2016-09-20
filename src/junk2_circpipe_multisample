@@ -23,8 +23,79 @@ file,sample,condition,adapter,translocation
 
 '''
 
-import os, csv, itertools, collections, re, errno
+import os, csv, itertools, collections, re, sys, subprocess, errno
 from collections import defaultdict
+from datetime import datetime
+
+def labelled_spawn(sh, escape, cmd, args, env ):
+
+    colors = {}
+    colors['purple'] = '\033[95m'
+    colors['green']  = '\033[92m'
+    colors['end']    = '\033[0m'
+    colors['red']    = '\033[91m'
+
+    formats = {}
+    formats['bold'] = '\033[1m'
+
+    ## TODO: set colors as a choice
+    colored = True
+
+    try:
+        prefix = env['LOG_PREFIX'] 
+    except KeyError:
+        prefix = ''
+    
+    ## print a START tag with datetime
+    if prefix:
+        outstring = prefix + ' ' + str(datetime.now()) + ': START\n'
+        if colored:
+            prefix =  colors['purple'] + prefix
+            outstring = prefix + ' ' +\
+                        colors['green'] + str(datetime.now()) + colors['end'] +\
+                        ': '+\
+                        colors['red'] + formats['bold'] + 'START' + colors['end']  + '\n'
+        sys.stdout.write(outstring)
+
+    ## execute the command
+    p = subprocess.Popen([sh, '-c', ' '.join(args)], 
+                         env = env, 
+                         stderr = subprocess.PIPE,
+                         stdout = subprocess.PIPE,
+                         close_fds = True)
+
+    #(stdout, stderr) = p.communicate() ## this cause the stream to wait till the end of process
+    ## is the following consuming the PIPEs?
+    ## this may also screw up stdout and stderr order
+    for line in iter(p.stdout.readline, ''):
+        if colored:
+            sys.stdout.write(prefix + ' ' +\
+                             colors['green'] + str(datetime.now()) + colors['end'] +\
+                             ': ' +\
+                             line)
+        else:
+            sys.stdout.write(prefix + ' ' + str(datetime.now()) + ': '+ line)
+    
+    for line in iter(p.stderr.readline, ''):
+        if colored:
+            sys.stderr.write(prefix + ' ' +\
+                             colors['green'] + str(datetime.now()) + colors['end'] +\
+                             ': ' +\
+                             line)
+        else:
+            sys.stderr.write(prefix + ' ' + str(datetime.now()) + ': ' + line)
+
+    ## print a DONE tag with datetime
+    if prefix:
+        outstring = prefix + ' ' + str(datetime.now()) + ': DONE\n'
+        if colored:
+            outstring = prefix + ' ' +\
+                        colors['green'] + str(datetime.now()) + colors['end'] +\
+                        ': '+\
+                        colors['red'] + formats['bold'] + 'DONE' + colors['end']  + '\n'
+        sys.stdout.write(outstring)
+    
+    return p.returncode
 
 def SymLink(target, source, env):
     try:
@@ -101,8 +172,8 @@ vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
 vars.Add('BYPASS_LINEAR', 'Skip analysis of linear transcripts. This will also skip '\
 			  'the analysis of linear-to-circular expression correlation',
 	 'False')
-
-
+vars.Add('LOGLEVEL', 'Verbosity of log messages', 0)
+ 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
 Help(vars.GenerateHelpText(env))
@@ -152,6 +223,47 @@ if env['DESEQ'] == 'True':
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 env['SCONSCRIPT_HOME'] = SCONSCRIPT_HOME
+
+## set logging
+log_id = "[CIRCPIPE MULTI]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+## must set variable into ENV for spawn function being able to read it
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
+try:
+    LOGLEVEL = env['LOGLEVEL']
+except KeyError:
+    LOGLEVEL = 0 ## default logging level: no modifications to output messages
+
+if LOGLEVEL == 1:
+    ## prepend script name and datetime to output
+    env['SPAWN'] = labelled_spawn 
+elif LOGLEVEL == 2:
+    ## TODO
+    ## prepend script name and datetime to output and save it to file;
+    ## hide stdout and stderr; show full commands and also save them
+    ## to log file
+    #env['ENV']['LOGFILE'] = 'log.stdout'
+    #env['SPAWN'] = labelled_spawn_logfile
+    #env['PRINT_CMD_LINE_FUNC'] = print_cmd_line
+    pass
+elif LOGLEVEL == 3:
+    ## TODO
+    ## prepend script name and datetime to output and save it to file;
+    ## hide stdout and stderr; show targets being built; 
+    ## save full commands to log file
+    pass
+elif LOGLEVEL == 4:
+    ## TODO
+    ## hide everything; save full commands to log file;
+    ## prepend script name and datetime to output and save it to log file
+    pass
+else:
+    pass
+
 
 samples_dir = 'samples'
 
