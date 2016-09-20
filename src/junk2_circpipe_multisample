@@ -45,7 +45,13 @@ def labelled_spawn(sh, escape, cmd, args, env ):
         prefix = env['LOG_PREFIX'] 
     except KeyError:
         prefix = ''
-    
+
+    ## TODO: set verbosity level
+    try:
+        LOGLEVEL = env['LOGLEVEL']
+    except KeyError:
+        LOGLEVEL = 0 # if not defined set base level as default
+
     ## print a START tag with datetime
     if prefix:
         outstring = prefix + ' ' + str(datetime.now()) + ': START\n'
@@ -104,6 +110,50 @@ def SymLink(target, source, env):
         if e.errno == errno.EEXIST:
             os.rmdir(os.path.abspath(str(target[0])))
             os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+
+def print_cmd_line(s, targets, sources, env):
+    '''This function controls the logging of commands'''
+    try:
+        LOGLEVEL = env['LOGLEVEL']
+    except KeyError:
+        LOGLEVEL = 0 # if not defined set base level as default
+
+    colors = {}
+    colors['purple'] = '\033[95m'
+    colors['green']  = '\033[92m'
+    colors['end']    = '\033[0m'
+
+    prefix = colors['purple'] + env['LOG_PREFIX'] + ' ' + colors['green'] +\
+             str(datetime.now()) + colors['end'] + ': '
+    full_cmd = prefix + "%s\n" % s
+
+    if GetOption("no_exec"): 
+        ## when no exec always print full commands and do not save log messages
+        outstr = colors['purple'] + env['LOG_PREFIX'] + colors['end'] +  " %s\n" % s
+    else:
+        ## Save real cmd to log file only if actual execution
+        logfile = "circpipe_multi_commands.log"
+        try:
+            logfile = env['CMD_LOGFILE']
+        except KeyError:
+            sys.stderr.write("Log file not defined. Set default " + logfile + "\n")
+        ## append to log file
+        open(logfile, 'a').write(full_cmd)
+    
+        outstr = "%s\n" % s ## no modifications to log messages
+    
+        if LOGLEVEL == 1: ## log full command
+            outstr = full_cmd
+        elif LOGLEVEL == 2: ## log full command, save to log file
+            outstr = full_cmd
+        elif LOGLEVEL == 3: ## log targets only
+            #outstr = prefix + " %s ...\n"%(' and '.join([str(x) for x in targets]))
+            prep = ' Building '
+            outstr = prefix + '\n'.join([prep + str(x) + '...' for x in targets]) + '\n'
+        if not LOGLEVEL == 4: ## silent output, only save in log files
+            # print to standard out
+            sys.stdout.write(outstr)           
+
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
@@ -241,6 +291,7 @@ except KeyError:
 if LOGLEVEL == 1:
     ## prepend script name and datetime to output
     env['SPAWN'] = labelled_spawn 
+    env['PRINT_CMD_LINE_FUNC'] = print_cmd_line
 elif LOGLEVEL == 2:
     ## TODO
     ## prepend script name and datetime to output and save it to file;
