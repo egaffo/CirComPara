@@ -150,9 +150,15 @@ def print_cmd_line(s, targets, sources, env):
             #outstr = prefix + " %s ...\n"%(' and '.join([str(x) for x in targets]))
             prep = ' Building '
             outstr = prefix + '\n'.join([prep + str(x) + '...' for x in targets]) + '\n'
-        if not LOGLEVEL == 4: ## silent output, only save in log files
-            # print to standard out
-            sys.stdout.write(outstr)           
+        elif LOGLEVEL == 4: ## silent output, only save in log files
+            ## do not print anything to stdout. Log file's already been updated
+            outstr = ''
+
+    if outstr:        
+        # print to standard out
+        sys.stdout.write(outstr)
+
+    return None
 
 
 ## GET PROGRAM ARGUMENTS
@@ -817,3 +823,12 @@ Clean('.', circrna_analyze_dir)
 Clean('.', read_stats_collect_dir)
 Clean('.', qre_dir)
 Clean('.', annotation_dir)
+
+## set logging id
+#log_id = "[]"
+#try:
+#    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+#except KeyError:
+#    env['LOG_PREFIX'] = log_id
+#
+#env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']

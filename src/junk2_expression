@@ -61,6 +61,15 @@ except NameError:
     if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
     	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
 
+## set logging id
+log_id = "[QUANTIFY EXPR]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 expression_results = []
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
@@ -98,3 +107,4 @@ Clean('.', htseq_count_dir)
 Clean('.', cufflinks_dir)
 
 Return('expression_results')
+

@@ -60,6 +60,15 @@ except NameError as ne:
     
         ALIGNMENTS = [File(f) for f in ALIGNMENTS]
 
+## set logging id
+log_id = "[CUFFQUANT]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 ## MERGE TRANSCRIPTS.GTF FILES
 add_options = ' --seed 0 ' + EXTRA_PARAMS 
 
@@ -77,3 +86,4 @@ for alignment in ALIGNMENTS:
     samples_abundances.append(cuffquant)
 
 Return('samples_abundances')
+

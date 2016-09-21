@@ -31,7 +31,7 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env
+    env = env.Clone()
     CPUS = segemehl_cpus
     READS = reads_to_map
     SAMPLE = sample_id
@@ -68,6 +68,15 @@ except NameError:
     SAMPLE = env['SAMPLE']
     SEGEMEHL_PARAMS = env['SEGEMEHL_PARAMS']
  
+## set logging id
+log_id = "[SEGEMEHL]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 segemehl_mapping_dir = 'segemehl'
 
 ## MAP READS
@@ -100,3 +109,4 @@ env.Precious(segemehl_map[0]) # do not delete old alignment file untill the new 
 Clean('.', segemehl_mapping_dir)
 
 Return('segemehl_map')
+

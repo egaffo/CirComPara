@@ -17,7 +17,7 @@ import os
 Import('*')
 
 try:
-    env = env_index_star
+    env = env_index_star.Clone()
 except NameError as ne:
     print 'junk2_index_star: command line execution'
     vars = Variables('vars.py')
@@ -35,6 +35,15 @@ except NameError as ne:
     
 SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
     
+## set logging id
+log_id = "[INDEXING STAR]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 CPUS        = env['CPUS']
 GENOME      = env['GENOME'].split(',')
 EXTRA_PARAMS= env['EXTRA_PARAMS']
@@ -52,3 +61,4 @@ index = env.Command(target, source, [command + ''' && cd ''' + Dir('#').abspath]
 Clean('.', target_basename)
 
 Return('index')
+

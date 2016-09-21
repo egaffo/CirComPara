@@ -47,6 +47,15 @@ SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 env.SetDefault(READSTAT_METHODS = 'fastqc')
 
+## set logging id
+log_id = "[READ STATISTICS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 statistics_dir = 'fastx_stats'
 
 readset_basename = os.path.splitext(os.path.basename(readset))[0]
@@ -99,3 +108,4 @@ if('fastqc' in env['READSTAT_METHODS'].split(',')):
     Clean('.', fastqc_dir)
 
 Return('stats junk2_fastqc')
+

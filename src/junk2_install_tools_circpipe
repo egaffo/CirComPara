@@ -260,3 +260,12 @@ env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], Sym
 #env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
 
 
+
+## set logging id
+#log_id = "[]"
+#try:
+#    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+#except KeyError:
+#    env['LOG_PREFIX'] = log_id
+#
+#env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']

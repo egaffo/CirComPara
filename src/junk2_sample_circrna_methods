@@ -125,6 +125,15 @@ except NameError:
 
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
+## set logging id
+log_id = "[CIRCRNA METHODS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 results = []
 
 ## GET INPUT READ FILE FULL PATH
@@ -331,3 +340,4 @@ Clean('.', build_dir)
 Clean('.', unmapped_reads_dir)
 
 Return('results')
+

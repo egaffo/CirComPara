@@ -27,7 +27,7 @@ import os
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     mapfile          = mapping_file
     mapfile_basename = sample_name
     annotation       = htseq_count_annotation
@@ -59,6 +59,15 @@ except NameError as ne:
     CPUS             = env['CPUS']
     STRANDED         = env['STRANDED']
 
+## set logging id
+log_id = "[HTSEQ_COUNT]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 if STRANDED.lower() not in ['yes', 'no']:
     print "WARNING: unrecognized option \'" + STRANDED + "\' for htseq-count strand parameter."\
           "Use either \'yes\' or \'no\'. Will continue setting \'no\'"
@@ -80,3 +89,4 @@ htseq_count = env.Command(["{}.htseq_count.txt".format(mapfile_basename)],
                            htseq_count_cmd)
 
 Return('htseq_count')
+

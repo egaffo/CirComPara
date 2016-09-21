@@ -28,7 +28,7 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env
+    env = env.Clone()
     CPUS = hisat2_cpus
     READS = reads_to_map
     HISAT2_INDEX = hisat2_index
@@ -61,6 +61,15 @@ except NameError:
     HISAT2_PARAMS = env['HISAT2_PARAMS']
     SAMPLE = env['SAMPLE']
  
+## set logging id
+log_id = "[HISAT2]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 hisat2_out_dir = 'hisat2_out'
 chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, hisat2_out_dir)
 hisat2_cmd = '''hisat2 -x ''' + HISAT2_INDEX + ' ' + HISAT2_PARAMS +\
@@ -92,3 +101,4 @@ env.Precious(hisat2[0]) # do not delete old alignment file until the new one has
 Clean('.', hisat2_out_dir)
 
 Return('hisat2')
+

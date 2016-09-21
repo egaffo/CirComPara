@@ -28,7 +28,7 @@ junk2_tophat      = 'junk2_tophat'
 Import('*')
 
 try:
-    env          = circexplorer_env
+    env          = circexplorer_env.Clone()
     CPUS         = circexplorer_cpus
     GENOME_INDEX = circexplorer_genome_index
     GENOME_FASTA = circexplorer_genome_fasta
@@ -67,6 +67,15 @@ except NameError:
     ALIGNER      = env['ALIGNER']
     
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+
+## set logging id
+log_id = "[CIRCEXPLORER]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
 ## GET INPUT READ FILE FULL PATH
 raw_reads = [File(f) for f in READS]
@@ -153,4 +162,5 @@ Return('CIRCexplorer mapped_reads')
 
 #Clean('.', fusion_mappings_dir)
 Clean('.', out_dir)
+
 

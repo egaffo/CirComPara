@@ -37,6 +37,15 @@ BOWTIE2_INDEX = env['BOWTIE2_INDEX']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
+## set logging id
+log_id = "[CIRCRNA METHODS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 ## READ META FILE AND MAKE SAMPLE DIRECTORIES
 samples_dir = 'samples'
 
@@ -72,3 +81,4 @@ with open(META) as csvfile:
 
 ## CLEAN DIRS WHEN CLEANING TARGETS
 Clean('.', samples_dir)
+

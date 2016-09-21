@@ -63,6 +63,15 @@ except NameError:
     if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
     	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
 
+## set logging id
+log_id = "[CUFFLINKS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 if os.path.splitext(annotation)[1] == '.gz':
     annotation = env.Command(os.path.basename(os.path.splitext(annotation)[0]), 
                              annotation, 'zcat $SOURCE > $TARGET')
@@ -82,3 +91,4 @@ cufflinks_targets = ['transcripts.gtf',
 cufflinks = env.Command(cufflinks_targets, [mapfile, annotation], cufflinks_cmd)
 
 Return('cufflinks')
+

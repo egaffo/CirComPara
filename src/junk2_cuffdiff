@@ -109,6 +109,15 @@ except NameError:
 
     cuffdiff_parameters = {'LABELS': CONDITIONS, 'SAMS': QUANTITIES}
 
+## set logging id
+log_id = "[CUFFDIFF]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 cuffdiff_cmd = 'cuffdiff -q $(--no-update-check -p ' + CPUS + '$) -o ' + Dir('.').path + ' ' +\
                EXTRA_PARAMS +\
                ' -L ' + cuffdiff_parameters['LABELS'] + ' ${SOURCES[0]} ' +\
@@ -129,3 +138,4 @@ cuffdiff = env.Command(cuffdiff_targets,
                        cuffdiff_cmd)
 
 Return('cuffdiff')
+

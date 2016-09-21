@@ -17,7 +17,7 @@ import os
 Import('*')
 
 try:
-    env
+    env = env.Clone()
     mapper
     genome_index
     genome_fasta
@@ -55,6 +55,15 @@ except NameError:
 
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
+## set logging id
+log_id = "[READ MAPPING]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 mapping_dir = 'mappings'
 #make_mapping_dir = env.Command(Dir(mapping_dir), [], Mkdir('$TARGET'))
 mappings = []
@@ -73,3 +82,4 @@ if mapper.lower()=='segemehl':
 
 Clean('.', mapping_dir)
 Return('mappings')
+

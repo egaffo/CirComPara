@@ -11,7 +11,7 @@ import os
 Import('*')
 
 try:
-    env
+    env = env.Clone()
     fix_read_names_READS
 except NameError as ne:
     print 'fix_read_names: command line mode'
@@ -30,6 +30,15 @@ except NameError as ne:
     env = cmdline_env
     fix_read_names_READS = [File(f) for f in env['READS'].split(',')]
  
+## set logging id
+log_id = "[FIX READ NAMES]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 target = '${SOURCE.filebase}_fixednames.gz'
 
 cmd_prefix = '''cat '''
@@ -46,3 +55,4 @@ for reads in fix_read_names_READS:
     fixed_read_names.append(env.Command(target, reads, cmd))
 
 Return('fixed_read_names')
+

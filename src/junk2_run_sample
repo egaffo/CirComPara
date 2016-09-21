@@ -24,7 +24,7 @@ junk2_expression      = 'junk2_expression'
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     CPUS         = sample_cpus
     GENOME_INDEX = sample_genome_index
     GENOME_FASTA = sample_genome_fasta
@@ -65,6 +65,20 @@ except NameError:
     READS = env['READS'].split(',')
 
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+
+#env['SAMPLE'] = os.path.basename(Dir('.').path)
+sample_name = os.path.basename(Dir('.').path)
+if sample_name=='.':
+    sample_name = os.path.basename(Dir('.').abspath)
+
+## set logging id
+log_id = "[" + sample_name + "]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
 results = []
 
@@ -112,11 +126,6 @@ if len(preprocess[0])>1:
     else:
         clean_reads.append(preprocess[0][1])
 
-#env['SAMPLE'] = os.path.basename(Dir('.').path)
-sample_name = os.path.basename(Dir('.').path)
-if sample_name=='.':
-    sample_name = os.path.basename(Dir('.').abspath)
-
 ## ALIGN TO GENOME
 mapper = MAPPER
 genome_index = GENOME_INDEX
@@ -144,3 +153,4 @@ Clean('.', read_statistics_dir)
 Clean('.', build_dir)
 
 Return('results')
+

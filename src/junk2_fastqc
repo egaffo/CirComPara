@@ -39,6 +39,14 @@ except NameError:
     # standalone
     fastqc_readset = File(env['READS'])
 
+## set logging id
+log_id = "[FASTQC]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
 ## fastqc_readset must be a Scons.File object
 # FASTQC removes .gz, .fq, .fastq extensions (also recursively) from the input file name
@@ -55,3 +63,4 @@ fastqc_quality = env.Command([fastqc_html_target, fastqc_zip_target,
                              fastqc_quality_cmd)
 
 Return('fastqc_quality')
+

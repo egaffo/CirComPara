@@ -66,6 +66,15 @@ except NameError:
     GENOME_FASTA = env['GENOME_FASTA']
     SAMPLE = env['SAMPLE']
 
+## set logging id
+log_id = "[FINDCIRC]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 out_dir = 'find_circ_out'
 
 try:
@@ -123,3 +132,4 @@ mapped_reads_cmd    = '''samtools view -F 4 ${SOURCE} '''\
 mapped_reads        = env.Command(mapped_reads_target, mappings_file, mapped_reads_cmd)
 
 Return('find_circ filter_circ mapped_reads')
+

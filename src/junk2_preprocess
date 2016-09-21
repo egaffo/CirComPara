@@ -15,7 +15,7 @@ import os, itertools
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     CPUS         = preprocess_cpus
     PREPROCESSOR = preprocess_preprocessor
     ADAPTER_FILE = preprocess_adapter_file
@@ -50,6 +50,15 @@ except NameError:
     PREPROCESSOR_PARAMS = env['PREPROCESSOR_PARAMS']
 
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+
+## set logging id
+log_id = "[READ PREPROCESSING]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
 preprocess_dir = 'preprocess'
 preprocessings = []
@@ -99,3 +108,4 @@ preprocessed_files = preprocessings
 
 Clean('.', preprocess_dir)
 Return('preprocessed_files')
+
