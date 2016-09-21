@@ -5,7 +5,7 @@ import os, re
 
 Import('*')
 try:
-    env = env_translocate_genome
+    env = env_translocate_genome.Clone()
     env['TRANSLOCATIONS'] = ','.join(env['TRANSLOCATIONS'])
 except NameError as ne:
     print 'junk2_translocate_genome: command line execution.'
@@ -26,6 +26,15 @@ except NameError as ne:
     if unknown:
         print "Unknown variables", unknown.keys()
         Exit(1)
+
+## set logging id
+log_id = "[TRANSLOCATE GENOME]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
 ## DEFINE TRANSLOCATED PARTS AS BED6 FILE(S)
 translocated_chromosomes = []
@@ -76,3 +85,4 @@ annotation = env.Command(annotation_target,
                          annotation_cmd)
 
 Return('genome annotation')
+

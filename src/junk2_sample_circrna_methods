@@ -36,7 +36,7 @@ junk2_segemehl_mapping = 'junk2_segemehl_mapping'
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     CPUS         = sample_cpus
     GENOME_FASTA = sample_genome_fasta
     ANNOTATION   = sample_annotation
@@ -116,6 +116,15 @@ except NameError:
     PRE_FILTER = False
 
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+## set logging id
+log_id = "[CIRCRNA METHODS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
 results = []
 
@@ -229,3 +238,4 @@ Clean('.', build_dir)
 Clean('.', unmapped_reads_dir)
 
 Return('results')
+

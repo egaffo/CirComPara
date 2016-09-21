@@ -56,7 +56,7 @@ def get_node_condition(node, conditions):
     return condition
 
 try:
-    env = env
+    env = env.Clone()
     CPUS        = deseq_cpus
     META        = metafile
     ANNOTATION  = deseq_annotation
@@ -92,6 +92,15 @@ except NameError as ne:
     STRANDED   = env['STRANDED']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+
+## set logging id
+log_id = "[DESEQ]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
 ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
 htseq_count_annotation = ANNOTATION
@@ -189,3 +198,4 @@ if len(QUANTITIES) > 1:
 Clean('.', htseq_counts_dir)
 
 Return('htseq_counts raw_count_matrix norm_count_matrix deTests')
+

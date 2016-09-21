@@ -13,7 +13,7 @@ import os
 Import('*')
 
 try:
-    env = env_index_bowtie2
+    env = env_index_bowtie2.Clone()
 except NameError as ne:
     print 'junk2_index_bowtie2: command line execution'
     vars = Variables('vars.py')
@@ -35,6 +35,14 @@ CPUS        = env['CPUS']
 GENOME      = env['GENOME'].split(',')
 EXTRA_PARAMS= env['EXTRA_PARAMS']
 
+log_id = "[INDEXING BOWTIE2]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 source  = [File(f).abspath for f in GENOME]
 target_basename = '_'.join([os.path.splitext(os.path.basename(f))[0] for f in GENOME])
 index_suffixes = ['.1.bt2', '.2.bt2', '.3.bt2', '.4.bt2', '.rev.1.bt2', '.rev.2.bt2']
@@ -45,3 +53,4 @@ command = '''bowtie2-build -f --seed 1 $(--threads ''' + CPUS +\
 index = env.Command(target, source, command)
 
 Return('index')
+

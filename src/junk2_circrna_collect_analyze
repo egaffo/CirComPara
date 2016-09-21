@@ -10,7 +10,7 @@ Currently supported/implemented for:
 Import('*')
 
 try:
-    env
+    env = env.Clone()
     circrna_analyze_circexplorer
     circrna_analyze_ciri        
     circrna_analyze_findcirc    
@@ -39,6 +39,15 @@ except NameError:
     circrna_analyze_segecirc     = csvs[3]
     GTF = env['GTF']
 
+## set logging id
+log_id = "[COLLECT CIRCRNAS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 cmd = '''{ convert_circrna_collect_tables.py -p circexplorer ${SOURCES[0]}; '''\
    '''convert_circrna_collect_tables.py -p ciri ${SOURCES[1]}; '''\
    '''convert_circrna_collect_tables.py -p findcirc ${SOURCES[2]}; '''\
@@ -51,3 +60,4 @@ target = 'combined_circrnas.gtf.gz'
 combine = env.Command(target, sources, cmd)
 
 Return('combine')
+

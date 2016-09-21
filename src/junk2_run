@@ -51,6 +51,15 @@ ANNOTATION   = env['ANNOTATION']
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
+## set logging id
+log_id = "[JUNK2 MULTI]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 samples_dir = 'samples'
 
 ## GRUB METADATA
@@ -165,3 +174,4 @@ Clean('.', transcript_sequences_dir)
 Clean('.', cuffquant_dir)
 Clean('.', cuffdiff_dir)
 Clean('.', deseq_dir)
+

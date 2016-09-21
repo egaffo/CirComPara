@@ -51,7 +51,7 @@ junk2_bamtofastq      = 'junk2_bamtofastq'
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     CPUS         = sample_cpus
     GENOME_INDEX = sample_genome_index
     GENOME_FASTA = sample_genome_fasta
@@ -140,6 +140,20 @@ except NameError:
 
 SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
+#env['SAMPLE'] = os.path.basename(Dir('.').path)
+sample_name = os.path.basename(Dir('.').path)
+if sample_name=='.':
+    sample_name = os.path.basename(Dir('.').abspath)
+
+## set logging id
+log_id = "[CIRCPIPE " + sample_name + "]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 results = []
 
 ## GET INPUT READ FILE FULL PATH
@@ -188,11 +202,6 @@ if len(preprocess[0]) > 2:
     ## case: no preprocessing was performed
     else:
         clean_reads.append(preprocess[0][1])
-
-#env['SAMPLE'] = os.path.basename(Dir('.').path)
-sample_name = os.path.basename(Dir('.').path)
-if sample_name=='.':
-    sample_name = os.path.basename(Dir('.').abspath)
 
 ## ALIGN TO GENOME
 #mapper = MAPPER
@@ -306,3 +315,4 @@ Clean('.', build_dir)
 Clean('.', unmapped_dir)
 
 Return('results')
+

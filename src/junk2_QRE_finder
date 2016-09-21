@@ -19,7 +19,7 @@ import os
 Import('*')
 
 try:
-    env
+    env         = env.Clone()
     GTF         = qre_GTF
     GENOME      = qre_GENOME
 except NameError:
@@ -39,6 +39,15 @@ except NameError:
     GTF     = env['GTF']
     GENOME  = env['GENOME']
 
+## set logging id
+log_id = "[QRE FINDER]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 qre_cmd = '''gtf_collapse_features.py ${SOURCES[0]} | '''\
           '''bedtools getfasta -name -s -fi ${SOURCES[1]} -bed - -fo stdout | '''\
           '''QRE_finder.py - > $TARGET'''
@@ -46,3 +55,4 @@ qre_target = 'qre.tsv'
 qre = env.Command(qre_target, [GTF, GENOME], qre_cmd)
 
 Return('qre')
+

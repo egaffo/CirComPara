@@ -235,3 +235,12 @@ env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), gtfToGenePred, SymLin
 ### OPTPARSE, GGPLOT2, DATA.TABLE, PLYR
 ### Bioconductor: DESEQ2
 
+
+## set logging id
+#log_id = "[]"
+#try:
+#    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+#except KeyError:
+#    env['LOG_PREFIX'] = log_id
+#
+#env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']

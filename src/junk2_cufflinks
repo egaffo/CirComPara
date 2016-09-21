@@ -25,7 +25,7 @@ import os
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     mapfile     = mapping_file
     mapfile_basename = sample_name
     annotation  = cufflinks_annotation
@@ -56,6 +56,15 @@ except NameError:
     CPUS = env['CPUS']
     CUFFLINKS_PARAMS = env['CUFFLINKS_PARAMS']
 
+## set logging id
+log_id = "[CUFFLINKS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 if os.path.splitext(annotation)[1] == '.gz':
     annotation = env.Command(os.path.basename(os.path.splitext(annotation)[0]), 
                              annotation, 'zcat $SOURCE > $TARGET')
@@ -71,3 +80,4 @@ cufflinks_targets = ['transcripts.gtf',
 cufflinks = env.Command(cufflinks_targets, [mapfile, annotation], cufflinks_cmd)
 
 Return('cufflinks')
+

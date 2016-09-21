@@ -82,6 +82,15 @@ except NameError:
     CIRI_ANNOTATION = env['CIRI_ANNOTATION']
     EXTRA_PARAMS    = env['EXTRA_PARAMS']
 
+## set logging id
+log_id = "[CIRI]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 bwa_cpus = CPUS
 
 out_dir = 'ciri_out'
@@ -131,3 +140,4 @@ mapped_reads        = env.Command(mapped_reads_target, mappings_file, mapped_rea
 
 
 Return('ciri mapped_reads')
+
