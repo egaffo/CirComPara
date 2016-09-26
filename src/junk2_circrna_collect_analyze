@@ -39,15 +39,24 @@ except NameError:
     circrna_analyze_segecirc     = csvs[3]
     GTF = env['GTF']
 
-cmd = '''{ convert_circrna_collect_tables.py -p circexplorer ${SOURCES[0]}; '''\
+## collect circRNAs in a single GTF annotation file
+circ_gtf_cmd = '''{ convert_circrna_collect_tables.py -p circexplorer ${SOURCES[0]}; '''\
    '''convert_circrna_collect_tables.py -p ciri ${SOURCES[1]}; '''\
    '''convert_circrna_collect_tables.py -p findcirc ${SOURCES[2]}; '''\
    '''convert_circrna_collect_tables.py -p segecirc ${SOURCES[3]}; } | '''\
-   '''bedtools intersect -wa -wb -a - -b ${SOURCES[4]} -s -loj | gzip -c > $TARGET'''
+   '''sort -k1,1 -k4,4n > ${TARGETS[0]} '''
+circ_gtf_sources = [circrna_analyze_circexplorer, circrna_analyze_ciri, 
+                    circrna_analyze_findcirc, circrna_analyze_segecirc]
 
-sources = [circrna_analyze_circexplorer, circrna_analyze_ciri, 
-           circrna_analyze_findcirc, circrna_analyze_segecirc, GTF]
-target = 'combined_circrnas.gtf.gz'
-combine = env.Command(target, sources, cmd)
+circ_gtf_target = 'circrnas.gtf'
+circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
 
-Return('combine')
+## intersect circRNAs with gene annotation
+circ_gene_combine_cmd = '''bedtools intersect -wa -wb -a ${SOURCES[0]} -b ${SOURCES[4]} -s -loj'''\
+                        ''' | gzip -c > $TARGET'''
+circ_gene_combine_sources = [circ_gtf, GTF]
+circ_gene_combine_target = 'combined_circrnas.gtf.gz'
+circ_gene_combine = env.Command(circ_gene_combine_target, circ_gene_combine_sources, 
+                                circ_gene_combine_cmd)
+
+Return('circ_gene_combine circ_gtf')
