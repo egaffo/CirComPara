@@ -317,6 +317,17 @@ else:
     translocated_genome = [[File(GENOME_FASTA)], [ANNOTATION]]
 
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
+hisat2_index_suffixes  = ['.1.ht2', '.2.ht2', '.3.ht2', '.4.ht2', 
+                          '.5.ht2', '.6.ht2', '.7.ht2', '.8.ht2']
+bowtie2_index_suffixes = ['.1.bt2', '.2.bt2', '.3.bt2', '.4.bt2', '.rev.1.bt2', '.rev.2.bt2']
+bwa_index_suffixes     = ['.amb', '.ann', '.bwt', '.pac', '.sa']
+
+indexes = {'HISAT2':    [File(GENOME_INDEX + suffix) for suffix in hisat2_index_suffixes], 
+           'SEGEMEHL':  [File(SEGEMEHL_INDEX)],
+           'BWA':       [File(BWA_INDEX + suffix) for suffix in bwa_index_suffixes],
+           'BOWTIE2':   [File(BOWTIE2_INDEX + suffix) for suffix in bowtie2_index_suffixes], 
+           'STAR':      [File(os.path.join(STAR_INDEX, 'SA'))]}
+
 genome_indexes_to_build = []
 if GENOME_INDEX == '': genome_indexes_to_build.append('HISAT2')
 if SEGEMEHL_INDEX == '': genome_indexes_to_build.append('SEGEMEHL')
@@ -414,7 +425,7 @@ for sample in sorted(samples.keys()):
     Depends(run_sample, indexes['BOWTIE2'])
     Depends(run_sample, indexes['SEGEMEHL'])
     Depends(run_sample, indexes['BWA'])
-    Depends(run_sample, genePred[2])
+    Depends(run_sample, GENEPRED) #genePred[2])
 
 
 ## MERGE SAMPLE TRANSCRIPTOMES
