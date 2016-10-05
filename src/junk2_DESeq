@@ -156,7 +156,7 @@ if len(QUANTITIES) > 1:
     MakeDESeqSampleTable = Builder(action = writeDESeqSampleTable, suffix = '.csv')
     
     ### WRITE "SAMPLE TABLE" FOR DESEQ
-    env = Environment(BUILDERS = {'MakeDESeqSampleTable' : MakeDESeqSampleTable})
+    env.Append(BUILDERS = {'MakeDESeqSampleTable' : MakeDESeqSampleTable})
     deseq_sample_table = env.MakeDESeqSampleTable('deseq_sample_table', [META, htseq_counts])
     
     
