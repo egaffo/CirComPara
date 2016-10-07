@@ -27,7 +27,7 @@ if(length(arguments$input)>0){
                 "breakpoints", "signal", "strandmatch", "category")
   
   combined.df <- ldply(inputs, function(x){
-    a <- read.table(file=x, sep="\t", header=F, col.names = colnames); a}
+    a <- read.table(file=x, sep="\t", header=F, col.names = colnames, stringsAsFactors = F); a}
   )
   colnames(combined.df)[1] <- "sampleID"
   

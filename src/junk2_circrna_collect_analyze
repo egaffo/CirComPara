@@ -61,7 +61,7 @@ circ_gtf_target = 'circrnas.gtf'
 circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
 
 ## intersect circRNAs with gene annotation
-circ_gene_combine_cmd = '''bedtools intersect -wa -wb -a ${SOURCES[0]} -b ${SOURCES[4]} -s -loj'''\
+circ_gene_combine_cmd = '''bedtools intersect -wa -wb -a ${SOURCES[0]} -b ${SOURCES[1]} -s -loj'''\
                         ''' | gzip -c > $TARGET'''
 circ_gene_combine_sources = [circ_gtf, GTF]
 circ_gene_combine_target = 'combined_circrnas.gtf.gz'
