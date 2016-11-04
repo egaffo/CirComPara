@@ -47,7 +47,7 @@ target  = [os.path.join(target_basename, f) for f in index_files]
 command = '''cd ${TARGETS[0].dir} && STAR --runMode genomeGenerate $(--runThreadN ''' + CPUS +\
           ''' $) --genomeFastaFiles ''' + ' '.join(source) +\
           ''' --genomeDir . ''' + EXTRA_PARAMS 
-index = env.Command(target, source, [command, '''cd ''' + Dir('#').abspath])
+index = env.Command(target, source, [command + ''' && cd ''' + Dir('#').abspath])
 
 Clean('.', target_basename)
 

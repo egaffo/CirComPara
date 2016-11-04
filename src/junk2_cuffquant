@@ -20,40 +20,48 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env             = env
+    env             = env.Clone()
     CPUS            = cuffquant_cpus
     GENOME_FASTA    = cuffquant_genome_fasta
     ALIGNMENTS      = cuffquant_alignments
     ANNOTATION      = cuffquant_annotation
+    EXTRA_PARAMS = cuffquant_extra_params
 
-except NameError:
-    vars = Variables('vars.py')
-    vars.Add('CPUS', 'Max parallel jobs to execute', '4')
-    vars.Add('GENOME_FASTA', '', '')
-    vars.Add('ALIGNMENTS', 'Comma separated list of BAM files', 'al_1.bam,al_2.bam')
-    vars.Add('ANNOTATION', 'Annotation GTF file such as from cuffmerge', 'merged.gtf')
+except NameError as ne:
+    if ne == 'cuffquant_extra_params':
+        print 'Warning: ' + ne + ' not defined. Setting no extra paramers as default'
+        EXTRA_PARAMS = ''
+    else:
+        vars = Variables('vars.py')
+        vars.Add('CPUS', 'Max parallel jobs to execute', '4')
+        vars.Add('GENOME_FASTA', '', '')
+        vars.Add('ALIGNMENTS', 'Comma separated list of BAM files', 'al_1.bam,al_2.bam')
+        vars.Add('ANNOTATION', 'Annotation GTF file such as from cuffmerge', 'merged.gtf')
+        vars.Add('EXTRA_PARAMS', 
+                 'Parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
+                 ' --multi-read-correct --max-bundle-frags 9999999', '')
+        
+        cmdline_env = Environment(ENV=os.environ,variables=vars)
     
-    cmdline_env = Environment(ENV=os.environ,variables=vars)
-
-    Help(vars.GenerateHelpText(cmdline_env))
-    unknown = vars.UnknownVariables()
-    if unknown:
-        print "Unknown variables:", unknown.keys()
-        Exit(1)
-
-    # These are the variables given from the command line when the SConscript is called
-    # standalone
-    env = cmdline_env
-    CPUS = env['CPUS']
-    GENOME_FASTA = env['GENOME_FASTA']
-    ALIGNMENTS = env['ALIGNMENTS'].split(',')
-    ANNOTATION = env['ANNOTATION']
-
-    ALIGNMENTS = [File(f) for f in ALIGNMENTS]
+        Help(vars.GenerateHelpText(cmdline_env))
+        unknown = vars.UnknownVariables()
+        if unknown:
+            print "Unknown variables:", unknown.keys()
+            Exit(1)
+    
+        # These are the variables given from the command line when the SConscript is called
+        # standalone
+        env = cmdline_env
+        CPUS = env['CPUS']
+        GENOME_FASTA = env['GENOME_FASTA']
+        ALIGNMENTS = env['ALIGNMENTS'].split(',')
+        ANNOTATION = env['ANNOTATION']
+        EXTRA_PARAMS = env['EXTRA_PARAMS']
+    
+        ALIGNMENTS = [File(f) for f in ALIGNMENTS]
 
 ## MERGE TRANSCRIPTS.GTF FILES
-add_options = ' --seed 0 --frag-bias-correct ' + GENOME_FASTA +\
-              ' --multi-read-correct --max-bundle-frags 9999999 '
+add_options = ' --seed 0 ' + EXTRA_PARAMS 
 
 cuffquant_cmd = 'cuffquant -q $(--no-update-check -p ' + CPUS +\
                 '$) -o ${TARGET.dir} ' + add_options +\

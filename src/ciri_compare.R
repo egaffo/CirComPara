@@ -25,7 +25,7 @@ if(length(arguments$input)>0){
   #              "#non_junction_reads", "junction_reads_ratio", "circRNA_type", "gene_id", "junction_reads_ID")
   
   combined.df <- ldply(inputs, function(x){
-    a <- read.table(file=x, sep="\t", header=T, comment.char=""); a}
+    a <- read.table(file=x, sep="\t", header=T, comment.char="", stringsAsFactors = F); a}
   )
   colnames(combined.df)[1] <- "sampleID"
   

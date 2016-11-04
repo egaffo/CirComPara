@@ -90,9 +90,9 @@ env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FASTQC[1], SymLink)
 
 
 # BEDTOOLS
-BEDTOOLS_tar = 'bedtools-2.25.0.tar.gz'
+BEDTOOLS_tar = 'bedtools-2.26.0.tar.gz'
 BEDTOOLS_dir = os.path.join(tools_dir, 'bedtools2')
-BEDTOOLS_link = 'https://github.com/arq5x/bedtools2/releases/download/v2.25.0/' + BEDTOOLS_tar
+BEDTOOLS_link = 'https://github.com/arq5x/bedtools2/releases/download/v2.26.0/' + BEDTOOLS_tar
 BEDTOOLS_target = [os.path.join(tools_dir, BEDTOOLS_tar), 
                    os.path.join(BEDTOOLS_dir, 'bin', 'bedtools')]
 #BEDTOOLS_source = 
@@ -148,13 +148,14 @@ env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRI[1], SymLink)
 
 
 # FIND-CIRC
-FINDCIRC_tar = 'find_circ.tar.gz'
-FINDCIRC_link = 'http://www.circbase.org/download/' + FINDCIRC_tar
+FINDCIRC_tar = 'find_circ.zip'
+#FINDCIRC_link = 'http://www.circbase.org/download/' + FINDCIRC_tar
+FINDCIRC_link = 'https://github.com/marvin-jens/find_circ/archive/master.zip'
 FINDCIRC_target = [os.path.join(tools_dir, FINDCIRC_tar),
-                   os.path.join(tools_dir, 'find_circ', 'find_circ.py')]
+                   os.path.join(tools_dir, 'find_circ-master', 'find_circ.py')]
 #FINDCIRC_source = 
 FINDCIRC = env.Command(FINDCIRC_target, [], ['wget -O $TARGET  ' + FINDCIRC_link,
-                                            'tar -xf ${TARGETS[0]} -C ${TARGETS[1].dir}'])
+                                            'unzip -u -d ' + tools_dir + ' ${TARGETS[0]}'])
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FINDCIRC[1], SymLink)
 
 # CIRCEXPLORER

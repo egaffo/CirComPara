@@ -4,18 +4,22 @@ In addition, it merges transcript annotation derived from each samples and asses
 gene and transcript expression among the samples.
 The metadata file given as input must be comma separated and must have the following columns:
 
-file        :the path to the reads file. If paired-end use one row per read file, setting the same 
-             sample name
+file        :the path to the reads file. If paired-end use one row per read file, 
+             setting the same sample name
 sample      :the sample name/ID  
 condition   :biological condition, used for differential gene expression. 
 adapter     :read adapter to trim (optional. leave empty string if not applicable)
+translocation:sharp (#) separted list of the coordinates involving fusion genes/translocations, 
+             defined as coords1&coords2 elements (optional)
 
 meta.csv example:
 
-file,sample,condition,adapter
+file,sample,condition,adapter,translocation
 /home/user/data/reads/SRR445566.fastq.gz,SRR445566,TUMOR,
 /home/user/data/reads/SRR534325_1.fastq.gz,SRR534325,CONTROL,/trimmomatic/adapters/TruSeq3-PE-2.fa
 /home/user/data/reads/SRR534325_2.fastq.gz,SRR534325,CONTROL,/trimmomatic/adapters/TruSeq3-PE-2.fa
+/home/user/data/reads/SRR534326_1.fastq.gz,SRR534325,t(4;1)t(1;X),,4:90000-120000:+&11:20-30000:-#1:20-400:+&X:1000-2045:+
+/home/user/data/reads/SRR534326_2.fastq.gz,SRR534325,CONTROL,t(4;1)t(1;X),4:90000-120000:+&11:20-30000:-#1:20-400:+&X:1000-2045:+
 
 '''
 
@@ -43,7 +47,7 @@ vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','')
 vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','')
 vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', '')
 
-vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
+vars.Add('GENEPRED', 'The genome annotation in GenePred format', '')
 vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner fixed '''\
          '''parameters '--dta --dta-cufflinks --rg-id <SAMPLE> --no-discordant '''\
          '''--no-mixed --no-overlap'. For instance, '--rna-strandness FR' if stranded reads'''\
@@ -51,7 +55,13 @@ vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner
 vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
         '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
         '''for the sequencing''', '')
-
+vars.Add('CUFFQUANT_EXTRA_PARAMS', 
+         'Cuffquant parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
+         ' --multi-read-correct --max-bundle-frags 9999999', '')
+vars.Add('CUFFDIFF_EXTRA_PARAMS', 
+         'Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
+         ' --multi-read-correct', '')
+vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
  
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
@@ -73,6 +83,7 @@ SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
 BWA_INDEX      = env['BWA_INDEX']
 BWA_PARAMS     = env['BWA_PARAMS']
 CIRI           = env['CIRI']
+CIRI_EXTRA_PARAMS = env['CIRI_EXTRA_PARAMS']
 BOWTIE2_INDEX  = env['BOWTIE2_INDEX']
     
 STAR_INDEX = env['STAR_INDEX']
@@ -80,6 +91,9 @@ GENEPRED   = env['GENEPRED']
 
 HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
 CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
+CUFFQUANT_EXTRA_PARAMS = env['CUFFQUANT_EXTRA_PARAMS']
+CUFFDIFF_EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS']
+
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -89,19 +103,60 @@ samples_dir = 'samples'
 samples     = defaultdict(list)
 adapters    = defaultdict(str)
 conditions  = defaultdict(set)
-translocations  = defaultdict(set)
+translocations  = set()
+
 with open(META) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         samples[row['sample']].append(os.path.abspath(row['file']))
         adapters[row['sample']] = row['adapter'] ##NB:last sample adapter row overwrites the previous
         conditions[row['condition']].add(row['sample'])
-#        try:
-#            translocations[row['sample']].add(row['translocation'])
-#        except KeyError as ke:
-#            print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
+        try:
+            for tr in row['translocation'].split('#'): 
+                if tr: translocations.add(tr) 
+        except KeyError as ke:
+            print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
+
+annotation_dir = 'junk2_dbs'
+
+## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
+if translocations:
+    ## RESET GENOME INDEXES TO BUILD TRANSLOCATED GENOME ONES
+    GENOME_INDEX = ''
+    SEGEMEHL_INDEX = ''
+    BWA_INDEX == ''
+    BOWTIE2_INDEX = ''
+    STAR_INDEX = ''
+    GENEPRED = ''
+
+    ## COMPUTE TRANSLOCATED GENOME SEQUENCE AND GENE ANNOTATION
+    env_translocate_genome = env
+    env_translocate_genome.Append(TRANSLOCATIONS = list(translocations))
+    env_translocate_genome['GENOME'] = GENOME_FASTA
+    #env_translocated_genome.Append(ANNOTATION = ANNOTATION)
+    translocated_genome = env.SConscript(os.path.join(annotation_dir, 'junk2_translocate_genome'),
+                                         src_dir = SCONSCRIPT_HOME, 
+                                         variant_dir = annotation_dir, duplicate = 0, 
+                                         exports = '''env_translocate_genome ''')
+    GENOME_FASTA = File(translocated_genome[0][0]).abspath
+    env['GENOME_FASTA'] = GENOME_FASTA
+    ANNOTATION = File(translocated_genome[1][0]).abspath
+else:
+    print "No translocations defined"
+    translocated_genome = [[File(GENOME_FASTA)], [ANNOTATION]]
 
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
+hisat2_index_suffixes  = ['.1.ht2', '.2.ht2', '.3.ht2', '.4.ht2', 
+                          '.5.ht2', '.6.ht2', '.7.ht2', '.8.ht2']
+bowtie2_index_suffixes = ['.1.bt2', '.2.bt2', '.3.bt2', '.4.bt2', '.rev.1.bt2', '.rev.2.bt2']
+bwa_index_suffixes     = ['.amb', '.ann', '.bwt', '.pac', '.sa']
+
+indexes = {'HISAT2':    [GENOME_INDEX + suffix for suffix in hisat2_index_suffixes], 
+           'SEGEMEHL':  [SEGEMEHL_INDEX],
+           'BWA':       [BWA_INDEX + suffix for suffix in bwa_index_suffixes],
+           'BOWTIE2':   [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes], 
+           'STAR':      [os.path.join(STAR_INDEX, 'SA')]}
+
 genome_indexes_to_build = []
 if GENOME_INDEX == '': genome_indexes_to_build.append('HISAT2')
 if SEGEMEHL_INDEX == '': genome_indexes_to_build.append('SEGEMEHL')
@@ -109,7 +164,6 @@ if BWA_INDEX == '': genome_indexes_to_build.append('BWA')
 if BOWTIE2_INDEX == '': genome_indexes_to_build.append('BOWTIE2')
 if STAR_INDEX == '': genome_indexes_to_build.append('STAR')
 
-annotation_dir = 'junk2_dbs'
 
 if genome_indexes_to_build:
 
@@ -117,26 +171,46 @@ if genome_indexes_to_build:
     env_build_indexes['INDEXES'] = ','.join(genome_indexes_to_build)
     env_build_indexes['CPUS']    = CPUS
     env_build_indexes['GENOME']  = GENOME_FASTA
-    #env_build_indexes['HISAT2_EXTRA_PARAMS']
-    #env_build_indexes['BWA_EXTRA_PARAMS']
-    #env_build_indexes['BOWTIE2_EXTRA_PARAMS']
-    #env_build_indexes['SEGEMEHL_EXTRA_PARAMS']
-    #env_build_indexes['STAR_EXTRA_PARAMS']
+    env_build_indexes['HISAT2_EXTRA_PARAMS']    = ''
+    env_build_indexes['BWA_EXTRA_PARAMS']       = ''
+    env_build_indexes['BOWTIE2_EXTRA_PARAMS']   = ''
+    env_build_indexes['SEGEMEHL_EXTRA_PARAMS']  = ''
+    env_build_indexes['STAR_EXTRA_PARAMS']      = ''
     
     indexes = SConscript(os.path.join(annotation_dir, 'junk2_build_indexes'), 
                                 src_dir = SCONSCRIPT_HOME, 
                                 variant_dir = annotation_dir, duplicate = 0,
                                 exports = '''env_build_indexes ''')
 
-    if GENOME_INDEX == '':  GENOME_INDEX    = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] 
+    if GENOME_INDEX == '' :GENOME_INDEX   = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] 
                                               #remove the .1.ht2 suffix
-    if SEGEMEHL_INDEX == '':SEGEMEHL_INDEX  = os.path.abspath(str(indexes['SEGEMEHL'][0]))
-    if BWA_INDEX == '':     BWA_INDEX       = os.path.abspath(str(indexes['BWA'][0]))[0:-4] 
+    if SEGEMEHL_INDEX == '':SEGEMEHL_INDEX= os.path.abspath(str(indexes['SEGEMEHL'][0]))
+    if BWA_INDEX    == '' :BWA_INDEX      = os.path.abspath(str(indexes['BWA'][0]))[0:-4] 
                                               #remove the .amb suffix
-    if BOWTIE2_INDEX == '': BOWTIE2_INDEX   = os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
+    if BOWTIE2_INDEX == '':BOWTIE2_INDEX  = os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
                                               #remove .1.bt2 suffix
-    if STAR_INDEX == '':    STAR_INDEX      = os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) 
+    if STAR_INDEX   == '' :STAR_INDEX = os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) 
                                               #index dir
+    Depends(indexes['HISAT2'], translocated_genome[0][0])
+    Depends(indexes['SEGEMEHL'], translocated_genome[0][0])
+    Depends(indexes['BWA'], translocated_genome[0][0])
+    Depends(indexes['BOWTIE2'], translocated_genome[0][0])
+    Depends(indexes['STAR'], translocated_genome[0][0])
+
+## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
+if GENEPRED == '':
+    genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info', 
+                                                           '${SOURCES[0].filebase}.genePred', 
+                                                           '${SOURCES[0].filebase}.genePred.wgn']]
+    genePred = env.Command(genePred_targets, File(ANNOTATION), 
+                           ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
+                            'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
+                            'paste - ${TARGETS[1]} > ${TARGETS[2]}']
+                          )
+    ## slow command
+    #'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
+    #'paste - ${TARGETS[1]} > ${TARGETS[2]}'
+    GENEPRED = genePred[2]
 
 ## PROCESS SAMPLES
 runs = []
@@ -153,7 +227,8 @@ for sample in sorted(samples.keys()):
     segemehl_index      = SEGEMEHL_INDEX
     bwa_index           = BWA_INDEX     
     bwa_params          = BWA_PARAMS    
-    ciri                = CIRI          
+    ciri                = CIRI
+    ciri_extra_parameters = CIRI_EXTRA_PARAMS
     bowtie2_index       = BOWTIE2_INDEX 
 
     star_index  = STAR_INDEX 
@@ -172,8 +247,14 @@ for sample in sorted(samples.keys()):
                             '''sample_adapter_file sample_annotation '''
                             '''sample_raw_reads segemehl_index bwa_index bwa_params '''
                             '''ciri bowtie2_index star_index gene_pred '''
-                            '''hisat2_extra_params cufflinks_params''')
+                            '''hisat2_extra_params cufflinks_params ciri_extra_parameters''')
     runs.append(run_sample)
+    Depends(run_sample, indexes['STAR'])
+    Depends(run_sample, indexes['HISAT2'])
+    Depends(run_sample, indexes['BOWTIE2'])
+    Depends(run_sample, indexes['SEGEMEHL'])
+    Depends(run_sample, indexes['BWA'])
+    Depends(run_sample, GENEPRED) #genePred[2])
 
 
 ## MERGE SAMPLE TRANSCRIPTOMES
@@ -193,15 +274,18 @@ def get_matching_nodes(nodelist, rexpression):
     return files
 
 transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
-cuffmerge_cpus = CPUS
-cuffmerge_annotation = ANNOTATION
-cuffmerge_genome_fasta = GENOME_FASTA
 cuffmerge_dir = 'cuffmerge'
-cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
-                       src_dir = SCONSCRIPT_HOME,
-                       variant_dir = cuffmerge_dir, duplicate = 0,
-                       exports = 'env transcripts_gtf_files cuffmerge_cpus '''
-                       '''cuffmerge_annotation cuffmerge_genome_fasta''')
+if len(transcripts_gtf_files) > 1:
+   cuffmerge_cpus = CPUS
+   cuffmerge_annotation = ANNOTATION
+   cuffmerge_genome_fasta = GENOME_FASTA
+   cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
+                           src_dir = SCONSCRIPT_HOME,
+                           variant_dir = cuffmerge_dir, duplicate = 0,
+                           exports = 'env transcripts_gtf_files cuffmerge_cpus '''
+                           '''cuffmerge_annotation cuffmerge_genome_fasta''')
+else:
+    cuffmerge = transcripts_gtf_files
 
 ## RETRIEVE TRANSCRIPT SEQUENCES
 transcript_sequences_annotation = cuffmerge
@@ -214,37 +298,42 @@ transcript_sequences = SConscript(os.path.join(transcript_sequences_dir,
                                   exports = '''env transcript_sequences_annotation '''
                                   '''transcript_sequences_genome''')
 
-## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
-cuffquant_annotation = cuffmerge
 alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
 alignments = get_matching_nodes(runs, alignment_matching_regexp)
-cuffquant_alignments = alignments
-cuffquant_genome_fasta = GENOME_FASTA
 
 cuffquant_dir = 'cuffquant'
-cuffquant_cpus = CPUS
-
-cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
-                       src_dir = SCONSCRIPT_HOME,
-                       variant_dir = cuffquant_dir, duplicate = 0,
-                       exports = '''env cuffquant_alignments cuffquant_annotation '''
-                       '''cuffquant_genome_fasta cuffquant_cpus''')
-
-Depends(cuffquant, [cuffmerge, alignments])
-
-## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
-cuffdiff_cpus = CPUS
-cuffdiff_conditions = conditions
-cuffdiff_annotation = cuffmerge
-cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
 cuffdiff_dir = 'cuffdiff'
-cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
-                      src_dir = SCONSCRIPT_HOME,
-                      variant_dir = cuffdiff_dir, duplicate = 0,
-                      exports = '''env cuffdiff_cpus cuffdiff_conditions '''
-                      '''cuffdiff_annotation cuffdiff_quantities''')
+if len(samples.keys()) > 1:
 
-Depends(cuffdiff, cuffquant)
+    ## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
+    cuffquant_annotation = cuffmerge
+    cuffquant_alignments = alignments
+    cuffquant_genome_fasta = GENOME_FASTA
+    cuffquant_extra_params = CUFFQUANT_EXTRA_PARAMS
+    
+    cuffquant_cpus = CPUS
+    
+    cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
+                           src_dir = SCONSCRIPT_HOME,
+                           variant_dir = cuffquant_dir, duplicate = 0,
+                           exports = '''env cuffquant_alignments cuffquant_annotation '''
+                           '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
+    
+    Depends(cuffquant, [cuffmerge, alignments])
+
+    ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
+    cuffdiff_cpus = CPUS
+    cuffdiff_conditions = conditions
+    cuffdiff_annotation = cuffmerge
+    cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
+    cuffdiff_extra_params = CUFFDIFF_EXTRA_PARAMS
+    cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
+                          src_dir = SCONSCRIPT_HOME,
+                          variant_dir = cuffdiff_dir, duplicate = 0,
+                          exports = '''env cuffdiff_cpus cuffdiff_conditions '''
+                          '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
+    
+    Depends(cuffdiff, cuffquant)
 
 ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
 deseq_annotation = cuffmerge
@@ -403,3 +492,4 @@ Clean('.', deseq_dir)
 Clean('.', circRNA_collect_dir)
 Clean('.', read_stats_collect_dir)
 Clean('.', qre_dir)
+Clean('.', annotation_dir)
