@@ -187,18 +187,20 @@ libgtextutils = env.Command(libgtextutils_target, [],
                             ' && make && make install',
                             'cd ' + Dir('#').abspath])
 
+libgtextutils_config_path = os.path.dirname(libgtextutils[2].abspath)
+
 FASTXTOOLKIT_tar = 'fastx_toolkit-0.0.14.tar.bz2'
 FASTXTOOLKIT_link = 'https://github.com/agordon/fastx_toolkit/releases/download/0.0.14/' +\
                     FASTXTOOLKIT_tar
 FASTXTOOLKIT_dir = os.path.join(tools_dir, 'fastx_toolkit-0.0.14')
 FASTXTOOLKIT_target = [os.path.join(tools_dir, FASTXTOOLKIT_tar),
                        os.path.join(FASTXTOOLKIT_dir, 'bin', 'fastx_quality_stats')]
-FASTXTOOLKIT = env.Command(FASTXTOOLKIT_target, libgtextutils[2], 
+FASTXTOOLKIT = env.Command(FASTXTOOLKIT_target, [Value(libgtextutils_config_path), libgtextutils[2]], 
                            ['wget -O $TARGET ' + FASTXTOOLKIT_link,
                             'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
                             'cd ' + FASTXTOOLKIT_dir + ' && ./configure --prefix=' +\
-                            FASTXTOOLKIT_dir + ' PKG_CONFIG_PATH=${os.path.dirname('\
-                            'SOURCES[0].abspath)}:$$PKG_CONFIG_PATH '\
+                            FASTXTOOLKIT_dir + ' PKG_CONFIG_PATH=${SOURCES[0]}'\
+                            ':$$PKG_CONFIG_PATH '\
                             ' && make && make install', 
                             'cd ' + Dir('#').abspath])
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FASTXTOOLKIT[1], SymLink)
@@ -230,11 +232,9 @@ gtfToGenePred = env.Command(gtfToGenePred_target, [],
                             Chmod('$TARGET', 0775)])
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), gtfToGenePred, SymLink)
 
-#TODO
-## R, RScript
-
-### optparse, ggplot2, DATA.TABLE, plyr, scales, reshape2, ggthemes, RSvgDevice
-### Bioconductor: ReportingTools, DESeq2
+# optparse, ggplot2, DATA.TABLE, plyr, scales, reshape2, ggthemes, RSvgDevice
+# Bioconductor: ReportingTools, DESeq2
+env['ENV']['R_LIBS'] = os.path.join(tools_dir, "R_libs")
 R_libs_targets = [os.path.join(tools_dir, 'R_libs', 'DESeq2', 'R', 'DESeq2')]
 R_libs = env.Command(R_libs_targets, [], 'install_R_libs.R')
 

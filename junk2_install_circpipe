@@ -3,6 +3,7 @@
 export JUNK2_HOME=$(dirname $(readlink -f $0))
 
 ## install Scons
+mkdir $JUNK2_HOME/tools
 cd $JUNK2_HOME/tools
 wget -N -c http://prdownloads.sourceforge.net/scons/scons-local-2.5.0.tar.gz
 mkdir -p scons
