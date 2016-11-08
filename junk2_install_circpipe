@@ -17,5 +17,8 @@ cd -
 
 export PATH=$JUNK2_HOME/bin/:$PATH
 
+## export environment variable for local R repository
+export R_LIBS="$JUNK2_HOME/tools/R_libs"
+
 ## install other tools
 scons -i -f $JUNK2_HOME/src/junk2_install_tools_circpipe $1 

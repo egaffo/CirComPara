@@ -232,6 +232,9 @@ env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), gtfToGenePred, SymLin
 
 #TODO
 ## R, RScript
-### OPTPARSE, GGPLOT2, DATA.TABLE, PLYR
-### Bioconductor: DESEQ2
+
+### optparse, ggplot2, DATA.TABLE, plyr, scales, reshape2, ggthemes, RSvgDevice
+### Bioconductor: ReportingTools, DESeq2
+R_libs_targets = [os.path.join(tools_dir, 'R_libs', 'DESeq2', 'R', 'DESeq2')]
+R_libs = env.Command(R_libs_targets, [], 'install_R_libs.R')
 

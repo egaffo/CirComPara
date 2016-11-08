@@ -9,4 +9,6 @@ export PATH=$JUNK2_HOME/bin:$PATH
 
 export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/CIRCexplorer/lib/python2.7/site-packages/"
 
+export R_LIBS="$JUNK2_HOME/tools/R_libs"
+
 scons -f $JUNK2_HOME/src/junk2_circpipe_multisample $1 
