@@ -7,7 +7,7 @@ export TRIMMOMATIC=$TOOLS_DIR/Trimmomatic-0.36/trimmomatic-0.36.jar
 
 export PATH=$JUNK2_HOME/bin:$PATH
 
-export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/CIRCexplorer/lib/python2.7/site-packages/:$TOOLS_DIR/lib/python2.7/site-packages/Bio/SeqIO/FastaIO.py"
+export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/CIRCexplorer/lib/python2.7/site-packages/:$TOOLS_DIR/lib/python2.7/site-packages/"
 
 export R_LIBS="$JUNK2_HOME/tools/R_libs"
 
