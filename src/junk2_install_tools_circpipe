@@ -160,11 +160,13 @@ FINDCIRC_tar = 'find_circ.zip'
 #FINDCIRC_link = 'http://www.circbase.org/download/' + FINDCIRC_tar
 FINDCIRC_link = 'https://github.com/marvin-jens/find_circ/archive/master.zip'
 FINDCIRC_target = [os.path.join(tools_dir, FINDCIRC_tar),
-                   os.path.join(tools_dir, 'find_circ-master', 'find_circ.py')]
+                   os.path.join(tools_dir, 'find_circ-master', 'find_circ.py'),
+		   os.path.join(tools_dir, 'find_circ-master', 'unmapped2anchors.py')]
 #FINDCIRC_source = 
 FINDCIRC = env.Command(FINDCIRC_target, [], ['wget -O $TARGET  ' + FINDCIRC_link,
-                                            'unzip -u -d ' + tools_dir + ' ${TARGETS[0]}'])
+                                             'unzip -u -d ' + tools_dir + ' ${TARGETS[0]}'])
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FINDCIRC[1], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FINDCIRC[2], SymLink)
 
 # CIRCEXPLORER
 #CIRCEXPLORER_zip = 'CIRCexplorer_v1.1.9.zip'
