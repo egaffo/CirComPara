@@ -17,8 +17,11 @@ if(length(arguments$input)>0){
 
     sampleTable <- read.csv(file=arguments$input)
 
+    #countfile_dir <- file.path(dirname(arguments$input), 'htseq_counts')
     suppressPackageStartupMessages(library(DESeq2))
-    ddsHTSeq <- DESeqDataSetFromHTSeqCount(sampleTable = sampleTable, design = ~condition)
+    ddsHTSeq <- DESeqDataSetFromHTSeqCount(sampleTable = sampleTable, 
+					   design = ~condition, 
+					   directory = "")
 
     raw.counts <- as.data.frame(counts(ddsHTSeq))
 
