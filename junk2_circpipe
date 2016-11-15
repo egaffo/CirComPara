@@ -7,6 +7,9 @@ export TRIMMOMATIC=$TOOLS_DIR/Trimmomatic-0.36/trimmomatic-0.36.jar
 
 export PATH=$JUNK2_HOME/bin:$PATH
 
-export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/CIRCexplorer/lib/python2.7/site-packages/"
+export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/CIRCexplorer/lib/python2.7/site-packages/:$TOOLS_DIR/biopython/lib/python2.7/site-packages/:$TOOLS_DIR/HTSeq-0.6.1p1/lib/python2.7/site-packages/"
+
+export R_LIBS="$JUNK2_HOME/tools/R_libs"
 
 scons -f $JUNK2_HOME/src/junk2_circpipe_multisample $1 
+
