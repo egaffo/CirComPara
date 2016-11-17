@@ -62,7 +62,10 @@ vars.Add('CUFFDIFF_EXTRA_PARAMS',
          'Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
          ' --multi-read-correct', '')
 vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
- 
+vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods to use. '\
+	 'Use all methods available as default', '')
+
+
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
 Help(vars.GenerateHelpText(env))
@@ -94,6 +97,7 @@ CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
 CUFFQUANT_EXTRA_PARAMS = env['CUFFQUANT_EXTRA_PARAMS']
 CUFFDIFF_EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS']
 
+CIRCRNA_METHODS = [m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
 
@@ -159,15 +163,23 @@ indexes = {'HISAT2':    [GENOME_INDEX + suffix for suffix in hisat2_index_suffix
 
 genome_indexes_to_build = []
 if GENOME_INDEX == '': genome_indexes_to_build.append('HISAT2')
-if SEGEMEHL_INDEX == '': genome_indexes_to_build.append('SEGEMEHL')
-if BWA_INDEX == '': genome_indexes_to_build.append('BWA')
-if BOWTIE2_INDEX == '': genome_indexes_to_build.append('BOWTIE2')
-if STAR_INDEX == '': genome_indexes_to_build.append('STAR')
+
+if SEGEMEHL_INDEX == '' and (CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS): 
+	genome_indexes_to_build.append('SEGEMEHL')
+
+if BWA_INDEX == '' and (CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS): 
+	genome_indexes_to_build.append('BWA')
+
+if BOWTIE2_INDEX == '' and (CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS): 
+	genome_indexes_to_build.append('BOWTIE2')
+
+if STAR_INDEX == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS): 
+	genome_indexes_to_build.append('STAR')
 
 
 if genome_indexes_to_build:
 
-    env_build_indexes = env
+    env_build_indexes = env.Clone()
     env_build_indexes['INDEXES'] = ','.join(genome_indexes_to_build)
     env_build_indexes['CPUS']    = CPUS
     env_build_indexes['GENOME']  = GENOME_FASTA
@@ -182,23 +194,32 @@ if genome_indexes_to_build:
                                 variant_dir = annotation_dir, duplicate = 0,
                                 exports = '''env_build_indexes ''')
 
-    if GENOME_INDEX == '' :GENOME_INDEX   = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] 
-                                              #remove the .1.ht2 suffix
-    if SEGEMEHL_INDEX == '':SEGEMEHL_INDEX= os.path.abspath(str(indexes['SEGEMEHL'][0]))
-    if BWA_INDEX    == '' :BWA_INDEX      = os.path.abspath(str(indexes['BWA'][0]))[0:-4] 
-                                              #remove the .amb suffix
-    if BOWTIE2_INDEX == '':BOWTIE2_INDEX  = os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
-                                              #remove .1.bt2 suffix
-    if STAR_INDEX   == '' :STAR_INDEX = os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) 
-                                              #index dir
-    Depends(indexes['HISAT2'], translocated_genome[0][0])
-    Depends(indexes['SEGEMEHL'], translocated_genome[0][0])
-    Depends(indexes['BWA'], translocated_genome[0][0])
-    Depends(indexes['BOWTIE2'], translocated_genome[0][0])
-    Depends(indexes['STAR'], translocated_genome[0][0])
+    if GENOME_INDEX == '' :
+	GENOME_INDEX = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] #remove the .1.ht2 suffix
+
+    if SEGEMEHL_INDEX == '' and (CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS):
+	SEGEMEHL_INDEX	= os.path.abspath(str(indexes['SEGEMEHL'][0]))
+
+    if BWA_INDEX    == '' and (CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS):
+	BWA_INDEX      	= os.path.abspath(str(indexes['BWA'][0]))[0:-4] #remove the .amb suffix
+
+    if BOWTIE2_INDEX == '' and (CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS):
+	BOWTIE2_INDEX  	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6] #remove .1.bt2 suffix
+
+    if STAR_INDEX   == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS):
+	STAR_INDEX 	= os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) #index dir
+
+    for k in indexes.keys():
+	Depends(indexes[k], translocated_genome[0][0])
+
+#    Depends(indexes['HISAT2'], translocated_genome[0][0])
+#    Depends(indexes['SEGEMEHL'], translocated_genome[0][0])
+#    Depends(indexes['BWA'], translocated_genome[0][0])
+#    Depends(indexes['BOWTIE2'], translocated_genome[0][0])
+#    Depends(indexes['STAR'], translocated_genome[0][0])
 
 ## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
-if GENEPRED == '':
+if GENEPRED == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS):
     genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info', 
                                                            '${SOURCES[0].filebase}.genePred', 
                                                            '${SOURCES[0].filebase}.genePred.wgn']]
@@ -236,6 +257,8 @@ for sample in sorted(samples.keys()):
 
     hisat2_extra_params = HISAT2_EXTRA_PARAMS 
     cufflinks_params    = CUFFLINKS_PARAMS
+    
+    circrna_methods = CIRCRNA_METHODS
 
     sample_dir = os.path.join(samples_dir, sample)
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'), 
@@ -246,15 +269,23 @@ for sample in sorted(samples.keys()):
                             '''sample_preprocessor_params '''
                             '''sample_adapter_file sample_annotation '''
                             '''sample_raw_reads segemehl_index bwa_index bwa_params '''
-                            '''ciri bowtie2_index star_index gene_pred '''
+                            '''ciri bowtie2_index star_index gene_pred circrna_methods '''
                             '''hisat2_extra_params cufflinks_params ciri_extra_parameters''')
     runs.append(run_sample)
-    Depends(run_sample, indexes['STAR'])
-    Depends(run_sample, indexes['HISAT2'])
-    Depends(run_sample, indexes['BOWTIE2'])
-    Depends(run_sample, indexes['SEGEMEHL'])
-    Depends(run_sample, indexes['BWA'])
-    Depends(run_sample, GENEPRED) #genePred[2])
+
+    for k in indexes.keys():
+	Depends(run_sample, indexes[k])
+
+    if translocations:
+	Depends(run_sample, translocated_genome)
+
+#    Depends(run_sample, indexes['STAR'])
+#    Depends(run_sample, indexes['HISAT2'])
+#    Depends(run_sample, indexes['BOWTIE2'])
+#    Depends(run_sample, indexes['SEGEMEHL'])
+#    Depends(run_sample, indexes['BWA'])
+    if CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS:
+	Depends(run_sample, GENEPRED) #genePred[2])
 
 
 ## MERGE SAMPLE TRANSCRIPTOMES
@@ -373,54 +404,68 @@ for sample in samples:
     CIRCexplorer_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                                 os.path.sep + '.*CIRCexplorer_circ\.txt'))
 
+
 ## collect segecirc
-segecirc_files = ','.join([f.path for f in flatten(segecirc_nodes)])
-segecirc_labels = ','.join(samples)
-segecirc_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                         '''segecirc_compare.R -l ''' + segecirc_labels +\
-                         ''' -i ''' + segecirc_files + ''' -o $TARGET''')
-segecirc_comapared_target = os.path.join(circRNA_collect_dir, 'segecirc_compared.csv')
-segecirc_compared = env.Command(segecirc_comapared_target, 
-                                segecirc_nodes, 
-                                segecirc_comapared_cmd)
-Depends(segecirc_compared, segecirc_nodes)
+CIRCexplorer_compared = None
+ciri_compared = None
+find_circ_compared = None
+segecirc_compared = None
 
-## collect find_circ
-find_circ_files = ','.join([f.path for f in flatten(find_circ_nodes)])
-find_circ_labels = ','.join(samples)
-find_circ_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                         '''findcirc_compare.R -l ''' + find_circ_labels +\
-                         ''' -i ''' + find_circ_files + ''' -o $TARGET''')
-find_circ_comapared_target = os.path.join(circRNA_collect_dir, 'find_circ_compared.csv')
-find_circ_compared = env.Command(find_circ_comapared_target, 
-                                find_circ_nodes, 
-                                find_circ_comapared_cmd)
-Depends(find_circ_compared, find_circ_nodes)
+if not ''.join([str(f) for f in flatten(segecirc_nodes)]) == '':
 
-## collect CIRI
-ciri_files = ','.join([f.path for f in flatten(ciri_nodes)])
-ciri_labels = ','.join(samples)
-ciri_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                         '''ciri_compare.R -l ''' + ciri_labels +\
-                         ''' -i ''' + ciri_files + ''' -o $TARGET''')
-ciri_comapared_target = os.path.join(circRNA_collect_dir, 'ciri_compared.csv')
-ciri_compared = env.Command(ciri_comapared_target, 
-                                ciri_nodes, 
-                                ciri_comapared_cmd)
-Depends(ciri_compared, ciri_nodes)
+    segecirc_files = ','.join([f.path for f in flatten(segecirc_nodes)])
+    segecirc_labels = ','.join(samples)
+    segecirc_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                             '''segecirc_compare.R -l ''' + segecirc_labels +\
+                             ''' -i ''' + segecirc_files + ''' -o $TARGET''')
+    segecirc_comapared_target = os.path.join(circRNA_collect_dir, 'segecirc_compared.csv')
+    segecirc_compared = env.Command(segecirc_comapared_target, 
+                                    segecirc_nodes, 
+                                    segecirc_comapared_cmd)
+    Depends(segecirc_compared, segecirc_nodes)
 
-## collect CIRCexplorer
-CIRCexplorer_files = ','.join([f.path for f in flatten(CIRCexplorer_nodes)])
-CIRCexplorer_labels = ','.join(samples)
-CIRCexplorer_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                         '''CIRCexplorer_compare.R -l ''' + CIRCexplorer_labels +\
-                         ''' -i ''' + CIRCexplorer_files + ''' -o $TARGET''')
-CIRCexplorer_comapared_target = os.path.join(circRNA_collect_dir, 'CIRCexplorer_compared.csv')
-CIRCexplorer_compared = env.Command(CIRCexplorer_comapared_target, 
-                                CIRCexplorer_nodes, 
-                                CIRCexplorer_comapared_cmd)
-Depends(CIRCexplorer_compared, CIRCexplorer_nodes)
+if not ''.join([str(f) for f in flatten(find_circ_nodes)]) == '':
 
+    ## collect find_circ
+    find_circ_files = ','.join([f.path for f in flatten(find_circ_nodes)])
+    find_circ_labels = ','.join(samples)
+    find_circ_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                             '''findcirc_compare.R -l ''' + find_circ_labels +\
+                             ''' -i ''' + find_circ_files + ''' -o $TARGET''')
+    find_circ_comapared_target = os.path.join(circRNA_collect_dir, 'find_circ_compared.csv')
+    find_circ_compared = env.Command(find_circ_comapared_target, 
+                                    find_circ_nodes, 
+                                    find_circ_comapared_cmd)
+    Depends(find_circ_compared, find_circ_nodes)
+    
+if not ''.join([str(f) for f in flatten(ciri_nodes)]) == '':
+
+    ## collect CIRI
+    ciri_files = ','.join([f.path for f in flatten(ciri_nodes)])
+    ciri_labels = ','.join(samples)
+    ciri_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                             '''ciri_compare.R -l ''' + ciri_labels +\
+                             ''' -i ''' + ciri_files + ''' -o $TARGET''')
+    ciri_comapared_target = os.path.join(circRNA_collect_dir, 'ciri_compared.csv')
+    ciri_compared = env.Command(ciri_comapared_target, 
+                                    ciri_nodes, 
+                                    ciri_comapared_cmd)
+    Depends(ciri_compared, ciri_nodes)
+    
+if not ''.join([str(f) for f in flatten(CIRCexplorer_nodes)]) == '':
+
+    ## collect CIRCexplorer
+    CIRCexplorer_files = ','.join([f.path for f in flatten(CIRCexplorer_nodes)])
+    CIRCexplorer_labels = ','.join(samples)
+    CIRCexplorer_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                             '''CIRCexplorer_compare.R -l ''' + CIRCexplorer_labels +\
+                             ''' -i ''' + CIRCexplorer_files + ''' -o $TARGET''')
+    CIRCexplorer_comapared_target = os.path.join(circRNA_collect_dir, 'CIRCexplorer_compared.csv')
+    CIRCexplorer_compared = env.Command(CIRCexplorer_comapared_target, 
+                                    CIRCexplorer_nodes, 
+                                    CIRCexplorer_comapared_cmd)
+    Depends(CIRCexplorer_compared, CIRCexplorer_nodes)
+    
 ##COLLECT CIRCRNA ALIGNMENT NUMBER
 # segecirc mapped reads
 segecirc_mappings_pattern = '.*segemehl_mapped_reads_count\.txt'
@@ -445,19 +490,26 @@ collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir,
 
 ## ANALYZE COLLECTED CIRCRNA RESULTS
 circrna_analyze_dir = circRNA_collect_dir
-circrna_analyze_circexplorer = CIRCexplorer_compared
-circrna_analyze_ciri         = ciri_compared
-circrna_analyze_findcirc     = find_circ_compared
-circrna_analyze_segecirc     = segecirc_compared
+circrna_analyze_csvs = {'CIRCEXPLORER': CIRCexplorer_compared,
+			'CIRI': ciri_compared,
+			'FINDCIRC': find_circ_compared,
+			'TESTREALIGN': segecirc_compared}
+#circrna_analyze_circexplorer = CIRCexplorer_compared
+#circrna_analyze_ciri         = ciri_compared
+#circrna_analyze_findcirc     = find_circ_compared
+#circrna_analyze_segecirc     = segecirc_compared
 circrna_analyze_GTF          = cuffmerge
 circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 'junk2_circrna_collect_analyze'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = circrna_analyze_dir, duplicate = 0,
-                            exports = '''env circrna_analyze_circexplorer '''
-                                      '''circrna_analyze_ciri circrna_analyze_findcirc '''
-                                      '''circrna_analyze_segecirc circrna_analyze_GTF''')
-Depends(circrna_analyze, [cuffmerge, CIRCexplorer_compared, ciri_compared, 
-                          find_circ_compared, segecirc_compared])
+                            exports = '''env circrna_analyze_GTF circrna_analyze_csvs''')
+#circrna_analyze_circexplorer '''
+#                                      '''circrna_analyze_ciri circrna_analyze_findcirc '''
+#                                      '''circrna_analyze_segecirc''')
+#Depends(circrna_analyze, [cuffmerge, CIRCexplorer_compared, ciri_compared, 
+#                          find_circ_compared, segecirc_compared])
+#Depends(circrna_analyze, [cuffmerge, circrna_analyze_csvs.items()])
+
 
 ## collect read processing statistics
 clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')

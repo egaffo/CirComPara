@@ -10,12 +10,13 @@ Currently supported/implemented for:
 Import('*')
 
 try:
-    env
-    circrna_analyze_circexplorer
-    circrna_analyze_ciri        
-    circrna_analyze_findcirc    
-    circrna_analyze_segecirc    
+    env = env.Clone()
+#    circrna_analyze_circexplorer
+#    circrna_analyze_ciri        
+#    circrna_analyze_findcirc    
+#    circrna_analyze_segecirc    
     GTF = circrna_analyze_GTF
+    CSVS = circrna_analyze_csvs
 
 except NameError:
     vars = Variables('vars.py')
@@ -39,14 +40,28 @@ except NameError:
     circrna_analyze_segecirc     = csvs[3]
     GTF = env['GTF']
 
+methods = {'CIRCEXPLORER': 'circexplorer',
+	   'CIRI': 'ciri',
+	   'FINDCIRC': 'findcirc',
+	   'TESTREALIGN': 'segecirc'}
+
 ## collect circRNAs in a single GTF annotation file
-circ_gtf_cmd = '''{ convert_circrna_collect_tables.py -p circexplorer ${SOURCES[0]}; '''\
-   '''convert_circrna_collect_tables.py -p ciri ${SOURCES[1]}; '''\
-   '''convert_circrna_collect_tables.py -p findcirc ${SOURCES[2]}; '''\
-   '''convert_circrna_collect_tables.py -p segecirc ${SOURCES[3]}; } | '''\
-   '''sort -k1,1 -k4,4n > ${TARGETS[0]} '''
-circ_gtf_sources = [circrna_analyze_circexplorer, circrna_analyze_ciri, 
-                    circrna_analyze_findcirc, circrna_analyze_segecirc]
+circ_gtf_sources = []
+circ_gtf_cmd = '''{ '''
+for k,v in CSVS.iteritems():
+    if v:
+	circ_gtf_sources.append(v)
+        circ_gtf_cmd = circ_gtf_cmd + '''convert_circrna_collect_tables.py -p ''' + methods[k] +\
+		       ''' ''' + v[0].path + ''' ; '''
+circ_gtf_cmd = circ_gtf_cmd + '''} | sort -k1,1 -k4,4n > ${TARGETS[0]}'''
+
+#circ_gtf_cmd = '''{ convert_circrna_collect_tables.py -p circexplorer ${SOURCES[0]}; '''\
+#   '''convert_circrna_collect_tables.py -p ciri ${SOURCES[1]}; '''\
+#   '''convert_circrna_collect_tables.py -p findcirc ${SOURCES[2]}; '''\
+#   '''convert_circrna_collect_tables.py -p segecirc ${SOURCES[3]}; } | '''\
+#   '''sort -k1,1 -k4,4n > ${TARGETS[0]} '''
+#circ_gtf_sources = [circrna_analyze_circexplorer, circrna_analyze_ciri, 
+#                    circrna_analyze_findcirc, circrna_analyze_segecirc]
 
 circ_gtf_target = 'circrnas.gtf'
 circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
