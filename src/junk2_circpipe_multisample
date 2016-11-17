@@ -64,7 +64,9 @@ vars.Add('CUFFDIFF_EXTRA_PARAMS',
 vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
 vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods to use. '\
 	 'Use all methods available as default', '')
-
+vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
+         'reconstruction. Default only quantifies genes and transcripts from the given '\
+         'annotation GTF file', 'False')
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
@@ -96,6 +98,9 @@ HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
 CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
 CUFFQUANT_EXTRA_PARAMS = env['CUFFQUANT_EXTRA_PARAMS']
 CUFFDIFF_EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS']
+TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False
+if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
+	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
 
 CIRCRNA_METHODS = [m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]
 
@@ -257,6 +262,7 @@ for sample in sorted(samples.keys()):
 
     hisat2_extra_params = HISAT2_EXTRA_PARAMS 
     cufflinks_params    = CUFFLINKS_PARAMS
+    toggle_transcriptome_reconstruction = TOGGLE_TRANSCRIPTOME_RECONSTRUCTION
     
     circrna_methods = CIRCRNA_METHODS
 
@@ -270,7 +276,8 @@ for sample in sorted(samples.keys()):
                             '''sample_adapter_file sample_annotation '''
                             '''sample_raw_reads segemehl_index bwa_index bwa_params '''
                             '''ciri bowtie2_index star_index gene_pred circrna_methods '''
-                            '''hisat2_extra_params cufflinks_params ciri_extra_parameters''')
+                            '''hisat2_extra_params cufflinks_params ciri_extra_parameters '''
+			    '''toggle_transcriptome_reconstruction''')
     runs.append(run_sample)
 
     for k in indexes.keys():
@@ -288,7 +295,7 @@ for sample in sorted(samples.keys()):
 	Depends(run_sample, GENEPRED) #genePred[2])
 
 
-## MERGE SAMPLE TRANSCRIPTOMES
+## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
 def flatten(l):
     for el in l:
         if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
@@ -304,19 +311,23 @@ def get_matching_nodes(nodelist, rexpression):
             files.append(node)
     return files
 
-transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
 cuffmerge_dir = 'cuffmerge'
-if len(transcripts_gtf_files) > 1:
-   cuffmerge_cpus = CPUS
-   cuffmerge_annotation = ANNOTATION
-   cuffmerge_genome_fasta = GENOME_FASTA
-   cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
-                           src_dir = SCONSCRIPT_HOME,
-                           variant_dir = cuffmerge_dir, duplicate = 0,
-                           exports = 'env transcripts_gtf_files cuffmerge_cpus '''
-                           '''cuffmerge_annotation cuffmerge_genome_fasta''')
+if TOGGLE_TRANSCRIPTOME_RECONSTRUCTION:
+    transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
+    if len(transcripts_gtf_files) > 1:
+       cuffmerge_cpus = CPUS
+       cuffmerge_annotation = ANNOTATION
+       cuffmerge_genome_fasta = GENOME_FASTA
+       cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
+                               src_dir = SCONSCRIPT_HOME,
+                               variant_dir = cuffmerge_dir, duplicate = 0,
+                               exports = 'env transcripts_gtf_files cuffmerge_cpus '''
+                               '''cuffmerge_annotation cuffmerge_genome_fasta''')
+    else:
+        cuffmerge = transcripts_gtf_files
 else:
-    cuffmerge = transcripts_gtf_files
+    ## just to recycle 'cuffmerge' variable
+    cuffmerge = ANNOTATION
 
 ## RETRIEVE TRANSCRIPT SEQUENCES
 transcript_sequences_annotation = cuffmerge

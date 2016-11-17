@@ -25,12 +25,13 @@ import os
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     mapfile     = mapping_file
     mapfile_basename = sample_name
     annotation  = cufflinks_annotation
     CPUS        = cufflinks_cpus
     CUFFLINKS_PARAMS = cufflinks_params
+    TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = cufflinks_toggle_transcriptome_reconstruction
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
@@ -41,6 +42,9 @@ except NameError:
     vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
              '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
              '''for the sequencing''', '')
+    vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
+	     'reconstruction. Default only quantifies genes and transcripts from the given '\
+	     'annotation GTF file', 'False')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -55,13 +59,20 @@ except NameError:
     annotation = env['ANNOTATION']
     CPUS = env['CPUS']
     CUFFLINKS_PARAMS = env['CUFFLINKS_PARAMS']
+    TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False
+    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
+    	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
 
 if os.path.splitext(annotation)[1] == '.gz':
     annotation = env.Command(os.path.basename(os.path.splitext(annotation)[0]), 
                              annotation, 'zcat $SOURCE > $TARGET')
 
+infer_transcripts_param = '-G'
+if TOGGLE_TRANSCRIPTOME_RECONSTRUCTION: infer_transcripts_param = '-g'
+
 cufflinks_cmd = "cufflinks -q --no-update-check " + CUFFLINKS_PARAMS + " $(-p " + CPUS +\
-                "$) --seed 0 -g ${SOURCES[1]} ${SOURCES[0]} -o " + Dir('.').path
+                "$) --seed 0 " + infer_transcripts_param + " ${SOURCES[1]} ${SOURCES[0]} -o " +\
+		Dir('.').path
 
 cufflinks_targets = ['transcripts.gtf', 
                      'isoforms.fpkm_tracking', 
