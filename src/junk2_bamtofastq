@@ -1,4 +1,6 @@
 '''
+DEPRECATED!!
+This script has been replaced by 'samtools fastq' commmand
 
 This SConscript converts BAM (un)alignments to FASTQ format, 
 a.i. to convert unmapped reads to their original FASTQ format.
