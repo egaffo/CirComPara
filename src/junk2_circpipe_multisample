@@ -76,6 +76,7 @@ vars.Add('DESEQ', 'Set True to enable differential expression computation also w
 	'Only available if more than one sample and more than one condition are given', 'False')
 vars.Add('CUFFNORM_EXTRA_PARAMS', 'Extra parameters to use if using Cuffnorm',
 	'--output-format cuffdiff')
+vars.Add('QRE_FIND', 'Set True to toggle analysis of QKI response elements sequences', 'False')
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
@@ -580,16 +581,17 @@ reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_sta
                               reads_stats_collect_cmd)
 #Depends(reads_stats_collect, runs)
 
-## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
 qre_dir = 'qre'
-qre_GTF = cuffmerge
-qre_GENOME = GENOME_FASTA
-qre = SConscript(os.path.join(qre_dir, 'junk2_QRE_finder'),
-                 src_dir = SCONSCRIPT_HOME,
-                 variant_dir = qre_dir, duplicate = 0,
-                 exports = '''env qre_GTF qre_GENOME''')
-
-Depends(qre, [cuffmerge, alignments])
+if env['QRE_FIND'] == 'True':
+    ## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
+    qre_GTF = cuffmerge
+    qre_GENOME = GENOME_FASTA
+    qre = SConscript(os.path.join(qre_dir, 'junk2_QRE_finder'),
+                     src_dir = SCONSCRIPT_HOME,
+                     variant_dir = qre_dir, duplicate = 0,
+                     exports = '''env qre_GTF qre_GENOME''')
+    
+    Depends(qre, [cuffmerge, alignments])
 
 
 ## CLEAN DIRS WHEN CLEANING TARGETS
