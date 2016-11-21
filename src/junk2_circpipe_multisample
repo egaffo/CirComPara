@@ -140,7 +140,8 @@ with open(META) as csvfile:
             for tr in row['translocation'].split('#'):
                 if tr: translocations.add(tr)
         except KeyError as ke:
-            print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
+            #print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
+            pass
 
 annotation_dir = 'junk2_dbs'
 
@@ -167,7 +168,7 @@ if translocations:
     env['GENOME_FASTA'] = GENOME_FASTA
     ANNOTATION = File(translocated_genome[1][0]).abspath
 else:
-    print "No translocations defined"
+    #print "No translocations defined"
     translocated_genome = [[File(GENOME_FASTA)], [ANNOTATION]]
 
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
