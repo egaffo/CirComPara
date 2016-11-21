@@ -573,7 +573,7 @@ reads_stats_collect_cmd = '''grep Input ''' +\
 reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_stats_collect.txt'), 
                               [clean_reads_stats_files, mapped_reads_linear_stats_files],
                               reads_stats_collect_cmd)
-Depends(reads_stats_collect, runs)
+#Depends(reads_stats_collect, runs)
 
 ## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
 qre_dir = 'qre'
