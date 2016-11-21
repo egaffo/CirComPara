@@ -26,6 +26,9 @@ file,sample,condition,adapter,translocation
 import os, csv, itertools, collections, re
 from collections import defaultdict
 
+def SymLink(target, source, env):
+    os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
 vars.Add('META', 'The metadata table file where you specify the project samples, etc.', 'meta.csv')
@@ -432,8 +435,9 @@ if len(samples.keys()) > 1:
         Depends(cuffnorm, cuffquant)
 
 else:
-    ## TODO: make a symlink to the sample cufflinks directory
-    pass
+    cufflinks_dir = get_matching_nodes(runs, '.*processings.*cufflinks')[0].dir
+    link_cufflinks_dir = env.Command(cuffdiff_dir, cufflinks_dir, SymLink)
+
 
 ## COLLECT CIRCRNA RESULTS
 circRNA_collect_dir = 'circRNA_collection'
