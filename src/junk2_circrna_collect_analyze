@@ -4,17 +4,14 @@ Currently supported/implemented for:
     * CIRCexplorer
     * CIRI
     * findcirc
-    * segecirc (segemehl)
+    * testrealign (segemehl)
 '''
 
+import os
 Import('*')
 
 try:
     env = env.Clone()
-#    circrna_analyze_circexplorer
-#    circrna_analyze_ciri        
-#    circrna_analyze_findcirc    
-#    circrna_analyze_segecirc    
     GTF = circrna_analyze_GTF
     CSVS = circrna_analyze_csvs
 
@@ -55,23 +52,17 @@ for k,v in CSVS.iteritems():
 		       ''' ''' + v[0].path + ''' ; '''
 circ_gtf_cmd = circ_gtf_cmd + '''} | sort -k1,1 -k4,4n > ${TARGETS[0]}'''
 
-#circ_gtf_cmd = '''{ convert_circrna_collect_tables.py -p circexplorer ${SOURCES[0]}; '''\
-#   '''convert_circrna_collect_tables.py -p ciri ${SOURCES[1]}; '''\
-#   '''convert_circrna_collect_tables.py -p findcirc ${SOURCES[2]}; '''\
-#   '''convert_circrna_collect_tables.py -p segecirc ${SOURCES[3]}; } | '''\
-#   '''sort -k1,1 -k4,4n > ${TARGETS[0]} '''
-#circ_gtf_sources = [circrna_analyze_circexplorer, circrna_analyze_ciri, 
-#                    circrna_analyze_findcirc, circrna_analyze_segecirc]
-
 circ_gtf_target = 'circrnas.gtf'
 circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
 
-## intersect circRNAs with gene annotation
-circ_gene_combine_cmd = '''bedtools intersect -wa -wb -a ${SOURCES[0]} -b ${SOURCES[1]} -s -loj'''\
+## intersect circRNAs with gene annotation: keep only 'exon' features from GTF
+circ_gene_combine_cmd = '''bedtools intersect -wa -wb -a ${SOURCES[0]} '''\
+                        '''-b <( grep -w exon ${SOURCES[1]} ) -s -loj'''\
                         ''' | gzip -c > $TARGET'''
 circ_gene_combine_sources = [circ_gtf, GTF]
 circ_gene_combine_target = 'combined_circrnas.gtf.gz'
 circ_gene_combine = env.Command(circ_gene_combine_target, circ_gene_combine_sources, 
                                 circ_gene_combine_cmd)
+
 
 Return('circ_gene_combine circ_gtf')
