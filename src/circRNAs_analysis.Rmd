@@ -377,7 +377,7 @@ gene.cumsum.per.sample
 ```
 
 # Correlation of circRNA and gene expression 
-```{r, echo=FALSE include=FALSE}
+```{r, echo=FALSE, include=FALSE}
 #median circRNA expression (circrna detected by at least 2 methods)
 circ_xpr_by_sample <- circrna.rpms.genes[circrnas.morethan2methods][
   medRPM>0, .(medRPM), by = .(circ_id, sample_id)]
