@@ -11,7 +11,7 @@ toc: no
 # CircRNAs
 
 ```{r global_options, include=FALSE}
-## variables to be defined in parent frame
+# # variables to be defined in parent frame
 # results.dir <- "/home/enrico/QKI/analysis/circRNA_collection/circrnas_analysis/"
 # circrnas.gtf.file <- "/home/enrico/QKI/analysis/circRNA_collection/circrnas.gtf"
 # combined_gtf_file <- "/home/enrico//QKI/analysis/circRNA_collection/combined_circrnas.gtf.gz"
@@ -19,6 +19,7 @@ toc: no
 # meta_file <- "/home/enrico/QKI/analysis/meta.csv"
 # gene_meta_file <- "/home/enrico/QKI/analysis/cuffdiff/read_groups.info"
 # gene_fpkm_file      <- "/home/enrico/QKI/analysis/cuffdiff/genes.read_group_tracking"
+# fix_testrealign <- TRUE
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path=file.path(results.dir, paste0('Figs', .Platform$file.sep)),
@@ -39,6 +40,13 @@ circrnas.gtf[, `:=` (sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9))
              ][, (V9newCols) := tstrsplit(sub(V9pattern, "\\1@\\2", V9), "@", fixed=TRUE)
                ][, V9 := NULL]
 
+# if(fix_testrealign){
+#   setkey(circrnas.gtf, V2)
+#   circrnas.gtf["segecirc", V4 := V4-1]
+#   circrnas.gtf["segecirc", `:=`(gene_id = paste0(V1, ":", V4, "-", V5, ":", V7), 
+#                                 transcript_id = paste0(V1, ":", V4, "-", V5, ":", V7, ".", sample_id))]
+# }
+
 # ## read circRNA-method per sample normalization factors
 # norm.factors.file <- "/home/enrico/Scrivania/QKI_anhal/analysis/circRNA_collection/circrna_maps_counts.txt"
 # norm.factors <- as.data.table(scan(file = norm.factors.file, what = list("character", "integer"), sep = "\n"))
@@ -54,7 +62,7 @@ circrnas.gtf[, `:=` (sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9))
 circrnas.gtf[, RPM := (V6/sum(V6))*10^6, by = .(sample_id, V2)]
 ## compute median of normalized value
 circrna.rpms <- data.table::dcast(data = circrnas.gtf, formula = sample_id + gene_id + V1 + V4 + V5 + V7 ~ V2, value.var = "RPM", fill = 0)
-circrna.rpms$medRPM <- apply(X = circrna.rpms[, 7:ncol(circrna.rpms)], MARGIN = 1, FUN = median)
+circrna.rpms$medRPM <- apply(X = circrna.rpms[, 7:ncol(circrna.rpms), with = F], MARGIN = 1, FUN = median)
 
 ## retrieve and attach gene symbols and gene_ids: use only exons hit by the backsplice coordinates 
 colClasses <- c("factor", "factor", "character", "integer", "integer", "integer", "factor", "character", "character",
@@ -62,6 +70,10 @@ colClasses <- c("factor", "factor", "character", "integer", "integer", "integer"
 #colToDrop <- c("V3", "V8", "V11", "V12", "V15", "V17")
 #combined_gtf <- fread(paste0('zcat ', combined_gtf_file), data.table = T, colClasses = colClasses, drop = colToDrop)
 combined_gtf <- fread(paste0('zcat ', combined_gtf_file), data.table = T, colClasses = colClasses)
+# if(fix_testrealign){
+#   setkey(combined_gtf, V2)
+#   combined_gtf["segecirc", V4 := V4-1]
+# }
 combined_gtf[, `:=`(gene_id = sub('.*gene_id "([^"]*)".*', "\\1", V18), 
                     gene_name = ifelse(grepl('gene_name', V18, fixed = T), 
                                        sub('.*gene_name "([^"]*)".*', "\\1", V18), 
@@ -300,7 +312,7 @@ Number of circRNAs detected with at least 2 reads and by at least 2 methods: `r 
 
 Number of circRNAs detected with at least 2 reads and by at least 2 methods - by sample:
 ```{r, echo=FALSE, include=TRUE}
-circrnas.morethan2methods.medrpm[, .N, by = .(sample_id, circ_id)][, .N, by = sample_id]
+circrnas.morethan2methods.medrpm[, .N, by = .(sample_id, circ_id)][, .N, by = sample_id][order(sample_id)]
 ```
 
 CircRNA expression by sample have been saved in file `r file.path(results.dir, "circRNA_expression_per_sample.csv")`
@@ -424,7 +436,7 @@ Expressed circrnas that are exonic or intronic are `r genic_circrnas[, .N, by = 
 `r circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N]` correlations computed for `r circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = circ_id][, .N]` circRNAs and 
 `r circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = gene_id][, .N]` genes.  
 
-Values saved in file `r file.path(results.dir, "circRNA_gene_expression_correlation.csv"`
+Values saved in file `r file.path(results.dir, "circRNA_gene_expression_correlation.csv")`
 
 # Session info
 
