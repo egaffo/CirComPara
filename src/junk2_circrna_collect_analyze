@@ -65,7 +65,7 @@ circ_gene_combine = env.Command(circ_gene_combine_target, circ_gene_combine_sour
                                 circ_gene_combine_cmd)
 
 env['JUNK2_HOME'] = env['ENV']['JUNK2_HOME']
-circrnas_analysis_cmd = '''Rscript -e 'results.dir <- "$TARGET.dir"; '''\
+circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                         '''circrnas.gtf.file <- "${SOURCES[0].abspath}"; '''\
                         '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
                         '''meta_file <- "${SOURCES[2].abspath}"; '''\
@@ -74,7 +74,8 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- "$TARGET.dir"; '''\
                         '''knitr::knit2html("$JUNK2_HOME/src/circRNAs_analysis.Rmd", '''\
                         '''output = "$TARGET", force_v1 = T)' '''
 
-circrnas_analysis_targets = "circrnas_analysis/circRNAs_analysis.html"
+circrnas_analysis_targets = os.path.join("circrnas_analysis", 
+                                         "circRNAs_analysis.html")
 circrnas_analysis_sources = [os.path.join(Dir("#").abspath, i) for i in [
                             os.path.join("circRNA_collection", "circrnas.gtf"), 
                             os.path.join("circRNA_collection", "combined_circrnas.gtf.gz"),
