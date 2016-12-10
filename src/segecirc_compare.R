@@ -11,7 +11,9 @@ option_list <- list(
   make_option(c("-o", "--output"), action="store", type="character", 
               help="The output file (CSV format)"),
   make_option(c("-r", "--minreads"), action="store", type="integer", default=2,
-              help="TODO: Minimum number of reads to consider a valid circular junction")
+              help="TODO: Minimum number of reads to consider a valid circular junction"),
+  make_option(c("-f", "--fixstart"), action="store", type="logical", default=T,
+	      help="Decrease by 1 position the start coordinates: this fixes a possible testrealign bug")
 )
 
 parser <- OptionParser(usage="%prog -l S1,S2,S3 -i S1/splicesites.bed,S2/splicesites.bed,S3/splicesites.bed -o segecirc_compared.csv ", 
@@ -26,11 +28,15 @@ if(length(arguments$input)>0){
   inputs <- unlist(strsplit(arguments$input,  ',', fixed=T))
   names(inputs) <- labels
   colnames <- c("CHR", "POS1", "POS2", "INFO", "SCORE", "STRAND")
-  splicesites.colclasses <- c("factor", "factor", "factor", "character", "numeric", "factor")
+  splicesites.colclasses <- c("factor", "numeric", "numeric", "character", "numeric", "factor")
   combined.df <- ldply(inputs, function(x){
     a <- read.table(file=x, sep="\t", header=F, stringsAsFactors = F, col.names=colnames, colClasses=splicesites.colclasses); a}
   )
   colnames(combined.df)[1] <- "sampleID"
+  
+  if(arguments$fixstart){
+	combined.df$POS1 <- combined.df$POS1-1
+  }
   
   #   The information INFO in field 4 shows
   #   three numbers. The first number indicates the number of reads that support the
