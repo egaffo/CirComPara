@@ -101,7 +101,16 @@ cuffnorm_cmd = 'cuffnorm $( -q --no-update-check -p $CPUS $) -o ' + Dir('.').pat
                ' $EXTRA_PARAMS -L ' + cuffnorm_parameters['LABELS'] + ' ${SOURCES[0]} ' +\
                cuffnorm_parameters['SAMS']
 
-cuffnorm_targets = ['isoforms.fpkm_tracking', 'genes.fpkm_tracking']
+
+## cuffdiff output targets 
+cuffnorm_targets = ['cds.count_tracking', 'genes.read_group_tracking', 
+                    'run.info', 'cds.fpkm_tracking', 'isoforms.count_tracking', 
+                    'tss_groups.count_tracking', 'cds.read_group_tracking', 
+                    'isoforms.fpkm_tracking', 'tss_groups.fpkm_tracking', 
+                    'genes.count_tracking', 'isoforms.read_group_tracking', 
+                    'tss_groups.read_group_tracking', 'genes.fpkm_tracking', 
+                    'read_groups.info']
+#cuffnorm_targets = ['isoforms.fpkm_tracking', 'genes.fpkm_tracking']
 cuffnorm = env.Command(cuffnorm_targets, [env['ANNOTATION'], env['QUANT_FILES']], cuffnorm_cmd)
 
 Return('cuffnorm')
