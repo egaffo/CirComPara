@@ -23,11 +23,16 @@ file,sample,condition,adapter,translocation
 
 '''
 
-import os, csv, itertools, collections, re
+import os, csv, itertools, collections, re, errno
 from collections import defaultdict
 
 def SymLink(target, source, env):
-    os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+    try:
+        os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            os.rmdir(os.path.abspath(str(target[0])))
+            os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
@@ -368,6 +373,7 @@ cuffquant_dir = 'cuffquant'
 cuffdiff_dir = 'cuffdiff'
 deseq_dir = 'deseq'
 
+gene_exp = ''
 if len(samples.keys()) > 1:
 
     ## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
@@ -400,6 +406,8 @@ if len(samples.keys()) > 1:
                               '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
         
         Depends(cuffdiff, cuffquant)
+        
+        gene_exp = cuffdiff
 	
         if DESEQ:
             ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
@@ -434,10 +442,11 @@ if len(samples.keys()) > 1:
                               exports = '''env_cuffnorm''')
         
         Depends(cuffnorm, cuffquant)
+        gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
 
 else:
-    cufflinks_dir = get_matching_nodes(runs, '.*processings.*cufflinks')[0].dir
-    link_cufflinks_dir = env.Command(cuffdiff_dir, cufflinks_dir, SymLink)
+    gene_exp = get_matching_nodes(runs, '.*genes.fpkm_tracking')
+    link_cufflinks_dir = env.Command(cuffdiff_dir, gene_exp[0].dir, SymLink)
 
 
 ## COLLECT CIRCRNA RESULTS
@@ -544,28 +553,31 @@ collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir,
                                           ciri_mappings, CIRCexplorer_mappings], 
                                           collect_circrna_maps_counts_cmd)
 
-## ANALYZE COLLECTED CIRCRNA RESULTS
-circrna_analyze_dir = circRNA_collect_dir
-circrna_analyze_csvs = {'CIRCEXPLORER': CIRCexplorer_compared,
+## COLLECT CIRCRNA RESULTS
+env_circrna_collect = env.Clone()
+env_circrna_collect['CSVS'] = {'CIRCEXPLORER': CIRCexplorer_compared,
 			'CIRI': ciri_compared,
 			'FINDCIRC': find_circ_compared,
 			'TESTREALIGN': segecirc_compared}
-#circrna_analyze_circexplorer = CIRCexplorer_compared
-#circrna_analyze_ciri         = ciri_compared
-#circrna_analyze_findcirc     = find_circ_compared
-#circrna_analyze_segecirc     = segecirc_compared
-circrna_analyze_GTF          = cuffmerge
-circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 'junk2_circrna_collect_analyze'), 
+env_circrna_collect['GTF'] = cuffmerge
+circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 
+                                          'junk2_circrna_collect'), 
                             src_dir = SCONSCRIPT_HOME, 
-                            variant_dir = circrna_analyze_dir, duplicate = 0,
-                            exports = '''env circrna_analyze_GTF circrna_analyze_csvs''')
-#circrna_analyze_circexplorer '''
-#                                      '''circrna_analyze_ciri circrna_analyze_findcirc '''
-#                                      '''circrna_analyze_segecirc''')
-#Depends(circrna_analyze, [cuffmerge, CIRCexplorer_compared, ciri_compared, 
-#                          find_circ_compared, segecirc_compared])
-#Depends(circrna_analyze, [cuffmerge, circrna_analyze_csvs.items()])
+                            variant_dir = circRNA_collect_dir, duplicate = 0,
+                            exports = '''env_circrna_collect''')
 
+## ANALYZE AND REPORT CIRCRNAS                  
+circrna_analyze_dir = 'circrna_analyze'
+env_circrna_analyze = env.Clone()
+env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
+env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
+env_circrna_analyze['GENEEXP'] = gene_exp
+circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 
+                                          'junk2_circrna_analyze'),
+                            src_dir = SCONSCRIPT_HOME,
+                            variant_dir = circrna_analyze_dir, duplicate = 0,
+                            exports = '''env_circrna_analyze''')
+Depends(circrna_analyze, gene_exp)
 
 ## collect read processing statistics
 clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
@@ -602,6 +614,7 @@ Clean('.', cuffquant_dir)
 Clean('.', cuffdiff_dir)
 Clean('.', deseq_dir)
 Clean('.', circRNA_collect_dir)
+Clean('.', circrna_analyze_dir)
 Clean('.', read_stats_collect_dir)
 Clean('.', qre_dir)
 Clean('.', annotation_dir)

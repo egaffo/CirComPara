@@ -21,6 +21,13 @@ toc: no
 # gene_fpkm_file      <- "/home/enrico/QKI/analysis/cuffdiff/genes.read_group_tracking"
 # fix_testrealign <- TRUE
 
+# results.dir <- "/home/enrico/QKI/qki_test_data/analysis/circrnas_analysis/"
+# circrnas.gtf.file <- "/home/enrico/QKI/qki_test_data/analysis/circRNA_collection/circrnas.gtf"
+# combined_gtf_file <- "/home/enrico/QKI/qki_test_data/analysis/circRNA_collection/combined_circrnas.gtf.gz"
+# gene_meta_file <- ""
+# gene_fpkm_file  <- "/home/enrico/QKI/qki_test_data/analysis/cuffdiff/genes.fpkm_tracking"
+# 
+
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path=file.path(results.dir, paste0('Figs', .Platform$file.sep)),
                       echo=FALSE, warning=FALSE, message=FALSE)
@@ -290,16 +297,18 @@ setkey(circrnas.morethan2methods, gene_id)
 circrnas.morethan2methods.medrpm <- circrna.rpms.genes[circrnas.morethan2methods][
   , .(circ_id, gene_ids, gene_names, label, sample_id, chr = V1, start = V4, end = V5, strand = V7, medRPM)][medRPM > 0]
 
-## reshape with one expression column per sample 
-circrnas.morethan2methods.medrpm.table <- data.table::dcast(data = circrnas.morethan2methods.medrpm, 
-                                                            formula = circ_id + gene_ids + gene_names + label + chr + start + end + strand ~ sample_id,
-                                                            value.var = "medRPM", fill = 0)
-
-# ## add a useful mean expression column
-# circrnas.morethan2methods.medrpm.table$avg_xpr <- apply(X = circrnas.morethan2methods.medrpm.table[
-#   , 9:ncol(circrnas.morethan2methods.medrpm.table)], 
-#   MARGIN = 1, FUN = mean)
-
+circrnas.morethan2methods.medrpm.table <- circrnas.morethan2methods
+if(nrow(circrnas.morethan2methods) > 0 ){
+  ## reshape with one expression column per sample 
+  circrnas.morethan2methods.medrpm.table <- data.table::dcast(data = circrnas.morethan2methods.medrpm, 
+                                                              formula = circ_id + gene_ids + gene_names + label + chr + start + end + strand ~ sample_id,
+                                                              value.var = "medRPM", fill = 0)
+  
+  # ## add a useful mean expression column
+  # circrnas.morethan2methods.medrpm.table$avg_xpr <- apply(X = circrnas.morethan2methods.medrpm.table[
+  #   , 9:ncol(circrnas.morethan2methods.medrpm.table)], 
+  #   MARGIN = 1, FUN = mean)
+}
 ## save table
 write.csv(x = circrnas.morethan2methods.medrpm.table, 
           file = file.path(results.dir, "circRNA_expression_per_sample.csv"), 
@@ -338,16 +347,25 @@ circrna.xpr.per.sample.boxplot <- ggplot(data = circrnas.morethan2methods.medrpm
 circrna.xpr.per.sample.boxplot
 
 # get gene expressions
-gene_meta <- fread(gene_meta_file)
-gene_fpkm <- as.data.table(read.table(file = gene_fpkm_file, header = T, sep = "\t", dec = ".", 
-                                      colClasses = c("character", "factor", "numeric", 
-                                                     "numeric", "numeric", "numeric", 
-                                                     "numeric", "character", "character")))
-expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
-gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
-setkey(gene_meta, condition, replicate_num)
-setkey(expressed_genes, condition, replicate)
-expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+if(gene_meta_file != ""){
+  gene_meta <- fread(gene_meta_file)
+  
+  gene_fpkm <- as.data.table(read.table(file = gene_fpkm_file, header = T, sep = "\t", dec = ".", 
+                                        colClasses = c("character", "factor", "numeric", 
+                                                       "numeric", "numeric", "numeric", 
+                                                       "numeric", "character", "character")))
+  expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+  gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
+  setkey(gene_meta, condition, replicate_num)
+  setkey(expressed_genes, condition, replicate)
+  expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+}else{
+  gene_fpkm <- fread(gene_fpkm_file)
+  expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+  expressed_genes$sample_id <- unique(circrnas.gtf$sample_id)
+}
+
+
 ```
 
 Gene expression ranges by sample:
@@ -409,13 +427,15 @@ genic_circrnas <-merge(genic_circrnas, gene_xpr_by_sample, all.x = T, all.y = F,
 genic_circrnas_corr <- genic_circrnas[, .(corr = cor(medRPM, FPKM, method = "spearman")), 
                                       by = .(circ_id, gene_id)]
 
-# put correlations in tabular format
-circrna_gene_xpr_bysample <- dcast(genic_circrnas, 
-                                   formula = circ_id + gene_id + gene_name~ sample_id, 
-                                   value.var = c("FPKM", "medRPM"), 
-                                   fill = 0)
-circrna_gene_xpr_bysample_corr <- merge(circrna_gene_xpr_bysample, genic_circrnas_corr, by = c("circ_id", "gene_id"))
-
+circrna_gene_xpr_bysample_corr <- genic_circrnas
+if(nrow(genic_circrnas) > 0){
+  # put correlations in tabular format
+  circrna_gene_xpr_bysample <- dcast(genic_circrnas, 
+                                     formula = circ_id + gene_id + gene_name~ sample_id, 
+                                     value.var = c("FPKM", "medRPM"), 
+                                     fill = 0)
+  circrna_gene_xpr_bysample_corr <- merge(circrna_gene_xpr_bysample, genic_circrnas_corr, by = c("circ_id", "gene_id"))
+}
 #save table
 write.csv(x = circrna_gene_xpr_bysample_corr, 
           file = file.path(results.dir, "circRNA_gene_expression_correlation.csv"), 
@@ -433,8 +453,8 @@ Expressed circrnas are: `r circ_xpr_by_sample[, .N, by = circ_id][, .N]`
 
 Expressed circrnas that are exonic or intronic are `r genic_circrnas[, .N, by = circ_id][, .N]`
 
-`r circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N]` correlations computed for `r circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = circ_id][, .N]` circRNAs and 
-`r circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = gene_id][, .N]` genes.  
+`r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N], 0)` correlations computed for `r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = circ_id][, .N], 0)` circRNAs and 
+`r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = gene_id][, .N], 0)` genes.  
 
 Values saved in file `r file.path(results.dir, "circRNA_gene_expression_correlation.csv")`
 
