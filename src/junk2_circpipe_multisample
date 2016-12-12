@@ -408,7 +408,7 @@ if len(samples.keys()) > 1:
         Depends(cuffdiff, cuffquant)
 
         gene_exp = get_matching_nodes(cuffdiff, ".*genes.read_group_tracking")
-        gene_meta = get_matching_nodes(cuffdiff, ".*read_groups.info")
+        gene_meta = get_matching_nodes(cuffdiff, ".*read_groups.info")[0]
 
         if DESEQ:
             ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
@@ -445,7 +445,7 @@ if len(samples.keys()) > 1:
         Depends(cuffnorm, cuffquant)
 
         gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
-        gene_meta = get_matching_nodes(cuffnorm, ".*read_groups.info")
+        gene_meta = get_matching_nodes(cuffnorm, ".*read_groups.info")[0]
 
 else:
     gene_exp = get_matching_nodes(runs, '.*genes.fpkm_tracking')
