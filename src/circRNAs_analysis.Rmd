@@ -383,7 +383,7 @@ circrna.xpr.per.sample.boxplot <- ggplot(data = circrnas.morethan2methods.medrpm
                                          mapping = aes(x = sample_id, y = medRPM, fill = sample_id)) + 
   geom_boxplot(notch = T, varwidth = T) + scale_y_log10() + xlab(NULL) + ylab("RPM") + 
   ggtitle("CircRNA expression per sample") + theme_bw()
-circrna.xpr.per.sample.boxplot + guides(fill=FALSE) + 
+circrna.xpr.per.sample.boxplot <- circrna.xpr.per.sample.boxplot + guides(fill=FALSE) + 
   theme(text = element_text(size=default.font.size))
 
 # get gene expressions
@@ -420,9 +420,61 @@ gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes,
                                       mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
   geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
   ggtitle("Gene expression per sample") + theme_bw()
-gene.xpr.per.sample.boxplot + guides(fill=FALSE) + 
+gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + guides(fill=FALSE) + 
   theme(text = element_text(size=default.font.size))
 
+
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+```
+
+```{r multiplot_expression_box, fig.width=12, fig.height=4,}
+multiplot(circrna.xpr.per.sample.boxplot, gene.xpr.per.sample.boxplot, cols = 2)
+  
 ## Cumulative expression plot: circRNAs
 cum_by_sample <- circrnas.morethan2methods.medrpm[order(sample_id, -medRPM), 
                                                   .(csum = cumsum(medRPM), seqid = seq_along(.I), circ_id), 
@@ -432,8 +484,8 @@ cum_by_sample[, cond_tot := max(csum), by = .(sample_id)][, perc_csum := csum/co
 circrna.cumsum.per.sample <- ggplot(data = cum_by_sample, mapping = aes(x = seqid, y = perc_csum, color = sample_id)) +
   geom_line() + ggtitle("CircRNAs cumulative expression") + xlab("Number of genes") + 
   ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) + scale_color_discrete("Sample") + theme_bw()
-circrna.cumsum.per.sample + 
-  theme(text = element_text(size=default.font.size))
+circrna.cumsum.per.sample <-circrna.cumsum.per.sample + 
+  theme(text = element_text(size=default.font.size), legend.position = "bottom")
 
 ## Cumulative expression plot: genes
 cum_gene_by_sample <- expressed_genes[order(sample_id, -FPKM), 
@@ -443,9 +495,12 @@ cum_gene_by_sample[, cond_tot := max(csum), by = .(sample_id)][, perc_csum := cs
 
 gene.cumsum.per.sample <- ggplot(data = cum_gene_by_sample, mapping = aes(x = seqid, y = perc_csum, color = sample_id)) +
   geom_line() + ggtitle("Gene cumulative expression") + xlab("Number of genes") + 
-  ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) + scale_color_discrete("Sample") + theme_bw()
-gene.cumsum.per.sample + 
-  theme(text = element_text(size=default.font.size))
+  ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) + 
+  scale_color_discrete("Sample") + theme_bw()
+gene.cumsum.per.sample <-gene.cumsum.per.sample + 
+  theme(text = element_text(size=default.font.size), legend.position = "bottom")
+
+multiplot(circrna.cumsum.per.sample, gene.cumsum.per.sample, cols=2)
 
 ```
 
