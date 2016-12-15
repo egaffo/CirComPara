@@ -208,8 +208,9 @@ When enabled, the fusion gene analysis will generate "synthetic" chromosomes ...
 
 In a freshly installed Ubuntu Server 16.04 LTS (x64) you need to install the dependency packages listed below (you need root system rights, or ask your system administrator):
 
-    sudo apt-get install python2.7 python-pip python-numpy zlib1g-dev unzip pkg-config libncurses5-dev default-jre r-base-core libcurl4-openssl-dev libxml2-dev libssl-dev libcairo2-dev 
-
+    sudo apt-get install python2.7 python-pip python-numpy zlib1g-dev unzip pkg-config libncurses5-dev default-jre r-base-core
+    libcurl4-openssl-dev libxml2-dev libssl-dev libcairo2-dev pandoc
+(pandoc >= 1.12.3 is required, try install latest packages from https://github.com/jgm/pandoc/releases/)
 You also need to upgrade `pip` version (`pip v8.1.1` has an issue with the `--install-option` parameter; tested working with `pip v9.0.1`) 
 
     pip install --upgrade pip
@@ -247,3 +248,4 @@ The core engine is the Scons build tool, which manage the various steps of the a
 [Cufflinks]: https://github.com/cole-trapnell-lab/cufflinks
 [junk2_link]: http://github.com/egaffo/junk2
 [cuffdiff_output]:http://cole-trapnell-lab.github.io/cufflinks/cuffdiff/#cuffdiff-output-files
+
