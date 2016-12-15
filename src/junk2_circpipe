@@ -271,8 +271,8 @@ sample_cpus         = CPUS
 sample_genome_fasta = GENOME_FASTA
 sample_annotation   = ANNOTATION
 
-if len(READS)>1:
-    sample_raw_reads    = [f.abspath for f in unmapped_reads[1:2]]
+if len(READS) > 1:
+    sample_raw_reads    = [f.abspath for f in unmapped_reads[1:3]]
 else:
     sample_raw_reads    = [f.abspath for f in unmapped_reads[1]]
 
