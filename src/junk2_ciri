@@ -102,7 +102,7 @@ ciri_target = os.path.join(out_dir, SAMPLE + '_ciri.out')
 bwa_target = os.path.join(out_dir, SAMPLE + '_bwa.sam.gz')
 
 ## Map the reads
-bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + '$) -M ' + BWA_PARAMS + ' ' + BWA_INDEX +\
+bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + '$) ' + BWA_PARAMS + ' ' + BWA_INDEX +\
           ' ' + read_bwa_par + ' > ${TARGETS[0].filebase}'
 ## Run CIRI on mappings
 ## multithread -T option works from v2 of CIRI
