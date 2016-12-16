@@ -82,6 +82,9 @@ vars.Add('DESEQ', 'Set True to enable differential expression computation also w
 vars.Add('CUFFNORM_EXTRA_PARAMS', 'Extra parameters to use if using Cuffnorm',
 	'--output-format cuffdiff')
 vars.Add('QRE_FIND', 'Set True to toggle analysis of QKI response elements sequences', 'False')
+vars.Add('READSTAT_METHODS', 'Comma separated list of methods to use for read statistics. '\
+         'Currently supported: fastqc,fastx', 'fastqc')
+
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
