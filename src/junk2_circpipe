@@ -46,7 +46,7 @@ junk2_preprocess      = 'junk2_preprocess'
 junk2_mapping         = 'junk2_hisat2'
 junk2_expression      = 'junk2_expression'
 junk2_circrnas        = 'junk2_sample_circrna_methods'
-junk2_bamtofastq      = 'junk2_bamtofastq'
+#junk2_bamtofastq      = 'junk2_bamtofastq'
 
 Import('*')
 
@@ -241,7 +241,8 @@ results.append(expression)
 unmapped_dir = os.path.join(build_dir, 'unmapped_reads')
 ## Extract unmapped reads in FASTQ format from BAM alignments
 unmapped_reads_target = ['singleton.fastq.gz']
-unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s >( gzip -c > ${TARGETS[0]} ) '''
+#unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s >( gzip -c > ${TARGETS[0]} ) '''
+unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s ${str(TARGETS[0].abspath).replace('.gz', '')}  '''
 #SAMFLAG 3328 = 256+1024+2048
 #4: read unmapped
 #8: mate unmapped
@@ -251,15 +252,22 @@ unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s >( gzip -c > ${TARGET
 # samtools fastq:
 # -s FILE   write singleton reads to FILE [assume single-end]
 # -n        don't append /1 and /2 to the read name
-if len(READS)>1:
+if len(READS) > 1:
     paired_end_read_files = ['unmapped_1.fastq.gz', 'unmapped_2.fastq.gz']
     unmapped_reads_target.extend(paired_end_read_files)
     unmapped_reads_cmd = unmapped_reads_cmd +\
-                         ''' -1 >( gzip -c > ${TARGETS[1]} )'''\
-                         ''' -2 >( gzip -c > ${TARGETS[2]} ) ${SOURCE}'''
+                         ''' -1 ${str(TARGETS[1].abspath).replace('.gz', '')} '''\
+                         ''' -2 ${str(TARGETS[2].abspath).replace('.gz', '')} ${SOURCE} '''\
+                         '''&& gzip ${str(TARGETS[1].abspath).replace('.gz', '')} '''\
+                         '''&& gzip ${str(TARGETS[2].abspath).replace('.gz', '')} '''
+#                         ''' -1 >( gzip -c > ${TARGETS[1]} )'''\
+#                         ''' -2 >( gzip -c > ${TARGETS[2]} ) ${SOURCE}'''
 else:
-    unmapped_reads_target.append('unmapped.fastq')
+    unmapped_reads_target.append('unmapped.fastq.gz')
     unmapped_reads_cmd = unmapped_reads_cmd + ''' ${SOURCE} | gzip -c > ${TARGETS[1]}'''
+
+unmapped_reads_cmd = unmapped_reads_cmd +\
+                    ''' && gzip ${str(TARGETS[0].abspath).replace('.gz', '')}'''
 
 unmapped_reads = env.Command([os.path.join(unmapped_dir, f) for f in unmapped_reads_target], 
                              mapping_file.abspath, 
@@ -305,6 +313,8 @@ circrnas = env.SConscript(os.path.join(build_dir, junk2_circrnas),
                         '''ciri_script bowtie2_index star_index gene_pred '''
                         '''ciri_extra_parameters circrna_methods''')
 results.append(circrnas)
+
+#Depends(circrnas, unmapped_reads)
 
 ## CLEAN COMMANDS
 Clean('.', read_statistics_dir)
