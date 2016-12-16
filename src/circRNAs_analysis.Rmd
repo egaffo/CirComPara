@@ -453,13 +453,27 @@ The following analysis regards the subset of `r circrnas.morethan2methods.medrpm
 ## Number of circRNAs per gene
 setkey(combined_gtf, gene_id)
 circRNAs.per.gene <- combined_gtf[gene_id != ".", .(circ_id = paste0(chr, ":", circ_start,  "-", circ_end, ":", strand)), 
-                                  by = .(gene_id, chr, circ_start,  circ_end, strand)]
+                                  by = .(gene_id)] #, chr, circ_start,  circ_end, strand
 
 setkey(circRNAs.per.gene, circ_id)
-circRNAs.per.gene <- circRNAs.per.gene[circrnas.morethan2methods.medrpm.table[, .(circ_id)]][, .(circRNAs_per_gene = .N), by = gene_id]
+n.circ.per.gene <- circRNAs.per.gene[circrnas.morethan2methods.medrpm.table[
+  , .(circ_id)]][, .(n_circRNAs = length(unique(circ_id)), 
+                     circ_ids = paste0(unique(circ_id), collapse = "|")), 
+                 by = gene_id][order(-n_circRNAs)]
+
+## save circRNAs per gene
+circRNAs_per_gene.file <- file.path(results.dir, "circRNAs_per_gene.csv")
+write.csv(x = n.circ.per.gene, 
+          file = circRNAs_per_gene.file, 
+          row.names = F)
+
+circRNAs.per.gene <- n.circ.per.gene[, .(circRNAs_per_gene = .N), by = gene_id]
+# circRNAs.per.gene <- circRNAs.per.gene[circrnas.morethan2methods.medrpm.table[, .(circ_id)]][, .(circRNAs_per_gene = .N), by = gene_id]
 ```
 
 Number of genes overlapping the `r circrnas.morethan2methods.medrpm.table[, .N]` reliable circRNAs: `r circRNAs.per.gene[, .N]`
+
+Number of circRNAs expressed by each gene, with the respective circRNAs IDs, are raported in file `r circRNAs_per_gene.file` (only genes expressing circRNAs are reported).
 
 Distribution of number of circRNAs per gene
 ```{r plot_circrnas_per_gene, echo=FALSE, include=TRUE}
@@ -693,6 +707,31 @@ corr.density.plot <- corr.density.plot + theme_bw() + ggtitle("CircRNA-gene expr
   theme(text = element_text(size=default.font.size)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) + 
   scale_x_continuous(expand = c(0, 0), limits = c(-1, 1))
 corr.density.plot
+
+kable(data.frame("Spearman correlation" = unclass(summary(circrna_gene_xpr_bysample_corr$corr))), 
+      caption = "Correlations distribution")
+
+kable(data.frame("Spearman correlation" = unclass(summary(circrna_gene_xpr_bysample_corr[corr >= 0]$corr))), 
+      caption = "Positive correlations distribution")
+
+kable(data.frame("Spearman correlation" = unclass(summary(circrna_gene_xpr_bysample_corr[corr < 0]$corr))), 
+      caption = "Negative correlations distribution")
+```
+
+```{r correlations_box, fig.width=12, fig.height=4}
+cor.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr) + 
+  geom_boxplot(aes(x = "", y = corr), notch = T, width = .5) + 
+  theme_bw() + xlab("") + 
+  ylab("Correlation") + ggtitle("Correlation\ndistribution")
+
+cor.abs.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr[
+  , .(pos_corr = ifelse(corr > 0, "Positive", "Negative"), corr)][!is.na(corr)]) + 
+  geom_boxplot(aes(x = "", y = abs(corr), fill = pos_corr), notch = T, varwidth = T)  + 
+  scale_fill_manual(values = c("blue", "red")) + facet_wrap(facets = ~ pos_corr) +
+  theme_bw() + guides(fill = FALSE) + xlab("") + ylab("Abs(correlation)") + 
+  ggtitle("Absolute negative and positive\ncorrelation distributions")
+
+multiplot(cor.boxplot, cor.abs.boxplot, cols = 2)
 #make HTML version of corralation table
 ```
 
