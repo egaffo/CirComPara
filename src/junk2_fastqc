@@ -20,7 +20,7 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env
+    env = env.Clone()
     fastqc_readset
 except NameError:
     vars = Variables('vars.py')
@@ -39,15 +39,16 @@ except NameError:
     # standalone
     fastqc_readset = File(env['READS'])
 
+
 ## fastqc_readset must be a Scons.File object
 # FASTQC removes .gz, .fq, .fastq extensions (also recursively) from the input file name
 # to name the output HTML and ZIP files
 readset_basename = re.sub('\.fq$|\.fastq$', '', re.sub('\.gz$', '', fastqc_readset.name))
-
-fastqc_quality_cmd = 'fastqc $SOURCE -o ${TARGETS[0].dir} > ${TARGETS[2]} 2> ${TARGETS[3]}' 
 fastqc_html_target = readset_basename + '_fastqc.html'
 fastqc_zip_target = readset_basename + '_fastqc.zip'
 
+fastqc_quality_cmd ='''echo "No reads in ${SOURCES[0]}" > ${TARGETS[0]} && '''\
+                    '''fastqc $SOURCE -o ${TARGETS[0].dir} > ${TARGETS[2]} 2> ${TARGETS[3]} '''
 fastqc_quality = env.Command([fastqc_html_target, fastqc_zip_target,
                              '${SOURCE.filebase}_fastqc.log', '${SOURCE.filebase}_fastqc.err'], 
                              fastqc_readset, 
