@@ -467,7 +467,7 @@ write.csv(x = n.circ.per.gene,
           file = circRNAs_per_gene.file, 
           row.names = F)
 
-circRNAs.per.gene <- n.circ.per.gene[, .(circRNAs_per_gene = .N), by = gene_id]
+circRNAs.per.gene <- n.circ.per.gene[, .(gene_id, circRNAs_per_gene = n_circRNAs)]
 # circRNAs.per.gene <- circRNAs.per.gene[circrnas.morethan2methods.medrpm.table[, .(circ_id)]][, .(circRNAs_per_gene = .N), by = gene_id]
 ```
 
