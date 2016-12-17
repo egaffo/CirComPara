@@ -452,12 +452,16 @@ The following analysis regards the subset of `r circrnas.morethan2methods.medrpm
 ```{r circrnas_per_gene, echo=FALSE, include=TRUE}
 ## Number of circRNAs per gene
 setkey(combined_gtf, gene_id)
-circRNAs.per.gene <- combined_gtf[gene_id != ".", .(circ_id = paste0(chr, ":", circ_start,  "-", circ_end, ":", strand)), 
+circRNAs.per.gene <- combined_gtf[gene_id != ".", 
+                                  .(circ_id = paste0(chr, ":", circ_start,  "-", circ_end, ":", strand)), 
                                   by = .(gene_id)] #, chr, circ_start,  circ_end, strand
 
-setkey(circRNAs.per.gene, circ_id)
-n.circ.per.gene <- circRNAs.per.gene[circrnas.morethan2methods.medrpm.table[
-  , .(circ_id)]][, .(n_circRNAs = length(unique(circ_id)), 
+#setkey(circRNAs.per.gene, circ_id)
+## circRNAs.per.gene[circrnas.morethan2methods.medrpm.table[, .(circ_id)]]
+n.circ.per.gene <- merge(circRNAs.per.gene, 
+                         circrnas.morethan2methods.medrpm.table[, .(circ_id)], 
+                         all = F, by = "circ_id")
+n.circ.per.gene <- n.circ.per.gene[, .(n_circRNAs = length(unique(circ_id)), 
                      circ_ids = paste0(unique(circ_id), collapse = "|")), 
                  by = gene_id][order(-n_circRNAs)]
 
