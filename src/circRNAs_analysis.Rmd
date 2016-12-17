@@ -453,7 +453,8 @@ The following analysis regards the subset of `r circrnas.morethan2methods.medrpm
 ## Number of circRNAs per gene
 setkey(combined_gtf, gene_id)
 circRNAs.per.gene <- combined_gtf[gene_id != ".", 
-                                  .(circ_id = paste0(chr, ":", circ_start,  "-", circ_end, ":", strand)), 
+                                  .(circ_id = paste0(chr, ":", circ_start,  "-", circ_end, ":", strand),
+                                    gene_name), 
                                   by = .(gene_id)] #, chr, circ_start,  circ_end, strand
 
 #setkey(circRNAs.per.gene, circ_id)
@@ -463,7 +464,7 @@ n.circ.per.gene <- merge(circRNAs.per.gene,
                          all = F, by = "circ_id")
 n.circ.per.gene <- n.circ.per.gene[, .(n_circRNAs = length(unique(circ_id)), 
                      circ_ids = paste0(unique(circ_id), collapse = "|")), 
-                 by = gene_id][order(-n_circRNAs)]
+                 by = .(gene_id, gene_name)][order(-n_circRNAs)]
 
 ## save circRNAs per gene
 circRNAs_per_gene.file <- file.path(results.dir, "circRNAs_per_gene.csv")
@@ -471,7 +472,7 @@ write.csv(x = n.circ.per.gene,
           file = circRNAs_per_gene.file, 
           row.names = F)
 
-circRNAs.per.gene <- n.circ.per.gene[, .(gene_id, circRNAs_per_gene = n_circRNAs)]
+circRNAs.per.gene <- n.circ.per.gene[, .(gene_id, gene_name, circRNAs_per_gene = n_circRNAs)]
 # circRNAs.per.gene <- circRNAs.per.gene[circrnas.morethan2methods.medrpm.table[, .(circ_id)]][, .(circRNAs_per_gene = .N), by = gene_id]
 ```
 
