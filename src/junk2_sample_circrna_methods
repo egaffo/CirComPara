@@ -36,7 +36,7 @@ junk2_segemehl_mapping = 'junk2_segemehl_mapping'
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     CPUS         = sample_cpus
     GENOME_FASTA = sample_genome_fasta
     ANNOTATION   = sample_annotation
@@ -53,6 +53,9 @@ try:
 
     STAR_INDEX = star_index
     GENEPRED   = gene_pred
+    
+    ## a list of circrna detection methods to use
+    CIRCRNA_METHODS = circrna_methods
 
    #TODO
     PRE_FILTER  = False
@@ -78,6 +81,9 @@ except NameError:
              '/path/to/Star/index/dir')
     vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
     vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
+
+    vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods to use. '\
+	     'Use all methods available as default', '')
 
     # TODO 
     #vars.Add('PRE_FILTER', 'Does a preliminary mapping of the reads have to be done?', 
@@ -112,6 +118,8 @@ except NameError:
     STAR_INDEX = env['STAR_INDEX']
     GENEPRED   = env['GENEPRED']
 
+    CIRCRNA_METHODS = [m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]
+
     #TODO
     PRE_FILTER = False
 
@@ -129,101 +137,106 @@ if sample_name=='.':
 ### RETIRIEVE CANONICALLY UNMAPPED READS
 unmapped_reads_dir = 'unmapped_reads'
 
-if PRE_FILTER:
-    tophat_cpus     = CPUS
-    reads_to_map    = raw_reads
-    tophat_index    = BOWTIE2_INDEX
-    tophat_extra_params = ' --no-mixed --no-discordant --max-multihits 5 '
-    tophat = env.SConscript(os.path.join(unmapped_reads_dir, 'junk2_tophat'),
-                              variant_dir = unmapped_reads_dir, src_dir = SRC_DIR,
-                              duplicate = 0, exports = '''env tophat_cpus reads_to_map '''\
-                                                       '''tophat_index tophat_extra_params''')
-    
-    bam2fq_cpus     = CPUS
-    bam2fq_bamfile  = tophat[4].abspath
-    bam2fq_prefix_id= sample_name
-    bam2fq_paired   = str(len(raw_reads)>1)
-    bam2fq          = env.SConscript(os.path.join(unmapped_reads_dir, 'junk2_bamtofastq'),
-                                     variant_dir = unmapped_reads_dir, src_dir = SRC_DIR,
-                                     duplicate = 0, exports = '''env bam2fq_cpus bam2fq_bamfile '''\
-                                                              '''bam2fq_prefix_id bam2fq_paired ''')
-    
-    raw_reads       = [File(f).abspath for f in bam2fq]
+#if PRE_FILTER:
+#    tophat_cpus     = CPUS
+#    reads_to_map    = raw_reads
+#    tophat_index    = BOWTIE2_INDEX
+#    tophat_extra_params = ' --no-mixed --no-discordant --max-multihits 5 '
+#    tophat = env.SConscript(os.path.join(unmapped_reads_dir, 'junk2_tophat'),
+#                              variant_dir = unmapped_reads_dir, src_dir = SRC_DIR,
+#                              duplicate = 0, exports = '''env tophat_cpus reads_to_map '''\
+#                                                       '''tophat_index tophat_extra_params''')
+#    
+#    bam2fq_cpus     = CPUS
+#    bam2fq_bamfile  = tophat[4].abspath
+#    bam2fq_prefix_id= sample_name
+#    bam2fq_paired   = str(len(raw_reads)>1)
+#    bam2fq          = env.SConscript(os.path.join(unmapped_reads_dir, 'junk2_bamtofastq'),
+#                                     variant_dir = unmapped_reads_dir, src_dir = SRC_DIR,
+#                                     duplicate = 0, exports = '''env bam2fq_cpus bam2fq_bamfile '''\
+#                                                              '''bam2fq_prefix_id bam2fq_paired ''')
+#    
+#    raw_reads       = [File(f).abspath for f in bam2fq]
 
 build_dir = 'circRNAs'
 
-## SEGEMEHL CIRCRNA
-segemehl_cpus = CPUS
-reads_to_map = raw_reads
-sample_id = sample_name
-segemehl_genome_fasta = GENOME_FASTA
-segemehl_index = SEGEMEHL_INDEX
-segemehl_extra_params = ''
-segemap = env.SConscript(os.path.join(build_dir, junk2_segemehl_mapping),
-                         variant_dir = build_dir, src_dir = SRC_DIR,
-                         duplicate = 0, exports='env segemehl_cpus reads_to_map sample_id segemehl_genome_fasta segemehl_index segemehl_extra_params')
+if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'testrealign' in CIRCRNA_METHODS:
 
-mapping_file = segemap[0]
-segemehlcirc_cpus = CPUS
-segemehlcirc_genome_fasta = GENOME_FASTA
-segecirc_dir = 'segecirc'
-segecirc = env.SConscript(os.path.join(build_dir, segecirc_dir, junk2_circrna),
-                          variant_dir = os.path.join(build_dir, segecirc_dir), src_dir = SRC_DIR,
-                          duplicate = 0, exports='env mapping_file sample_name segemehlcirc_cpus segemehlcirc_genome_fasta')
-results.append(segecirc)
+    ## SEGEMEHL CIRCRNA
+    segemehl_cpus = CPUS
+    reads_to_map = raw_reads
+    sample_id = sample_name
+    segemehl_genome_fasta = GENOME_FASTA
+    segemehl_index = SEGEMEHL_INDEX
+    segemehl_extra_params = ''
+    segemap = env.SConscript(os.path.join(build_dir, junk2_segemehl_mapping),
+                             variant_dir = build_dir, src_dir = SRC_DIR,
+                             duplicate = 0, exports='env segemehl_cpus reads_to_map sample_id segemehl_genome_fasta segemehl_index segemehl_extra_params')
+    
+    mapping_file = segemap[0]
+    segemehlcirc_cpus = CPUS
+    segemehlcirc_genome_fasta = GENOME_FASTA
+    segecirc_dir = 'segecirc'
+    segecirc = env.SConscript(os.path.join(build_dir, segecirc_dir, junk2_circrna),
+                              variant_dir = os.path.join(build_dir, segecirc_dir), src_dir = SRC_DIR,
+                              duplicate = 0, exports='env mapping_file sample_name segemehlcirc_cpus segemehlcirc_genome_fasta')
+    results.append(segecirc)
 
-## CIRI
-ciri_cpus = CPUS
-ciri_reads = raw_reads
-ciri_genome_fasta = GENOME_FASTA
-ciri_sample = sample_name
-ciri_bwa_index = BWA_INDEX
-ciri_bwa_extra_parameters = BWA_PARAMS 
-ciri_script = CIRI
-ciri_annotation = ANNOTATION
-ciri_extra_parameters = CIRI_EXTRA_PARAMS
+if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'ciri' in CIRCRNA_METHODS:
+    ## CIRI
+    ciri_cpus = CPUS
+    ciri_reads = raw_reads
+    ciri_genome_fasta = GENOME_FASTA
+    ciri_sample = sample_name
+    ciri_bwa_index = BWA_INDEX
+    ciri_bwa_extra_parameters = BWA_PARAMS 
+    ciri_script = CIRI
+    ciri_annotation = ANNOTATION
+    ciri_extra_parameters = CIRI_EXTRA_PARAMS
+    
+    ciri = env.SConscript(os.path.join(build_dir, junk2_ciri), 
+                          variant_dir = build_dir, src_dir = SRC_DIR, 
+                          duplicate = 0, 
+                          exports = 'env ciri_cpus ciri_bwa_index ciri_reads ciri_genome_fasta ciri_sample ciri_bwa_extra_parameters ciri_annotation ciri_script ciri_extra_parameters ')
+    
+    results.append(ciri)
 
-ciri = env.SConscript(os.path.join(build_dir, junk2_ciri), 
-                      variant_dir = build_dir, src_dir = SRC_DIR, 
-                      duplicate = 0, 
-                      exports = 'env ciri_cpus ciri_bwa_index ciri_reads ciri_genome_fasta ciri_sample ciri_bwa_extra_parameters ciri_annotation ciri_script ciri_extra_parameters ')
+if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'findcirc' in CIRCRNA_METHODS:
+    ## FIND_CIRC
+    junk2_findcirc    = 'junk2_findcirc'
+    find_circ_cpus    = CPUS
+    find_circ_bt2_idx = BOWTIE2_INDEX
+    find_circ_reads   = raw_reads
+    find_circ_genome  = GENOME_FASTA
+    find_circ_sample  = sample_name
+    
+    find_circ = env.SConscript(os.path.join(build_dir, junk2_findcirc),
+                               variant_dir = build_dir, src_dir = SRC_DIR, 
+                               duplicate = 0, 
+                               exports = '''env find_circ_cpus find_circ_bt2_idx find_circ_reads '''\
+                                         '''find_circ_genome find_circ_sample''')
+    results.append(find_circ)
 
-results.append(ciri)
-
-## FIND_CIRC
-junk2_findcirc    = 'junk2_findcirc'
-find_circ_cpus    = CPUS
-find_circ_bt2_idx = BOWTIE2_INDEX
-find_circ_reads   = raw_reads
-find_circ_genome  = GENOME_FASTA
-find_circ_sample  = sample_name
-
-find_circ = env.SConscript(os.path.join(build_dir, junk2_findcirc),
-                           variant_dir = build_dir, src_dir = SRC_DIR, 
-                           duplicate = 0, 
-                           exports = '''env find_circ_cpus find_circ_bt2_idx find_circ_reads '''\
-                                     '''find_circ_genome find_circ_sample''')
-results.append(find_circ)
-
-## CIRCexplorer
-junk2_circexplorer  = 'junk2_CIRCExplorer'
-circexplorer_env    = env
-circexplorer_cpus   = CPUS
-circexplorer_reads  = raw_reads
-circexplorer_genome_index   = STAR_INDEX
-circexplorer_genome_fasta   = GENOME_FASTA
-circexplorer_annotation     = ANNOTATION
-gene_pred_annotation        = GENEPRED
-circexplorer_aligner        = 'Star'
-
-circexplorer = env.SConscript(os.path.join(build_dir, junk2_circexplorer),
-                              variant_dir = build_dir, src_dir = SRC_DIR,
-                              duplicate = 0,
-                              exports = '''circexplorer_env circexplorer_cpus '''\
-                                        '''circexplorer_reads circexplorer_genome_index '''\
-                                        '''circexplorer_genome_fasta circexplorer_annotation '''\
-                                        '''gene_pred_annotation circexplorer_aligner''')
-results.append(circexplorer)
+if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'circexplorer' in CIRCRNA_METHODS:
+    ## CIRCexplorer
+    junk2_circexplorer  = 'junk2_CIRCExplorer'
+    circexplorer_env    = env
+    circexplorer_cpus   = CPUS
+    circexplorer_reads  = raw_reads
+    circexplorer_genome_index   = STAR_INDEX
+    circexplorer_genome_fasta   = GENOME_FASTA
+    circexplorer_annotation     = ANNOTATION
+    gene_pred_annotation        = GENEPRED
+    circexplorer_aligner        = 'Star'
+    
+    circexplorer = env.SConscript(os.path.join(build_dir, junk2_circexplorer),
+                                  variant_dir = build_dir, src_dir = SRC_DIR,
+                                  duplicate = 0,
+                                  exports = '''circexplorer_env circexplorer_cpus '''\
+                                            '''circexplorer_reads circexplorer_genome_index '''\
+                                            '''circexplorer_genome_fasta circexplorer_annotation '''\
+                                            '''gene_pred_annotation circexplorer_aligner''')
+    results.append(circexplorer)
 
 Clean('.', build_dir)
 Clean('.', unmapped_reads_dir)

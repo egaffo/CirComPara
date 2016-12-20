@@ -84,6 +84,8 @@ if env['PREPROCESSOR'].lower() == 'trimmomatic':
                                               exports = 'env read_statistics_readset')
                                   )
 
+    Depends(preprocessing_stats, preprocessings)
+
 elif env['PREPROCESSOR'] == '':
     ## in case of no preprocessor specified, just return the raw reads
     print 'No read preprocessing specified'

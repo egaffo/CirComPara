@@ -7,7 +7,7 @@
 packs <- c("BH", "svglite", "optparse", "plyr", 
 	   "scales", "reshape2", 
            "ggplot2", "ggthemes",
-           "RSvgDevice")
+           "RSvgDevice", "rmarkdown", "knitr")
 
 install.packages(packs, repos="http://cran.r-project.org", dependencies = T)
 

@@ -1,0 +1,53 @@
+'''
+Analyze circRNA predictions and set up a report
+'''
+
+import os
+Import('*')
+
+try:
+    env = env_circrna_analyze
+except NameError, ne:
+    vars = Variables('vars.py')
+    vars.Add('CIRCRNAS', 'A GTF file with circRNA predictions', '')
+    vars.Add('CIRCGENES', 'A 18 fields GTF file with genes intersections with '\
+            'circRNAs', '')
+    vars.Add('GENEEXP', 'The file with gene expression: '\
+                        'genes.read_group_tracking when multisample; '\
+                        'genes.fpkm_tracking when sigle sample', '')
+    vars.Add('GENEMETA', 'A meta file of gene expression results: '\
+                        'genes.fpkm_tracking when multisample; '\
+                        'leave empty when single sample', '')
+
+    env = Environment(ENV=os.environ, SHELL = '/bin/bash',
+                      variables=vars)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+env['JUNK2_HOME'] = env['ENV']['JUNK2_HOME']
+
+if not env['GENEMETA'] == "":
+    env['GENEMETA'] = File(env['GENEMETA']).abspath
+
+circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
+                        '''circrnas.gtf.file <- "${SOURCES[0].abspath}"; '''\
+                        '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
+                        '''gene_meta_file <- "$GENEMETA"; '''\
+                        '''gene_fpkm_file <- "${SOURCES[2].abspath}"; '''\
+                        '''rmarkdown::render(input = "$JUNK2_HOME/src/circRNAs_analysis.Rmd",'''\
+                        '''output_file = "$TARGET.abspath", '''\
+                        '''intermediates_dir = dirname("$TARGET.abspath") )' '''
+#                        '''knitr::knit2html("$JUNK2_HOME/src/circRNAs_analysis.Rmd", '''\
+#                        '''output = "$TARGET", force_v1 = F)' '''
+
+circrnas_analysis_targets = "circRNAs_analysis.html"
+circrnas_analysis_sources = [env['CIRCRNAS'], env['CIRCGENES'], env['GENEEXP']]
+circrnas_analysis = env.Command(circrnas_analysis_targets, 
+                                circrnas_analysis_sources, 
+                                circrnas_analysis_cmd)
+
+
+Return('circrnas_analysis')

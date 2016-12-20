@@ -1,0 +1,132 @@
+'''
+This SConscript normalizes FPKM values in multiple samples with Cuffnorm [1]
+
+[1] Trapnell, C. et al.
+
+    Differential analysis of gene regulation at transcript resolution with RNA-seq.
+
+    Nat Biotech 31, 46-53 (2013).
+
+Software dependencies:
+ * Cuffdiff v2.2.1
+
+Variables and functions required to export when calling from a SConscript:
+ * env_cuffnorm with the following environment variables:
+	* CPUS, LABELS, ANNOTATION, QUANT_FILES, EXTRA_PARAMS
+
+'''
+
+import os, re, collections 
+
+Import('env_cuffnorm')
+
+def get_node_sample(node, samples):
+    s = None
+    for sample in samples:
+        if re.match('.*'+sample+'.*', node.path):
+            s = sample
+            break
+    return s
+
+def get_node_condition(node, conditions):
+    condition = None
+    for c,samples in conditions.iteritems():
+        s = get_node_sample(node, samples)
+        if s:
+            condition = c
+            break
+    return condition
+
+def get_matching_nodes(nodelist, rexpression):
+    files = []
+    for node in Flatten(nodelist):
+        if re.match(rexpression, node.path):
+            files.append(node)
+    return files
+
+def format_cuffnorm_sample_arguments(conditions, cuffnorm_quantities):
+    labels = []
+    node_lists = ''
+    if len(conditions.keys()) > 1:
+        ## use conditions as labels: Cuffnorm will collapse condition replicates
+        for condition in conditions.keys():
+            labels.append(condition)
+            nodes = []
+            for sample in conditions[condition]:
+                nodes.extend(get_matching_nodes(cuffnorm_quantities, '.*'+sample+'.*'))
+            node_lists = node_lists + ','.join([n.path for n in nodes]) + ' '
+        return {'LABELS':','.join(labels), 'SAMS':node_lists}
+    else:
+        ## use sample names as labels
+        labels = conditions.values()[0]
+        nodes = []
+        for sample in labels:
+            nodes.extend(get_matching_nodes(cuffnorm_quantities, '.*'+sample+'.*'))
+        node_lists = node_lists + ' '.join([n.path for n in nodes]) + ' '
+        return {'LABELS':','.join(labels), 'SAMS':node_lists}
+
+cuffdiff_parameters = {}
+
+try:
+    env = env_cuffnorm
+    cuffnorm_labels = [get_node_condition(n, env['LABELS']) for n in env['QUANT_FILES']]
+    cuffnorm_parameters = format_cuffnorm_sample_arguments(env['LABELS'], env['QUANT_FILES'])
+
+except NameError as ne:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('QUANT_FILES', 'Comma separated list of condition replicates alignment files (SAM/BAM)'\
+			' or Cuffquant files (CXB); @ character separates condition lists',
+             'cond1_1.cxb,cond1_2.cxb@cond2_1.cxb,cond2_2.cxb')
+    vars.Add('ANNOTATION', 'Gene annotation in GTF format', 'transcripts.gtf')
+    vars.Add('LABELS', 'Conditions to test differential expression comma separated list '\
+			'ordered as the QUANTITIES parameter', 'CONDITION_1,CONDITION_2')
+    vars.Add('EXTRA_PARAMS', 'Parameter options to specify. E.g. --library-type fr-firststrand '\
+             '--total-hits-norm TRUE --output-format simple-table', '--output-format cuffdiff')
+
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+    env['QUANT_FILES'] = ' '.join(env['QUANT_FILES'].split('@'))
+
+    cuffnorm_parameters = {'LABELS': env['LABELS'], 'SAMS': env['QUANT_FILES']}
+
+cuffnorm_cmd = 'cuffnorm $( -q --no-update-check -p $CPUS $) -o ' + Dir('.').path +\
+               ' $EXTRA_PARAMS -L ' + cuffnorm_parameters['LABELS'] + ' ${SOURCES[0]} ' +\
+               cuffnorm_parameters['SAMS']
+
+
+## cuffdiff output targets 
+cuffnorm_targets = ['cds.count_tracking', 'genes.read_group_tracking', 
+                    'run.info', 'cds.fpkm_tracking', 'isoforms.count_tracking', 
+                    'tss_groups.count_tracking', 'cds.read_group_tracking', 
+                    'isoforms.fpkm_tracking', 'tss_groups.fpkm_tracking', 
+                    'genes.count_tracking', 'isoforms.read_group_tracking', 
+                    'tss_groups.read_group_tracking', 'genes.fpkm_tracking', 
+                    'read_groups.info']
+#cuffnorm_targets = ['isoforms.fpkm_tracking', 'genes.fpkm_tracking']
+cuffnorm = env.Command(cuffnorm_targets, [env['ANNOTATION'], env['QUANT_FILES']], cuffnorm_cmd)
+
+Return('cuffnorm')
+
+## table output targets
+#cds.attr_table    genes.count_table     isoforms.fpkm_table
+#tss_groups.count_table cds.count_table   genes.fpkm_table      run.info
+#tss_groups.fpkm_table cds.fpkm_table    isoforms.attr_table   samples.table
+#genes.attr_table  isoforms.count_table  tss_groups.attr_table
+
+## cuffdiff output targets 
+#cds.count_tracking       genes.read_group_tracking     run.info
+#cds.fpkm_tracking        isoforms.count_tracking
+#tss_groups.count_tracking
+#cds.read_group_tracking  isoforms.fpkm_tracking
+#tss_groups.fpkm_tracking
+#genes.count_tracking     isoforms.read_group_tracking
+#tss_groups.read_group_tracking
+#genes.fpkm_tracking      read_groups.info
