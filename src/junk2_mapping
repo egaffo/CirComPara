@@ -53,7 +53,7 @@ except NameError:
     mapper_cpus = env['CPUS']
     reads_to_map = [File(f).abspath for f in env['READS'].split(',')]
 
-SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 mapping_dir = 'mappings'
 #make_mapping_dir = env.Command(Dir(mapping_dir), [], Mkdir('$TARGET'))

@@ -62,7 +62,7 @@ except NameError:
     	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
 
 expression_results = []
-SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 mapping_file = ALIGNMENTS
 sample_name  = SAMPLE

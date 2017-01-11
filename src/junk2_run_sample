@@ -4,7 +4,7 @@ It composes a pipeline that gives statistics on the raw data and
 also processes the raw reads to map them on a reference genome, 
 estimates gene/trnascript expression, etc.
 
-Software dependencies are inherited from the JUNK2-SConscripts used:
+Software dependencies are inherited from the CIRCOMPARA-SConscripts used:
  * junk2_read_statistics
  * junk2_preprocess
  * junk2_mapping
@@ -64,7 +64,7 @@ except NameError:
     ANNOTATION = env['ANNOTATION']
     READS = env['READS'].split(',')
 
-SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 results = []
 

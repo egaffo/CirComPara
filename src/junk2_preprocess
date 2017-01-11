@@ -49,7 +49,7 @@ except NameError:
     READS = env['READS'].split(',')
     PREPROCESSOR_PARAMS = env['PREPROCESSOR_PARAMS']
 
-SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 preprocess_dir = 'preprocess'
 preprocessings = []

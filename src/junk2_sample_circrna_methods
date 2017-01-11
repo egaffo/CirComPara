@@ -2,7 +2,7 @@
 This SConscript performs circRNAs detection on a RNA-seq sample using different
 circRNA detection methods.
 
-Software dependencies are inherited from the JUNK2-SConscripts used:
+Software dependencies are inherited from the CIRCOMPARA-SConscripts used:
  * junk2_circrna
  * junk2_ciri
  * junk2_findcirc
@@ -123,7 +123,7 @@ except NameError:
     #TODO
     PRE_FILTER = False
 
-SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 results = []
 

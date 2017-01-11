@@ -5,7 +5,7 @@ also processes the raw reads to map them on a reference genome,
 reconstruct transcripts, estimates gene/transcript expression, and 
 also detects circRNAs by means of backsplice junctions.
 
-Software dependencies are inherited from the JUNK2-SConscripts used:
+Software dependencies are inherited from the CIRCOMPARA-SConscripts used:
  * junk2_read_statistics
  * junk2_preprocess
  * junk2_hisat2
@@ -150,7 +150,7 @@ except NameError:
 
     CIRCRNA_METHODS = env['CIRCRNA_METHODS'].strip().split(',')
 
-SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 results = []
 
