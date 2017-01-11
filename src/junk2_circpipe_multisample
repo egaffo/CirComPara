@@ -132,7 +132,7 @@ DESEQ = False
 if env['DESEQ'] == 'True':
     DESEQ = True
 
-SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 samples_dir = 'samples'
 
@@ -461,13 +461,13 @@ circRNA_collect_dir = 'circRNA_collection'
 
 samples = sorted(samples.keys())
 
-segecirc_nodes     = []
+testrealign_nodes     = []
 find_circ_nodes    = []
 ciri_nodes         = []
 CIRCexplorer_nodes = []
 
 for sample in samples:
-    segecirc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+    testrealign_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                              os.path.sep + 'splicesites\.bed'))
     find_circ_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                               os.path.sep + 'circ_candidates\.bed'))
@@ -477,24 +477,24 @@ for sample in samples:
                                                 os.path.sep + '.*CIRCexplorer_circ\.txt'))
 
 
-## collect segecirc
+## collect testrealign
 CIRCexplorer_compared = None
 ciri_compared = None
 find_circ_compared = None
-segecirc_compared = None
+testrealign_compared = None
 
-if not ''.join([str(f) for f in flatten(segecirc_nodes)]) == '':
+if not ''.join([str(f) for f in flatten(testrealign_nodes)]) == '':
 
-    segecirc_files = ','.join([f.path for f in flatten(segecirc_nodes)])
-    segecirc_labels = ','.join(samples)
-    segecirc_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''segecirc_compare.R -l ''' + segecirc_labels +\
-                             ''' -i ''' + segecirc_files + ''' -o $TARGET''')
-    segecirc_comapared_target = os.path.join(circRNA_collect_dir, 'segecirc_compared.csv')
-    segecirc_compared = env.Command(segecirc_comapared_target, 
-                                    segecirc_nodes, 
-                                    segecirc_comapared_cmd)
-    Depends(segecirc_compared, segecirc_nodes)
+    testrealign_files = ','.join([f.path for f in flatten(testrealign_nodes)])
+    testrealign_labels = ','.join(samples)
+    testrealign_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                             '''testrealign_compare.R -l ''' + testrealign_labels +\
+                             ''' -i ''' + testrealign_files + ''' -o $TARGET''')
+    testrealign_comapared_target = os.path.join(circRNA_collect_dir, 'testrealign_compared.csv')
+    testrealign_compared = env.Command(testrealign_comapared_target, 
+                                    testrealign_nodes, 
+                                    testrealign_comapared_cmd)
+    Depends(testrealign_compared, testrealign_nodes)
 
 if not ''.join([str(f) for f in flatten(find_circ_nodes)]) == '':
 
@@ -539,8 +539,8 @@ if not ''.join([str(f) for f in flatten(CIRCexplorer_nodes)]) == '':
     Depends(CIRCexplorer_compared, CIRCexplorer_nodes)
     
 ##COLLECT CIRCRNA ALIGNMENT NUMBER
-# segecirc mapped reads
-segecirc_mappings_pattern = '.*segemehl_mapped_reads_count\.txt'
+# testrealign mapped reads
+testrealign_mappings_pattern = '.*segemehl_mapped_reads_count\.txt'
 # find_circ mapped reads
 find_circ_mappings_pattern = '.*find_circ_mapped_reads_count\.txt'
 # CIRI mapped reads
@@ -548,7 +548,7 @@ CIRI_mappings_pattern = '.*CIRI_mapped_reads_count\.txt'
 # CIRCexplorer mapped reads
 CIRCexplorer_mappings_pattern = '.*CIRCExplorer_mapped_reads_count\.txt'
 
-segecirc_mappings     = get_matching_nodes(runs, segecirc_mappings_pattern)
+testrealign_mappings     = get_matching_nodes(runs, testrealign_mappings_pattern)
 find_circ_mappings    = get_matching_nodes(runs, find_circ_mappings_pattern)
 ciri_mappings         = get_matching_nodes(runs, CIRI_mappings_pattern)
 CIRCexplorer_mappings = get_matching_nodes(runs, CIRCexplorer_mappings_pattern)
@@ -556,7 +556,7 @@ CIRCexplorer_mappings = get_matching_nodes(runs, CIRCexplorer_mappings_pattern)
 collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
 collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir, 
                                                        'circrna_maps_counts.txt'), 
-                                          [segecirc_mappings, find_circ_mappings, 
+                                          [testrealign_mappings, find_circ_mappings, 
                                           ciri_mappings, CIRCexplorer_mappings], 
                                           collect_circrna_maps_counts_cmd)
 
@@ -565,7 +565,7 @@ env_circrna_collect = env.Clone()
 env_circrna_collect['CSVS'] = {'CIRCEXPLORER': CIRCexplorer_compared,
 			'CIRI': ciri_compared,
 			'FINDCIRC': find_circ_compared,
-			'TESTREALIGN': segecirc_compared}
+			'TESTREALIGN': testrealign_compared}
 env_circrna_collect['GTF'] = cuffmerge
 circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 
                                           'junk2_circrna_collect'), 

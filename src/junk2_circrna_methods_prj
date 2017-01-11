@@ -35,7 +35,7 @@ CIRI           = env['CIRI']
 
 BOWTIE2_INDEX = env['BOWTIE2_INDEX']
 
-SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 ## READ META FILE AND MAKE SAMPLE DIRECTORIES
 samples_dir = 'samples'

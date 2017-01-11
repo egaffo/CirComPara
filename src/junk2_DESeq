@@ -91,7 +91,7 @@ except NameError as ne:
     META       = env['META']
     STRANDED   = env['STRANDED']
 
-SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
 htseq_count_annotation = ANNOTATION
