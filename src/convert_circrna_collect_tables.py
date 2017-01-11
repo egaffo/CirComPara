@@ -67,19 +67,19 @@ def format_findcirc(line, outformat):
         outline = 'BED6 formatting not yet immplemented'
     return outline
 
-def format_segecirc(line, outformat):
+def format_testrealign(line, outformat):
     fields = line
     if outformat == 'gtf':
         sample = fields[0]
         chrom   = fields[1]
-        start   = str(int(fields[2]) + 1) # segecirc gives BED coordinates
+        start   = str(int(fields[2]) + 1) # testrealign gives BED coordinates
         end     = fields[3]
         strand  = fields[5]
         score   = fields[6]
         gene_id = chrom + ':' + start + '-' + end + ':' + strand
         transcript_id = gene_id + '.' + sample
         
-        outline = format_gtf_line(chrom, 'segecirc', 'backsplice', 
+        outline = format_gtf_line(chrom, 'testrealign', 'backsplice', 
                                   start, end, score, strand, '.', 
                                   gene_id, transcript_id, 'sample_id "' + sample + '";')
 
@@ -95,7 +95,7 @@ if __name__ == '__main__':
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('input', default = '-', help = 'A csv file or piped stream (default -)')
     parser.add_argument('-p', '--program', type = str, 
-                        choices = ['ciri', 'circexplorer', 'findcirc', 'segecirc'], 
+                        choices = ['ciri', 'circexplorer', 'findcirc', 'testrealign'], 
                         required = True, dest = 'program', 
                         help = 'The program that generated the input file')
     parser.add_argument('-f', '--format', type = str, 
@@ -121,8 +121,8 @@ if __name__ == '__main__':
             outline = format_ciri(line, args.outformat)
         elif args.program == 'findcirc':
             outline = format_findcirc(line, args.outformat)
-        elif args.program == 'segecirc':
-            outline = format_segecirc(line, args.outformat)
+        elif args.program == 'testrealign':
+            outline = format_testrealign(line, args.outformat)
 
         print outline
 

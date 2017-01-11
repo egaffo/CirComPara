@@ -179,8 +179,8 @@ if(nrow(circrnas.gtf) > 0){
   
   # if(fix_testrealign){
   #   setkey(circrnas.gtf, V2)
-  #   circrnas.gtf["segecirc", V4 := V4-1]
-  #   circrnas.gtf["segecirc", `:=`(gene_id = paste0(V1, ":", V4, "-", V5, ":", V7), 
+  #   circrnas.gtf["testrealign", V4 := V4-1]
+  #   circrnas.gtf["testrealign", `:=`(gene_id = paste0(V1, ":", V4, "-", V5, ":", V7), 
   #                                 transcript_id = paste0(V1, ":", V4, "-", V5, ":", V7, ".", sample_id))]
   # }
   
@@ -222,7 +222,7 @@ if(nrow(combined_gtf) > 0){
   exists_gene_overlaps <- TRUE
   # if(fix_testrealign){
   #   setkey(combined_gtf, V2)
-  #   combined_gtf["segecirc", V4 := V4-1]
+  #   combined_gtf["testrealign", V4 := V4-1]
   # }
   combined_gtf[, `:=`(gene_id = sub('.*gene_id "([^"]*)".*', "\\1", V18), 
                       gene_name = ifelse(grepl('gene_name', V18, fixed = T), 

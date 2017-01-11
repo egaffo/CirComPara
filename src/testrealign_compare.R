@@ -16,7 +16,7 @@ option_list <- list(
 	      help="Decrease by 1 position the start coordinates: this fixes a possible testrealign bug")
 )
 
-parser <- OptionParser(usage="%prog -l S1,S2,S3 -i S1/splicesites.bed,S2/splicesites.bed,S3/splicesites.bed -o segecirc_compared.csv ", 
+parser <- OptionParser(usage="%prog -l S1,S2,S3 -i S1/splicesites.bed,S2/splicesites.bed,S3/splicesites.bed -o testrealign_compared.csv ", 
                        option_list=option_list)
 arguments <- parse_args(parser, positional_arguments=F)
 opt <- arguments$options
