@@ -71,7 +71,8 @@ vars.Add('CUFFDIFF_EXTRA_PARAMS',
          ' --multi-read-correct', '')
 vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
 vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods to use. '\
-	'Use all methods available as default', '')
+	     'Repeated values will be collapsed. Default: use all methods available (empty string)', 
+         '')
 vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
          'reconstruction. Default only quantifies genes and transcripts from the given '\
          'annotation GTF file', 'False')
@@ -84,6 +85,10 @@ vars.Add('CUFFNORM_EXTRA_PARAMS', 'Extra parameters to use if using Cuffnorm',
 vars.Add('QRE_FIND', 'Set True to toggle analysis of QKI response elements sequences', 'False')
 vars.Add('READSTAT_METHODS', 'Comma separated list of methods to use for read statistics. '\
          'Currently supported: fastqc,fastx', 'fastqc')
+vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
+                        'define the circRNA as reliable. If this value exceeds the number '\
+                        'of methods specified, it will be set to the number of methods.', 2)
+vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
 
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
@@ -122,7 +127,7 @@ TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
 	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
 
-CIRCRNA_METHODS = [m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]
+CIRCRNA_METHODS = sorted(set([m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]))
 
 DIFF_EXP = False
 if env['DIFF_EXP'] == 'True':
@@ -580,6 +585,9 @@ env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
 env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
 env_circrna_analyze['GENEEXP'] = gene_exp
 env_circrna_analyze['GENEMETA'] = gene_meta
+if int(env_circrna_analyze['MIN_METHODS']) > len(CIRCRNA_METHODS):
+    env_circrna_analyze['MIN_METHODS'] = len(CIRCRNA_METHODS)
+
 circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 
                                           'junk2_circrna_analyze'),
                             src_dir = SCONSCRIPT_HOME,
