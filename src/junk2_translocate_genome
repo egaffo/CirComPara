@@ -5,7 +5,7 @@ import os, re
 
 Import('*')
 try:
-    env = env_translocate_genome
+    env = env_translocate_genome.Clone()
     env['TRANSLOCATIONS'] = ','.join(env['TRANSLOCATIONS'])
 except NameError as ne:
     print 'junk2_translocate_genome: command line execution.'

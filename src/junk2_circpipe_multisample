@@ -168,7 +168,7 @@ if translocations:
     GENEPRED = ''
 
     ## COMPUTE TRANSLOCATED GENOME SEQUENCE AND GENE ANNOTATION
-    env_translocate_genome = env
+    env_translocate_genome = env.Clone()
     env_translocate_genome.Append(TRANSLOCATIONS = list(translocations))
     env_translocate_genome['GENOME'] = GENOME_FASTA
     #env_translocated_genome.Append(ANNOTATION = ANNOTATION)
