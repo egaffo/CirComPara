@@ -23,6 +23,8 @@ Circpipe analysis results are presented in this page. Different sections display
 # combined_gtf_file# 
 # gene_meta_file
 # gene_fpkm_file
+# min_methods ## minimum number of methods detecting a circRNA to define it "reliable"
+# min_reads
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 6, 
@@ -165,9 +167,9 @@ TODO: Considered samples: list (+ altri dati?)
 -->
 
 ```{r load_circrnas, echo=FALSE, include=FALSE}
-## read circRNA results: filter low expressed (less than 2 reads) circRNAs
+## read circRNA results: filter low expressed (less than min_reads reads) circRNAs
 colClasses <- c("factor", "factor", "character", "integer", "integer", "integer", "factor", "character", "character")
-circrnas.gtf <- fread(circrnas.gtf.file, data.table = T, colClasses = colClasses)[V6 >= 2]
+circrnas.gtf <- fread(circrnas.gtf.file, data.table = T, colClasses = colClasses)[V6 >= min_reads]
 V9pattern <- '.*gene_id "([^"]*)".*transcript_id "([^"]*)".*'
 V9newCols <- c("gene_id", "transcript_id")
 exists_circrnas <- FALSE
@@ -179,8 +181,8 @@ if(nrow(circrnas.gtf) > 0){
   
   # if(fix_testrealign){
   #   setkey(circrnas.gtf, V2)
-  #   circrnas.gtf["segecirc", V4 := V4-1]
-  #   circrnas.gtf["segecirc", `:=`(gene_id = paste0(V1, ":", V4, "-", V5, ":", V7), 
+  #   circrnas.gtf["testrealign", V4 := V4-1]
+  #   circrnas.gtf["testrealign", `:=`(gene_id = paste0(V1, ":", V4, "-", V5, ":", V7), 
   #                                 transcript_id = paste0(V1, ":", V4, "-", V5, ":", V7, ".", sample_id))]
   # }
   
@@ -222,7 +224,7 @@ if(nrow(combined_gtf) > 0){
   exists_gene_overlaps <- TRUE
   # if(fix_testrealign){
   #   setkey(combined_gtf, V2)
-  #   combined_gtf["segecirc", V4 := V4-1]
+  #   combined_gtf["testrealign", V4 := V4-1]
   # }
   combined_gtf[, `:=`(gene_id = sub('.*gene_id "([^"]*)".*', "\\1", V18), 
                       gene_name = ifelse(grepl('gene_name', V18, fixed = T), 
@@ -297,15 +299,15 @@ kable(data.frame(sample_id = names(sample.table.file.names), file = sample.table
 
 ```{r reliable_circrnas, echo=FALSE, include=TRUE}
 ############# CircRNA expression per sample ###########
-## get the list of circRNAs detected by 2 or more methods
+## get the list of circRNAs detected by min_methods or more methods
 circrnas.morethan2methods <- circrnas.gtf[, .N, 
                                           by = .(gene_id, V2)][
                                             , N := NULL][
                                               , .(n_methods = .N), 
                                               by = gene_id][
-                                                n_methods >= 2, .(gene_id)]
+                                                n_methods >= min_methods, .(gene_id)]
 
-## subset the circRNA expression table by the circRNAs detected by at least 2 methods and
+## subset the circRNA expression table by the circRNAs detected by at least min_methods methods and
 ## with normalized median expression > 0
 setkey(circrna.rpms.genes, circ_id)
 setkey(circrnas.morethan2methods, gene_id)
@@ -336,7 +338,7 @@ write.csv(x = circrnas.morethan2methods.medrpm.table,
 
 ```{r show_circrnas_per_method, echo=FALSE, include=TRUE}
 
-circ.per.method <- circrnas.gtf[V6 >=2][, .N, by = .(gene_id, V2)]
+circ.per.method <- circrnas.gtf[V6 >= min_reads][, .N, by = .(gene_id, V2)]
 #circ.per.method[, .N, by = V2][, Method := V2][order(-N), .(Method, N)]
 non.redundant <- circ.per.method[, .N, by = gene_id][, .N]
 ## number of circRNAs per method
@@ -350,7 +352,7 @@ circByMethod.barplot <- ggplot(data = circ.per.method, mapping = aes(x = V2, fil
   geom_bar(width = .7, colour="black") + 
   geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=default.font.size*(5/14)) + 
   theme_bw() + xlab("CircRNA detection method") + ylab("CircRNA number") +
-  ggtitle("CircRNAs detected with >= 2 reads by each method")
+  ggtitle(paste0("CircRNAs detected with >=", min_reads, "reads by each method"))
 
 ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
 circByMethod.barplot.limits <- c(0, max(circ.per.method[, .N, by = V2][, N])*1.1)
@@ -381,7 +383,7 @@ sharedByMethod.barplot <- ggplot(data = circ.per.method[, .(shared_by = .N), by 
   geom_bar(width = .7, color = "black") + 
   geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=default.font.size*(5/14)) + 
   theme_bw() + xlab("Number of methods") + ylab("CircRNA number") +
-  ggtitle("Number of circRNAs (with >= 2 reads)\ncommonly detected by the methods")
+  ggtitle(paste0("Number of circRNAs (with >= ", min_reads, " reads)\ncommonly detected by the methods"))
 ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
 sharedByMethod.barplot.limits <- c(0, max(circ.per.method[, .(shared_by = .N), by = gene_id][, .N, by=shared_by][, N])*1.1)
 sharedByMethod.barplot + guides(fill=FALSE) + 
@@ -393,20 +395,24 @@ sharedByMethod.barplot + guides(fill=FALSE) +
 
 ## CircRNAs detected in total
 
-For each method, at least 2 reads were required to consider a circRNAs as detected. Further, circRNAs detected by at least 2 methods are considered more reliable.
+For each method, at least `r min_reads` reads were required to consider a circRNAs as detected. Further, circRNAs detected by at least `r min_methods` methods are considered more reliable.
 
-With at least 2 reads | With at least 2 reads and 2 methods
+With at least `r min_reads` reads | With at least `r min_reads` reads and `r min_methods` methods
 ---------------: | -----------------------------------------:
 `r circrnas.gtf[RPM > 0, .N, by = .(gene_id)][, .N]` | `r circrnas.morethan2methods.medrpm.table[, .N]`
 
 ## CircRNAs detected by sample
 
 ```{r show_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE}
-circ.2reads.at.least <- circrnas.gtf[RPM > 0 , .N, by = .(sample_id, gene_id)][, .("With at least 2 reads" = .N), by = sample_id]
+circ.2reads.at.least <- circrnas.gtf[RPM > 0 , .N, by = .(sample_id, gene_id)][, .(above_min_reads = .N), by = sample_id]
+colnames(circ.2reads.at.least)[colnames(circ.2reads.at.least) == "above_min_reads"] <- paste0("With at least ", min_reads, " reads")
+
+coln <- paste0("With at least ", min_reads, " reads and ", min_methods, " methods")
 circ.2reads.at.least.2methods.at.least <- circrnas.morethan2methods.medrpm[, .N, 
                                                                            by = .(sample_id, circ_id)][
-                                                                             , .("With at least 2 reads and 2 methods" = .N), 
+                                                                             , .(reliable = .N),
                                                                              by = sample_id]
+colnames(circ.2reads.at.least.2methods.at.least)[colnames(circ.2reads.at.least.2methods.at.least) == "reliable"] <- coln
 reliable.circ.tab <- merge(circ.2reads.at.least, circ.2reads.at.least.2methods.at.least)
 kable(reliable.circ.tab)
 ```
@@ -447,7 +453,7 @@ reliable.circ.barplot
 
 ## CircRNAs expressed per gene, considering genes expressing circRNAs
 
-The following analysis regards the subset of `r circrnas.morethan2methods.medrpm.table[, .N]` detected with at least 2 reads and by at least 2 methods (__reliable circRNAs__). 
+The following analysis regards the subset of `r circrnas.morethan2methods.medrpm.table[, .N]` detected with at least `r min_reads` reads and by at least `r min_methods` methods (__reliable circRNAs__). 
 
 ```{r circrnas_per_gene, echo=FALSE, include=TRUE}
 ## Number of circRNAs per gene

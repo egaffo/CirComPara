@@ -8,7 +8,7 @@ Moreover, it executes quality cehck with FASTQC
 Software dependencies:
  * FASTX-Toolkit v0.0.14
  * FASTQC
- * JUNK2 custom R scripts
+ * CIRCOMPARA custom R scripts
 
 When called from a SConscript it imports the following variables:
  * env
@@ -43,7 +43,7 @@ except NameError:
     # standalone
     readset = env['READS']
 
-SRC_DIR = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 env.SetDefault(READSTAT_METHODS = 'fastqc')
 

@@ -1,25 +1,25 @@
 #!/bin/bash
 
-export JUNK2_HOME=$(dirname $(readlink -f $0))
+export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))
 
 ## install Scons
-mkdir $JUNK2_HOME/tools
-cd $JUNK2_HOME/tools
+mkdir $CIRCOMPARA_HOME/tools
+cd $CIRCOMPARA_HOME/tools
 wget -N -c http://prdownloads.sourceforge.net/scons/scons-local-2.5.0.tar.gz
 mkdir -p scons
 tar -xf scons-local-2.5.0.tar.gz -C scons
-ln -s $JUNK2_HOME/tools/scons/scons.py $JUNK2_HOME/bin/scons
+ln -s $CIRCOMPARA_HOME/tools/scons/scons.py $CIRCOMPARA_HOME/bin/scons
 cd -
 
-cd $JUNK2_HOME/bin
+cd $CIRCOMPARA_HOME/bin
 ln -s ../src/*.py .
 ln -s ../src/*.R .
 cd -
 
-export PATH=$JUNK2_HOME/bin/:$PATH
+export PATH=$CIRCOMPARA_HOME/bin/:$PATH
 
 ## export environment variable for local R repository
-export R_LIBS="$JUNK2_HOME/tools/R_libs"
+export R_LIBS="$CIRCOMPARA_HOME/tools/R_libs"
 
 ## install other tools
-scons -i -f $JUNK2_HOME/src/junk2_install_tools_circpipe $1 
+scons -i -f $CIRCOMPARA_HOME/src/junk2_install_tools_circpipe $1 

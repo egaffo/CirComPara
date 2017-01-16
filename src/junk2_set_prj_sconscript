@@ -20,7 +20,7 @@ if not sconsscript:
 
 installdir = os.path.dirname(os.path.realpath(sconsscript[0]))
 
-## LIST JUNK2 SCRIPTS
+## LIST CIRCOMPARA SCRIPTS
 SRC_SCRIPTS = [os.path.join(installdir, f) for f in os.listdir(installdir) 
                        if os.path.isfile(os.path.join(installdir, f)) and not 
                        os.path.basename(f).startswith('.')]

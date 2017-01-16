@@ -6,7 +6,7 @@ import os
 Import('*')
 
 try:
-    env = env_circrna_analyze
+    env = env_circrna_analyze.Clone()
 except NameError, ne:
     vars = Variables('vars.py')
     vars.Add('CIRCRNAS', 'A GTF file with circRNA predictions', '')
@@ -18,6 +18,10 @@ except NameError, ne:
     vars.Add('GENEMETA', 'A meta file of gene expression results: '\
                         'genes.fpkm_tracking when multisample; '\
                         'leave empty when single sample', '')
+    vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
+                            ' define the circRNA as reliable', 2)
+    vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
+
 
     env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                       variables=vars)
@@ -27,7 +31,7 @@ except NameError, ne:
         print "Run sample: unknown variables", unknown.keys()
         Exit(1)
 
-env['JUNK2_HOME'] = env['ENV']['JUNK2_HOME']
+env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 
 if not env['GENEMETA'] == "":
     env['GENEMETA'] = File(env['GENEMETA']).abspath
@@ -37,10 +41,12 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
                         '''gene_meta_file <- "$GENEMETA"; '''\
                         '''gene_fpkm_file <- "${SOURCES[2].abspath}"; '''\
-                        '''rmarkdown::render(input = "$JUNK2_HOME/src/circRNAs_analysis.Rmd",'''\
+                        '''min_methods <- ${MIN_METHODS}; '''\
+                        '''min_reads <- ${MIN_READS}; '''\
+                        '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", '''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
-#                        '''knitr::knit2html("$JUNK2_HOME/src/circRNAs_analysis.Rmd", '''\
+#                        '''knitr::knit2html("$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd", '''\
 #                        '''output = "$TARGET", force_v1 = F)' '''
 
 circrnas_analysis_targets = "circRNAs_analysis.html"

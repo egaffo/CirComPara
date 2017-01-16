@@ -49,7 +49,7 @@ PREPROCESSOR = env['PREPROCESSOR']
 MAPPER       = env['MAPPER']
 ANNOTATION   = env['ANNOTATION']
 
-SCONSCRIPT_HOME = os.path.join(env['ENV']['JUNK2_HOME'], 'src')
+SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 samples_dir = 'samples'
 
