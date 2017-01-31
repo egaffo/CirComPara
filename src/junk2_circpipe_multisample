@@ -132,6 +132,8 @@ DESEQ = False
 if env['DESEQ'] == 'True':
     DESEQ = True
 
+env.SetDefault(ENABLE_FCIRCRNA = 'FALSE')
+
 SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 samples_dir = 'samples'
@@ -159,6 +161,9 @@ annotation_dir = 'junk2_dbs'
 
 ## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
 if translocations:
+    
+    env['ENABLE_FCIRCRNA'] = 'TRUE'
+
     ## RESET GENOME INDEXES TO BUILD TRANSLOCATED GENOME ONES
     GENOME_INDEX = ''
     SEGEMEHL_INDEX = ''
