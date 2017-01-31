@@ -21,6 +21,7 @@ except NameError, ne:
     vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
                             ' define the circRNA as reliable', 2)
     vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
+    vars.Add('ENABLE_FCIRCRNA', 'Enable analysis of fusion-circRNAs. {TRUE,FALSE}', 'FALSE')
 
 
     env = Environment(ENV=os.environ, SHELL = '/bin/bash',
@@ -32,6 +33,7 @@ except NameError, ne:
         Exit(1)
 
 env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
+env.SetDefault(ENABLE_FCIRCRNA = 'FALSE')
 
 if not env['GENEMETA'] == "":
     env['GENEMETA'] = File(env['GENEMETA']).abspath
@@ -43,6 +45,7 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''gene_fpkm_file <- "${SOURCES[2].abspath}"; '''\
                         '''min_methods <- ${MIN_METHODS}; '''\
                         '''min_reads <- ${MIN_READS}; '''\
+                        '''enable_fcircrna_report = $ENABLE_FCIRCRNA; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", '''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''

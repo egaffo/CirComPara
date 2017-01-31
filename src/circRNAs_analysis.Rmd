@@ -25,6 +25,7 @@ CirComPara analysis results are presented in this page. Different sections displ
 # gene_fpkm_file
 # min_methods ## minimum number of methods detecting a circRNA to define it "reliable"
 # min_reads
+# enable_fcircrna_report
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 6, 
@@ -744,6 +745,85 @@ cor.abs.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr[
 
 multiplot(cor.boxplot, cor.abs.boxplot, cols = 2)
 #make HTML version of corralation table
+```
+
+# Fusion circRNAs
+
+```{r f-circRNA_functions, echo=FALSE, include=FALSE}
+
+# Check whether the backsplice spans two genes in the fusion-gene pseudo-chromosome
+
+is.fusionCircrna <- function(chr, start, end, fusion.chr.prefix = "zz"){
+    label <- "circRNA"
+    if(grepl(paste0("^", fusion.chr.prefix), chr)){
+        label <- "circRNA_fchr"
+        chr_fields <- strsplit(chr, "_", fixed = T)[[1]]
+        if(chr_fields[1] == "zz"){
+            g1_len <- as.integer(chr_fields[4]) - as.integer(chr_fields[3])
+            #g2_len <- as.integer(chr_fields[8]) - as.integer(chr_fields[7])
+            if(start <= g1_len && end > g1_len){
+                label <- "f_circRNA"
+            }
+        }
+    }
+    label
+}
+```
+
+```{r, echo=FALSE}
+fcircrnas.file <- file.path(results.dir, "fusion_circrnas.csv")
+fchrom.normal.circrnas.file <- file.path(results.dir, "chimeric_chr_canonical_circrnas.csv")
+
+if(enable_fcircrna_report){
+    ## set lablel to fusion-circRNAs
+    f.circrna.rpms.genes <- circrna.rpms.genes[, .(f_circRNA = is.fusionCircrna(as.character(V1), 
+                                                                                V4, V5)), 
+                                               by = .(circ_id, V1, V4, V5)][f_circRNA != "circRNA", .(circ_id, f_circRNA)]
+    if(nrow(f.circrna.rpms.genes) > 0){
+        setkey(circrna.rpms.genes, circ_id)
+        setkey(f.circrna.rpms.genes, circ_id)
+        fchrom.circrnas <- circrna.rpms.genes[f.circrna.rpms.genes]
+        #fchrom.circrnas[, lapply(.SD, function(x)paste0(sort(unique(x)), collapse = "|")), by = .(circ_id)]
+        #fchrom.circrnas[, lapply(.SD, function(x)paste0(x, collapse = "|")), by = .(circ_id)]
+        
+        fusion.circrnas <- fchrom.circrnas[f_circRNA == "f_circRNA"]
+        write.csv(x = fusion.circrnas, file = fcircrnas.file)
+        
+        fchrom.normal.circrnas <- fchrom.circrnas[f_circRNA == "circRNA_fchr"]
+        write.csv(x = fchrom.normal.circrnas, file = fchrom.normal.circrnas.file)
+        
+    }else{
+        fchrom.circrnas.counts <- data.table( f_circRNA="", fchr="",  sample_id="", N = 0)
+    }
+    
+}
+
+```
+
+Detected `r fusion.circrnas[, .N, by = .(circ_id)][, .N]` fusion-circRNAs in `r fusion.circrnas[, .N, by = .(sample_id)][, .N]` samples.  
+Fusion-circRNAs have been saved in `r fcircrnas.file` file.  
+
+```{r fcirc_table, echo=FALSE}
+if(enable_fcircrna_report){
+    fusion.circrnas.counts <- fusion.circrnas[, .N, by = .(sample_id, fchr = V1)][order(sample_id, -N)]
+    knitr::kable(fusion.circrnas.counts, align = "c", caption = "Fusion circular RNAs")
+}else{
+    "Fusion circRNA search not enabled"
+}
+```
+
+## Canonical circRNAs in chimeric chromosomes
+
+CircRNAs detected in chimeric chromosomes = `r fchrom.normal.circrnas[, .N]`, in `r fchrom.normal.circrnas[, .N, by = .(V1)][, .N]` diferent chimeric chromosomes, from `r paste0(fchrom.normal.circrnas[, .N, by = .(sample_id)][, sample_id], collapse = ",")` samples.  
+Fusion-circRNAs have been saved in `r fchrom.normal.circrnas.file` file.
+
+```{r fchrom_circ_table, echo=FALSE}
+if(enable_fcircrna_report){
+    fchrom.circrnas.counts <- fchrom.normal.circrnas[, .N, by = .(fchr = V1, sample_id)][order(sample_id, -N)]
+    knitr::kable(fchrom.circrnas.counts, align = "c", caption = "Canonical circular RNAs in chimeric chromosomes")
+}else{
+    "Fusion circRNA search not enabled"
+}
 ```
 
 
