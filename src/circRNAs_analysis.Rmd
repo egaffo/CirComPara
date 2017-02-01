@@ -1,5 +1,5 @@
 ---
-title: "Circpipe: detection and analysis of circular RNAs"
+title: "CirComPara: detection and analysis of circular RNAs"
 date: "`r Sys.Date()`"  
 output: 
   html_document: 
@@ -13,8 +13,8 @@ output:
     theme: "readable"
 ---
 
-# Circpipe results summary
-Circpipe analysis results are presented in this page. Different sections display aggregated data in tables and figures. Raw and integrated results were saved in comma separated (CSV) files. 
+# CirComPara results summary
+CirComPara analysis results are presented in this page. Different sections display aggregated data in tables and figures. Raw and integrated results were saved in comma separated (CSV) files. 
 
 ```{r global_options, include=FALSE}
 ## variables to be defined in parent frame
