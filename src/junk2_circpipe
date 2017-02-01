@@ -262,16 +262,18 @@ if len(READS) > 1:
                          '''&& gzip ${str(TARGETS[2].abspath).replace('.gz', '')} '''
 #                         ''' -1 >( gzip -c > ${TARGETS[1]} )'''\
 #                         ''' -2 >( gzip -c > ${TARGETS[2]} ) ${SOURCE}'''
+    unmapped_reads_cmd = unmapped_reads_cmd +\
+                        ''' && gzip ${str(TARGETS[0].abspath).replace('.gz', '')}'''
+    
+    unmapped_reads = env.Command([os.path.join(unmapped_dir, f) for f in unmapped_reads_target], 
+                                 mapping_file.abspath, 
+                                 unmapped_reads_cmd)
+    
 else:
-    unmapped_reads_target.append('unmapped.fastq.gz')
-    unmapped_reads_cmd = unmapped_reads_cmd + ''' ${SOURCE} | gzip -c > ${TARGETS[1]}'''
+    #unmapped_reads_target.append('unmapped.fastq.gz')
+    #unmapped_reads_cmd = unmapped_reads_cmd + ''' ${SOURCE} | gzip -c > ${TARGETS[1]}'''
+    unmapped_reads = mappings[2]
 
-unmapped_reads_cmd = unmapped_reads_cmd +\
-                    ''' && gzip ${str(TARGETS[0].abspath).replace('.gz', '')}'''
-
-unmapped_reads = env.Command([os.path.join(unmapped_dir, f) for f in unmapped_reads_target], 
-                             mapping_file.abspath, 
-                             unmapped_reads_cmd)
 results.append(unmapped_reads)
                     
 # run circRNA detection pipeline 
@@ -282,7 +284,7 @@ sample_annotation   = ANNOTATION
 if len(READS) > 1:
     sample_raw_reads    = [f.abspath for f in unmapped_reads[1:3]]
 else:
-    sample_raw_reads    = [f.abspath for f in unmapped_reads[1]]
+    sample_raw_reads    = [unmapped_reads.abspath]
 
 sample_segemehl_index     = SEGEMEHL_INDEX
 ciri_bwa_index            = BWA_INDEX
