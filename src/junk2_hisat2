@@ -66,18 +66,18 @@ chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, hisat2_out_dir)
 hisat2_cmd = '''hisat2 -x ''' + HISAT2_INDEX + ' ' + HISAT2_PARAMS +\
              ''' $(-p '''  + CPUS + '''$) '''
 
+hisat2_targets_postfixes = [SAMPLE + '_hisat2.bam',
+                            SAMPLE + '_hisat2.log']
 if len(READS)>1:
     hisat2_cmd = hisat2_cmd + ''' -1 ${SOURCES[0].abspath} -2 ${SOURCES[1].abspath} '''
 else:
     hisat2_cmd = hisat2_cmd + ''' -U $SOURCE.abspath --un-gz ${TARGETS[2].abspath} '''
+    hisat2_targets_postfixes.append(SAMPLE + '_unmapped.fastq.gz')
 
 chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
 hisat2_targets = [os.path.join(Dir('.').abspath, 
-                               hisat2_out_dir, f) for f in [SAMPLE + '_hisat2.bam', 
-                                                            SAMPLE + '_hisat2.log',
-                                                            SAMPLE + '_unmapped.fastq.gz']
-                 ]
+                               hisat2_out_dir, f) for f in hisat2_targets_postfixes]
 
 hisat2_cmd = hisat2_cmd + ''' 2> ${TARGETS[1].abspath} | samtools view -hu -@ $( ''' +\
              CPUS + ''' $) - | samtools sort -O 'bam' -@ $( ''' + CPUS +\
