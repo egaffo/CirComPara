@@ -4,8 +4,8 @@ def SymLink(target, source, env):
     os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash')
-tools_dir = os.path.join(env['ENV']['JUNK2_HOME'], 'tools')
-junk2_bin_dir = os.path.join(env['ENV']['JUNK2_HOME'], 'bin')
+tools_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'tools')
+junk2_bin_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin')
 
 # BIOPYTHON
 BIOPYTHON_dir = os.path.join(tools_dir, 'biopython')

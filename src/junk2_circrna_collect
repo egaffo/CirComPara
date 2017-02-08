@@ -16,9 +16,9 @@ try:
 except NameError:
     vars = Variables('vars.py')
     vars.Add('CSVS', '''A comma-separated list with the four circRNA result collection csv'''\
-             ''' files. The order must be CIRCexplorer,ciri,find_circ,segecirc ''', 
+             ''' files. The order must be CIRCexplorer,ciri,find_circ,testrealign ''', 
              '''CIRCexplorer_compared.csv,ciri_compared.csv,find_circ_compared.csv,'''\
-             '''segecirc_compared.csv''')
+             '''testrealign_compared.csv''')
     vars.Add('GTF', 'The annotation file in GTF format to be intersected', 'merged.gtf')
     env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                       variables=vars)
@@ -32,13 +32,13 @@ except NameError:
     circrna_analyze_circexplorer = csvs[0]
     circrna_analyze_ciri         = csvs[1]
     circrna_analyze_findcirc     = csvs[2]
-    circrna_analyze_segecirc     = csvs[3]
+    circrna_analyze_testrealign     = csvs[3]
     GTF = env['GTF']
 
 methods = {'CIRCEXPLORER': 'circexplorer',
 	   'CIRI': 'ciri',
 	   'FINDCIRC': 'findcirc',
-	   'TESTREALIGN': 'segecirc'}
+	   'TESTREALIGN': 'testrealign'}
 
 ## collect circRNAs in a single GTF annotation file
 circ_gtf_sources = []
