@@ -15,12 +15,10 @@ output:
 
 ```{r load data, echo=FALSE, include=FALSE}
 ## inherited variables
-##
-read_stats_collect.file <- "/blackhole/enrico/circular/pb/analysis/read_stats_collect/read_stats_collect.txt"
-linear.mapper <- "hisat2"
-circrna.reads.stats.file <- "/blackhole/enrico/circular/pb/analysis/circRNA_collection/circrna_maps_counts.txt"
-
-results.dir <- dirname(read_stats_collect.file)
+# read_stats_collect.file 
+# linear.mapper 
+# circrna.reads.stats.file 
+# results.dir
 
 library(data.table)
 read_stats_collect <- as.data.table(data.frame(line = cbind(scan(file = read_stats_collect.file, 
@@ -50,8 +48,8 @@ read_stats_collect[is.preprocessor == TRUE, `:=`(`Raw reads` = as.integer(sub(pa
                                                                   "\\1", line)))]
 ## linearly unmapped
 read_stats_collect[, is.mapper := grepl(pattern = linear.mapper, x = line)]
-read_stats_collect[is.mapper == TRUE, `:=`(`Linearly unmapped` = ifelse(grepl(pattern = "aligned concordantly 0 times", x = line), 
-                                                          as.integer(sub(pattern = ".* ([0-9]*) .*aligned concordantly 0 times", 
+read_stats_collect[is.mapper == TRUE, `:=`(`Linearly unmapped` = ifelse(grepl(pattern = "aligned[^0]* 0 times", x = line), 
+                                                          as.integer(sub(pattern = ".* ([0-9]*) .*aligned[^0]* 0 times", 
                                                               "\\1", x = line)), NA))]
 
 ## merge table
