@@ -1,0 +1,176 @@
+---
+title: 'CirComPara: read statistics'
+date: "`r Sys.Date()`"  
+output: 
+  html_document: 
+    keep_md: no
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    theme: "readable"
+---
+
+```{r load data, echo=FALSE, include=FALSE}
+## inherited variables
+##
+read_stats_collect.file <- "/blackhole/enrico/circular/pb/analysis/read_stats_collect/read_stats_collect.txt"
+linear.mapper <- "hisat2"
+circrna.reads.stats.file <- "/blackhole/enrico/circular/pb/analysis/circRNA_collection/circrna_maps_counts.txt"
+
+results.dir <- dirname(read_stats_collect.file)
+
+library(data.table)
+read_stats_collect <- as.data.table(data.frame(line = cbind(scan(file = read_stats_collect.file, 
+                                                                 what = "character", 
+                                                                 multi.line = T, sep = "\n"))))
+## samples
+read_stats_collect$Sample <- gsub(pattern = paste(".*samples", "([^", "]*)", ".*", 
+                                                  sep = .Platform$file.sep), 
+                                  replacement = "\\1", 
+                                  x = read_stats_collect$line)
+
+## preprocessing
+read_stats_collect$is.preprocessor <- grepl(pattern = "preprocess", x = read_stats_collect$line)
+
+read_stats_collect[is.preprocessor == TRUE, preprocessor := gsub(pattern = paste("samples/[^", 
+                                                                                 "]*/processings/preprocess/([^", 
+                                                                                 "]*)",  ".*", 
+                                                                                 sep = .Platform$file.sep), 
+                                                                 replacement = "\\1", 
+                                                                 x = line)]
+
+read_stats_collect[is.preprocessor == TRUE, `:=`(`Raw reads` = as.integer(sub(pattern = ".*Input Read[^:]*: ([0-9]*) .*Surviving.*", 
+                                                             "\\1", line)),
+                                              `Clean reads` = as.integer(sub(pattern = ".*Input Read[^:]*: [0-9]* [^0-9]* ([0-9]*) .*", 
+                                                              "\\1", line)),
+                                              Dropped = as.integer(sub(pattern = ".*Dropped: ([0-9]*) .*", 
+                                                                  "\\1", line)))]
+## linearly unmapped
+read_stats_collect[, is.mapper := grepl(pattern = linear.mapper, x = line)]
+read_stats_collect[is.mapper == TRUE, `:=`(`Linearly unmapped` = ifelse(grepl(pattern = "aligned concordantly 0 times", x = line), 
+                                                          as.integer(sub(pattern = ".* ([0-9]*) .*aligned concordantly 0 times", 
+                                                              "\\1", x = line)), NA))]
+
+## merge table
+read.processing.table <- merge(read_stats_collect[is.preprocessor == TRUE, .(Sample, `Raw reads`, `Clean reads`, Dropped)],
+                               read_stats_collect[is.mapper == TRUE, ][!is.na(`Linearly unmapped`), 
+                                                                       .(Sample, `Linearly unmapped`)])
+read.processing.table[, `Linearly mapped` := `Clean reads`-`Linearly unmapped`]
+```
+
+# Read (pre-)processing
+
+| Label             | Description                                                                                            |
+|-------------------|--------------------------------------------------------------------------------------------------------|
+| Raw reads         | Number of raw reads                                                                                    |
+| Clean reads       | Number of reads that passed the quality filtering of pre-processing                                    |
+| Linearly mapped   | Number of reads linearly aligned (concordantly, if paired-end) 1 or more times to the reference genome |
+| Linearly unmapped | Number of reads NOT linearly aligned to the reference genome: the input reads for backsplice search    |
+| Dropped           | Number of reads that did NOT pass the quality filtering of pre-processing                              |
+
+Read counts on read pre-processing and alignment.  
+
+```{r read processing table, echo=FALSE}
+knitr::kable(read.processing.table[, .(Sample, `Raw reads`, `Clean reads`, Dropped, `Linearly mapped`, `Linearly unmapped`)], 
+             caption = "Per sample read count in each processing step")
+```
+
+## Per sample comparison of processing step read counts
+
+```{r Per sample comparison of processing step read counts, echo=FALSE}
+library(ggplot2)
+read.processing.table.m <- melt(read.processing.table, id.vars = "Sample", 
+                                variable.name = "Processing step reads", 
+                                value.name = "Read count")
+read.processing.table.m$`Processing step reads` <- factor(x = read.processing.table.m$`Processing step reads`, 
+                                                          levels = c("Raw reads", "Clean reads", "Linearly mapped", 
+                                                                     "Linearly unmapped", "Dropped"), 
+                                                          ordered = T)
+
+# ggplot(read.processing.table.m, aes(x=Sample, fill=`Processing step reads`, y=`Read count`)) +
+#     geom_bar(stat = "identity", position = "dodge")
+ggplot(read.processing.table.m, aes(x=`Processing step reads`, y=`Read count`)) + 
+    geom_bar(stat = "identity", aes(fill = `Processing step reads`)) + 
+    facet_wrap(facets = ~ Sample, scales = "free_y") + 
+    theme(legend.position="none", axis.text.x = element_text(angle=45, hjust=1))
+```
+
+## Comparison of processing step read counts
+```{r Comparison of processing step read counts, echo=FALSE}
+ggplot(read.processing.table.m, aes(x=`Processing step reads`, y=`Read count`)) + 
+    geom_line(aes(group = Sample, color = Sample)) + 
+    geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) 
+```
+
+## Comparison of samples, for each processing step
+```{r Comparison of samples, for each processing step, echo=FALSE}
+
+ggplot(read.processing.table.m, aes(x=Sample, y=`Read count`)) +
+    geom_bar(stat = "identity") + 
+    facet_wrap(facets = ~ `Processing step reads`, scales = "free_y") +
+    theme(axis.text.x = element_text(angle=45, hjust=1))
+
+```
+
+# Circular RNA methods' alignments
+
+```{r Circular RNA methods alignments, echo=FALSE, include=FALSE}
+circrna.mappings <- as.data.table(data.frame(scan(file = circrna.reads.stats.file, 
+                              what = list("", ""), sep = "\n", blank.lines.skip = T), 
+                              stringsAsFactors = F))
+colnames(circrna.mappings) <- c("file", "Mapped reads")
+
+circrna.mappings[, `:=`(Sample = sub(pattern = paste(".*samples", "([^", "]*)", ".*", 
+                                                     sep = .Platform$file.sep), 
+                                     replacement = "\\1", x = file),
+                        `CircRNA method` = sub("_out", "", sub(pattern = paste(".*circRNAs", "([^", "]*)", ".*", 
+                                                     sep = .Platform$file.sep), 
+                                     replacement = "\\1", x = file)),
+                        `Mapped reads` = as.integer(`Mapped reads`))]
+
+circrna.mappings.table.m <- rbind(circrna.mappings[, .(Sample, `CircRNA method`, `Mapped reads`)], 
+                                  read.processing.table.m[`Processing step reads` == "Linearly unmapped", 
+                                                          .(Sample, `CircRNA method` = `Processing step reads`, 
+                                                            `Mapped reads` = `Read count`)], use.names = T, fill = T)
+```
+
+```{r circrna aligned reads table, echo=FALSE}
+circrna.mappings.table <- dcast(data = circrna.mappings.table.m[, .(`Mapped reads`, Sample, `CircRNA method`)], 
+                                formula = Sample ~ `CircRNA method`, value.var = "Mapped reads")
+knitr::kable(x = circrna.mappings.table, caption = "")
+```
+
+## Read aligned by each circRNA method, per sample
+
+```{r plot circrna methods, echo=FALSE}
+ggplot(data = circrna.mappings.table.m, aes(x = `CircRNA method`, y = `Mapped reads`)) + 
+    geom_bar(stat = "identity") + facet_wrap(facets = ~ Sample)  +
+    theme(axis.text.x = element_text(angle=45, hjust=1))
+```
+
+## CircRNA method aligned read comparison
+```{r plot circrna methods compared, echo=FALSE}
+ggplot(data = circrna.mappings.table.m,#[`CircRNA method` != "Linearly unmapped"], 
+       aes(x = `CircRNA method`, y = `Mapped reads`)) + 
+    geom_line(aes(group = Sample, color = Sample)) + 
+    geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) +
+    theme(axis.text.x = element_text(angle=45, hjust=1))
+```
+
+```{r save read counts, echo=FALSE}
+write.csv(x = merge(read.processing.table, 
+      dcast(circrna.mappings[, .(Sample, `CircRNA method`, `Mapped reads`)], 
+            formula = Sample ~ `CircRNA method`, value.var = "Mapped reads")),
+      file = file.path(results.dir, "processing_and_mapped_read_counts.csv"), row.names = F)
+```
+
+# Session info
+
+This page was generated with the following packages version
+
+```{r session, echo=FALSE}
+sessionInfo()
+```
