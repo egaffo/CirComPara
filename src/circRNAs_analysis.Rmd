@@ -417,7 +417,7 @@ reliable.circ.tab <- merge(circ.2reads.at.least, circ.2reads.at.least.2methods.a
 kable(reliable.circ.tab)
 ```
 
-```{r plot_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE}
+```{r plot_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE, fig.width=12}
 reliable.circ.tab.long <- melt(data = reliable.circ.tab, id.vars = "sample_id", 
                                variable.name = "Filter", value.name = "count")
 
@@ -625,7 +625,7 @@ gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + guides(fill=FALSE) 
 ```
 
 
-```{r plot_circ_gene_expr}
+```{r plot_circ_gene_expr, fig.width=12, fig.height=4}
 multiplot(circrna.xpr.per.sample.boxplot, gene.xpr.per.sample.boxplot, cols = 2)
 ```
 
@@ -668,18 +668,41 @@ multiplot(circrna.cumsum.per.sample, gene.cumsum.per.sample, cols=2)
 ```{r correlation, echo=FALSE, include=FALSE}
 #median circRNA expression (circrna detected by at least 2 methods)
 circ_xpr_by_sample <- circrna.rpms.genes[circrnas.morethan2methods][
-  medRPM>0, .(medRPM), by = .(circ_id, sample_id)]
+  medRPM > 0, .(medRPM), by = .(circ_id, sample_id)]
+# expand the table to include all samples; assume 0 expression for circRNA not detected in samples
+circ_xpr_all_sample <- merge(circ_xpr_by_sample, 
+                             CJ(circ_id = unique(circ_xpr_by_sample[, circ_id]), 
+                                sample_id = unique(circ_xpr_by_sample[, sample_id])), 
+                             all = T, by = c("circ_id", "sample_id"))
+circ_xpr_all_sample$medRPM[is.na(circ_xpr_all_sample$medRPM)] <- 0.0
 
-# avg gene expression
-gene_xpr_by_sample <- expressed_genes[, .(gene_id = tracking_id, sample_id, FPKM)]
-
-# select only gene and circRNAs that are overlapping
+# select only circRNAs that are overlapping a gene
 setkey(circ_to_gene, label)
 circrna_genes <- unique(circ_to_gene[label == "exonic" | label == "intronic", 
                                      .(circ_id = paste0(chr, ":", circ_start, "-", circ_end, ":", strand), 
                                        gene_id, gene_name)])
-genic_circrnas <- merge(circrna_genes, circ_xpr_by_sample, all = F, by = "circ_id")
-genic_circrnas <-merge(genic_circrnas, gene_xpr_by_sample, all.x = T, all.y = F, by = c("gene_id", "sample_id"))
+# attach circRNA expression
+genic_circrnas <- merge(circrna_genes, circ_xpr_all_sample, 
+                        all.x = T, all.y = F, by = "circ_id")[!is.na(medRPM)]
+
+# avg gene expression
+gene_xpr_by_sample <- expressed_genes[, .(gene_id = tracking_id, sample_id, FPKM)]
+# expand the table to include all samples; assume 0 expression for gene not detected in samples
+gene_xpr_all_sample <- merge(gene_xpr_by_sample, 
+                             CJ(gene_id = unique(gene_xpr_by_sample[, gene_id]), 
+                                sample_id = unique(gene_xpr_by_sample[, sample_id])), 
+                             all = T, by = c("gene_id", "sample_id"))
+gene_xpr_all_sample$FPKM[is.na(gene_xpr_all_sample$FPKM)] <- 0.0
+
+# get expression of genes for which a circRNA has been detected in at least one sample
+# setkey(gene_xpr_all_sample, gene_id)
+# circrna_gene_xpr <- gene_xpr_all_sample[genic_circrnas[, .(n_samples = .N), by = .(gene_id)][, .(gene_id)]]
+# 
+# genic_circrnas <- merge(genic_circrnas, circrna_gene_xpr, all.x = T, all.y = F, by = c("gene_id", "sample_id"))
+
+setkey(gene_xpr_all_sample, gene_id, sample_id)
+setkey(genic_circrnas, gene_id, sample_id)
+genic_circrnas <- gene_xpr_all_sample[genic_circrnas][is.na(FPKM), FPKM := 0]
 
 # compute coorelations (matrix?)
 genic_circrnas_corr <- genic_circrnas[, .(corr = cor(medRPM, FPKM, method = "spearman")), 
@@ -689,7 +712,7 @@ circrna_gene_xpr_bysample_corr <- genic_circrnas
 if(nrow(genic_circrnas) > 0){
   # put correlations in tabular format
   circrna_gene_xpr_bysample <- dcast(genic_circrnas, 
-                                     formula = circ_id + gene_id + gene_name~ sample_id, 
+                                     formula = circ_id + gene_id + gene_name ~ sample_id, 
                                      value.var = c("FPKM", "medRPM"), 
                                      fill = 0)
   circrna_gene_xpr_bysample_corr <- merge(circrna_gene_xpr_bysample, genic_circrnas_corr, by = c("circ_id", "gene_id"))
@@ -710,9 +733,10 @@ In total, `r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_b
 
 Correlation values were saved in file `r file.path(results.dir, "circRNA_gene_expression_correlation.csv")`
 
-```{r corr_density_plot}
+```{r corr_density_plot, fig.height=4, fig.width=8}
 # plot correlations
-corr.density.plot <- ggplot(data = circrna_gene_xpr_bysample_corr, mapping = aes(x = corr)) + geom_density()
+#corr.density.plot <- ggplot(data = circrna_gene_xpr_bysample_corr, mapping = aes(x = corr)) + geom_density(aes(y=..scaled..))
+corr.density.plot <- ggplot(data = genic_circrnas_corr, mapping = aes(x = corr)) + geom_density(aes(y=..scaled..))
 corr.density.plot <- corr.density.plot + theme_bw() + ggtitle("CircRNA-gene expression correlation distribution") + 
   xlab("Spearman correlation") + ylab("Density") + 
   theme(text = element_text(size=default.font.size)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) + 
