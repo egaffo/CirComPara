@@ -13,14 +13,32 @@ output:
     theme: "readable"
 ---
 
-```{r load data, echo=FALSE, include=FALSE}
+```{r global_options, include=FALSE}
 ## inherited variables
 # read_stats_collect.file 
 # linear.mapper 
 # circrna.reads.stats.file 
 # results.dir
+# meta_file
 
 library(data.table)
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+
+dir.create(path = results.dir, showWarnings = F, recursive = T)
+knitr::opts_chunk$set(fig.width = 12, 
+                      fig.height = 6, 
+                      dev = c('svglite', 'png'), 
+                      fig.pos = "center",
+                      fig.path = file.path(results.dir, paste0('Figs_rs', .Platform$file.sep)),
+                      echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE)
+```
+
+```{r load data, echo=FALSE, include=FALSE}
+
 read_stats_collect <- as.data.table(data.frame(line = cbind(scan(file = read_stats_collect.file, 
                                                                  what = "character", 
                                                                  multi.line = T, sep = "\n"))))
@@ -50,7 +68,7 @@ read_stats_collect[is.preprocessor == TRUE, `:=`(`Raw reads` = as.integer(sub(pa
 read_stats_collect[, is.mapper := grepl(pattern = linear.mapper, x = line)]
 read_stats_collect[is.mapper == TRUE, `:=`(`Linearly unmapped` = ifelse(grepl(pattern = "aligned[^0]* 0 times", x = line), 
                                                           as.integer(sub(pattern = ".* ([0-9]*) .*aligned[^0]* 0 times", 
-                                                              "\\1", x = line)), NA))]
+                                                              "\\1", x = line)), as.integer(NA)))]
 
 ## merge table
 read.processing.table <- merge(read_stats_collect[is.preprocessor == TRUE, .(Sample, `Raw reads`, `Clean reads`, Dropped)],
@@ -79,7 +97,18 @@ knitr::kable(read.processing.table[, .(Sample, `Raw reads`, `Clean reads`, Dropp
 ## Per sample comparison of processing step read counts
 
 ```{r Per sample comparison of processing step read counts, echo=FALSE}
-library(ggplot2)
+if(meta_file != ""){
+    meta <- fread(meta_file)
+    
+    intgroup.dt <- meta[, .(sample, condition)][order(sample)]
+    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
+    intgroup.dt <- merge(intgroup.dt, 
+                         intgroup.dt[, .(samples_per_condition = .N), 
+                                     by = condition][, hue := brewer.pal(8, 
+                                                                         "Set2")[1:length(condition)]][], 
+                         by = "condition")[, color := muted(hue, l = color_luminance)][]
+}
+
 read.processing.table.m <- melt(read.processing.table, id.vars = "Sample", 
                                 variable.name = "Processing step reads", 
                                 value.name = "Read count")
@@ -98,18 +127,31 @@ ggplot(read.processing.table.m, aes(x=`Processing step reads`, y=`Read count`)) 
 
 ## Comparison of processing step read counts
 ```{r Comparison of processing step read counts, echo=FALSE}
-ggplot(read.processing.table.m, aes(x=`Processing step reads`, y=`Read count`)) + 
+
+read.processing.boxplot <- ggplot(read.processing.table.m, aes(x=`Processing step reads`, y=`Read count`)) + 
     geom_line(aes(group = Sample, color = Sample)) + 
-    geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) 
+    geom_boxplot(alpha = .8) + geom_point(aes(color = Sample))
+if(meta_file != ""){
+    read.processing.boxplot + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample]))
+}else{
+    read.processing.boxplot
+}
 ```
 
 ## Comparison of samples, for each processing step
 ```{r Comparison of samples, for each processing step, echo=FALSE}
 
-ggplot(read.processing.table.m, aes(x=Sample, y=`Read count`)) +
+read.processing.bars <- ggplot(read.processing.table.m, aes(x=Sample, y=`Read count`, fill = Sample)) +
     geom_bar(stat = "identity") + 
     facet_wrap(facets = ~ `Processing step reads`, scales = "free_y") +
     theme(axis.text.x = element_text(angle=45, hjust=1))
+if(meta_file != ""){
+    read.processing.bars + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample]))
+}else{
+    read.processing.bars
+}
 
 ```
 
@@ -151,11 +193,17 @@ ggplot(data = circrna.mappings.table.m, aes(x = `CircRNA method`, y = `Mapped re
 
 ## CircRNA method aligned read comparison
 ```{r plot circrna methods compared, echo=FALSE}
-ggplot(data = circrna.mappings.table.m,#[`CircRNA method` != "Linearly unmapped"], 
+circrna.mappings.boxplot <- ggplot(data = circrna.mappings.table.m,#[`CircRNA method` != "Linearly unmapped"], 
        aes(x = `CircRNA method`, y = `Mapped reads`)) + 
     geom_line(aes(group = Sample, color = Sample)) + 
     geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) +
     theme(axis.text.x = element_text(angle=45, hjust=1))
+if(meta_file != ""){
+    circrna.mappings.boxplot + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample]))
+}else{
+    circrna.mappings.boxplot
+}
 ```
 
 ```{r save read counts, echo=FALSE}

@@ -29,7 +29,7 @@ CirComPara analysis results are presented in this page. Different sections displ
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 6, 
                       fig.height = 4, 
-                      dev = c('svg', 'png'), 
+                      dev = c('svglite', 'png'), 
                       fig.pos = "center",
                       fig.path = file.path(results.dir, paste0('Figs', .Platform$file.sep)),
                       echo = FALSE, 
@@ -38,8 +38,10 @@ knitr::opts_chunk$set(fig.width = 6,
 library(knitr)
 library(data.table)
 library(ggplot2)
-
+library(RColorBrewer)
+library(scales)
 ```
+
 
 ```{r utility_functions, echo=FALSE, include=FALSE}
 # Multiple plot function
@@ -357,7 +359,7 @@ circByMethod.barplot <- ggplot(data = circ.per.method, mapping = aes(x = V2, fil
 ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
 circByMethod.barplot.limits <- c(0, max(circ.per.method[, .N, by = V2][, N])*1.1)
 circByMethod.barplot + guides(fill=FALSE) + 
-  theme(text = element_text(size=default.font.size)) + 
+  theme(text = element_text(size=default.font.size), plot.title = element_text(hjust = 0.5)) + 
   scale_y_continuous(expand = c(0, 0), limits = circByMethod.barplot.limits) + 
   scale_fill_manual(values = rainbow(circ.per.method[, .N, by = V2][, .N]))
 
@@ -387,7 +389,7 @@ sharedByMethod.barplot <- ggplot(data = circ.per.method[, .(shared_by = .N), by 
 ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
 sharedByMethod.barplot.limits <- c(0, max(circ.per.method[, .(shared_by = .N), by = gene_id][, .N, by=shared_by][, N])*1.1)
 sharedByMethod.barplot + guides(fill=FALSE) + 
-  theme(text = element_text(size=default.font.size)) + 
+  theme(text = element_text(size=default.font.size), plot.title = element_text(hjust = 0.5)) + 
   scale_y_continuous(expand = c(0, 0), limits = sharedByMethod.barplot.limits) + 
   scale_fill_brewer(direction = 1)
 
@@ -404,6 +406,7 @@ With at least `r min_reads` reads | With at least `r min_reads` reads and `r min
 ## CircRNAs detected by sample
 
 ```{r show_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE}
+
 circ.2reads.at.least <- circrnas.gtf[RPM > 0 , .N, by = .(sample_id, gene_id)][, .(above_min_reads = .N), by = sample_id]
 colnames(circ.2reads.at.least)[colnames(circ.2reads.at.least) == "above_min_reads"] <- paste0("With at least ", min_reads, " reads")
 
@@ -418,6 +421,20 @@ kable(reliable.circ.tab)
 ```
 
 ```{r plot_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE, fig.width=12}
+## set custom color shades
+if(gene_meta_file != ""){
+    gene_meta <- fread(gene_meta_file)
+    gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
+    
+    intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
+    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
+    intgroup.dt <- merge(intgroup.dt, 
+                         intgroup.dt[, .(samples_per_condition = .N), 
+                                     by = condition][, hue := brewer.pal(8, 
+                                                                         "Set2")[1:length(condition)]][], 
+                         by = "condition")[, color := muted(hue, l = color_luminance)][]
+}
+
 reliable.circ.tab.long <- melt(data = reliable.circ.tab, id.vars = "sample_id", 
                                variable.name = "Filter", value.name = "count")
 
@@ -427,13 +444,18 @@ reliable.circ.barplot <- ggplot(data = reliable.circ.tab.long,
   geom_bar(stat = "identity", width = .7, colour="black", position = "dodge") + 
   geom_text(stat='identity', aes(label= count), vjust=-0.3, size=default.font.size*(5/14)) +
   facet_wrap(facets = ~ Filter) + ggtitle("CircRNAs per sample") + xlab("") + ylab("Number of circRNAs") + 
-  theme_bw()
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5))
 ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
 reliable.circ.barplot.limits <- c(0, max(reliable.circ.tab.long$count)*1.1)
 reliable.circ.barplot <- reliable.circ.barplot + guides(fill = FALSE) +
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
   scale_y_continuous(expand = c(0, 0), limits = reliable.circ.barplot.limits)
-reliable.circ.barplot
+
+if(gene_meta_file != ""){
+    reliable.circ.barplot + scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    reliable.circ.barplot
+}
 
 # reliable.circ.barplot <- ggplot(data = reliable.circ.tab, 
 #                                 mapping = aes(x = sample_id, y = `With at least 2 reads and 2 methods`,
@@ -500,7 +522,7 @@ circRNAs.per.gene.plot.limits <- c(0, max(circRNAs.per.gene[, .N, by=circRNAs_pe
 circRNAs.per.gene.plot <- circRNAs.per.gene.plot + 
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=90, hjust=1)) + 
   scale_y_continuous(expand = c(0, 0), limits = circRNAs.per.gene.plot.limits)
-circRNAs.per.gene.plot
+circRNAs.per.gene.plot + theme(plot.title = element_text(hjust = 0.5))
 
 # # compute lower and upper whiskers
 # ylim_circRNAs.per.gene = boxplot.stats(circRNAs.per.gene$circRNAs_per_gene)$stats[c(1, 5)]
@@ -538,13 +560,13 @@ Gene expression is reported in file `r gene_fpkm_file`.
 # get gene expressions
 if(gene_meta_file != ""){
   gene_meta <- fread(gene_meta_file)
+  gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
   
   gene_fpkm <- as.data.table(read.table(file = gene_fpkm_file, header = T, sep = "\t", dec = ".", 
                                         colClasses = c("character", "factor", "numeric", 
                                                        "numeric", "numeric", "numeric", 
                                                        "numeric", "character", "character")))
   expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
-  gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
   setkey(gene_meta, condition, replicate_num)
   setkey(expressed_genes, condition, replicate)
   expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
@@ -570,8 +592,16 @@ expressed_genes.by.sample.plot <- ggplot(data = expressed_genes.by.sample,
 expressed_genes.by.sample.plot.limits <- c(0, max(expressed_genes.by.sample$`Tot. gene expressed`)*1.1)
 expressed_genes.by.sample.plot <- expressed_genes.by.sample.plot + guides(fill = FALSE) +
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
-  scale_y_continuous(expand = c(0, 0), limits = expressed_genes.by.sample.plot.limits)
-expressed_genes.by.sample.plot
+  scale_y_continuous(expand = c(0, 0), limits = expressed_genes.by.sample.plot.limits) + 
+        theme(plot.title = element_text(hjust = 0.5))
+
+if(gene_meta_file != ""){
+    expressed_genes.by.sample.plot + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    expressed_genes.by.sample.plot
+}
+
 ```
 
 ## CircRNA expression distribution by sample
@@ -594,7 +624,8 @@ circrna.xpr.per.sample.boxplot <- ggplot(data = circrnas.morethan2methods.medrpm
   geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("RPM") + 
   ggtitle("CircRNA expression\nper sample") + theme_bw()
 circrna.xpr.per.sample.boxplot <- circrna.xpr.per.sample.boxplot + guides(fill=FALSE) + 
-  theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1))
+  theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
+        theme(plot.title = element_text(hjust = 0.5))
 
 ```
 
@@ -621,11 +652,18 @@ gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes,
   geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
   ggtitle("Gene expression\nper sample") + theme_bw()
 gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + guides(fill=FALSE) + 
-  theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1))
+  theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
+        theme(plot.title = element_text(hjust = 0.5))
 ```
 
 
 ```{r plot_circ_gene_expr, fig.width=12, fig.height=4}
+if(gene_meta_file != ""){
+    circrna.xpr.per.sample.boxplot <- circrna.xpr.per.sample.boxplot + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+    gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}
 multiplot(circrna.xpr.per.sample.boxplot, gene.xpr.per.sample.boxplot, cols = 2)
 ```
 
@@ -637,30 +675,59 @@ cum_by_sample <- circrnas.morethan2methods.medrpm[order(sample_id, -medRPM),
                                                   by = .(sample_id)]
 cum_by_sample[, cond_tot := max(csum), by = .(sample_id)][, perc_csum := csum/cond_tot]
 
+if(gene_meta_file != ""){
+    cum_by_sample <- merge(cum_by_sample, intgroup.dt[, .(sample_id, condition)], by = "sample_id")
+}else{
+    cum_by_sample$condition <- "unset"
+}
+
 cum_gene_by_sample <- expressed_genes[order(sample_id, -FPKM), 
                                       .(csum = cumsum(FPKM), seqid = seq_along(.I), tracking_id), 
                                       by = .(sample_id)]
 cum_gene_by_sample[, cond_tot := max(csum), by = .(sample_id)][, perc_csum := csum/cond_tot]
+
+if(gene_meta_file != ""){
+    cum_gene_by_sample <- merge(cum_gene_by_sample, intgroup.dt[, .(sample_id, condition)], by = "sample_id")
+}else{
+    cum_gene_by_sample$condition <- "unset"
+}
 ```
 
-```{r cumulative_expression_box, fig.width=12, fig.height=4}
+```{r cumulative_expression_box, fig.width=12, fig.height=6}
 ## Cumulative expression plot: circRNAs
-circrna.cumsum.per.sample <- ggplot(data = cum_by_sample, mapping = aes(x = seqid, y = perc_csum, color = sample_id)) +
+circrna.cumsum.per.sample <- ggplot(data = cum_by_sample, mapping = aes(x = seqid, y = perc_csum, 
+                                                                        color = sample_id, linetype = condition)) +
   geom_line() + ggtitle("CircRNAs cumulative expression") + xlab("Number of circRNAs") +
-  ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) + scale_color_discrete("Sample") + theme_bw()
-circrna.cumsum.per.sample <-circrna.cumsum.per.sample +
-  theme(text = element_text(size=default.font.size), legend.position = "bottom")
+  ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) + 
+    theme_bw()
+circrna.cumsum.per.sample <- circrna.cumsum.per.sample +
+  theme(text = element_text(size=default.font.size), legend.position = "bottom") + 
+        theme(plot.title = element_text(hjust = 0.5))
 
 ## Cumulative expression plot: genes
-gene.cumsum.per.sample <- ggplot(data = cum_gene_by_sample, mapping = aes(x = seqid, y = perc_csum, color = sample_id)) +
+gene.cumsum.per.sample <- ggplot(data = cum_gene_by_sample, mapping = aes(x = seqid, y = perc_csum, 
+                                                                          color = sample_id, linetype = condition)) +
   geom_line() + ggtitle("Gene cumulative expression") + xlab("Number of genes") +
   ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) +
-  scale_color_discrete("Sample") + theme_bw()
+  theme_bw()
 gene.cumsum.per.sample <- gene.cumsum.per.sample +
-  theme(text = element_text(size=default.font.size), legend.position = "bottom")
+  theme(text = element_text(size=default.font.size), legend.position = "bottom") + 
+        theme(plot.title = element_text(hjust = 0.5))
 
+if(gene_meta_file != ""){
+    circrna.cumsum.per.sample <- circrna.cumsum.per.sample + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]), "Sample") + 
+        guides(color = guide_legend(ncol = intgroup.dt[, .N, by = condition][, .N]), 
+               linetype = guide_legend(direction = "vertical"))
+    gene.cumsum.per.sample <- gene.cumsum.per.sample + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]), "Sample") + 
+        guides(color = guide_legend(ncol = intgroup.dt[, .N, by = condition][, .N]), 
+               linetype = guide_legend(direction = "vertical"))
+}else{
+    circrna.cumsum.per.sample <- circrna.cumsum.per.sample + scale_color_discrete("Sample")
+    gene.cumsum.per.sample <- gene.cumsum.per.sample + scale_color_discrete("Sample")
+}
 multiplot(circrna.cumsum.per.sample, gene.cumsum.per.sample, cols=2)
-
 ```
 
 ## Correlation of circRNA and gene expression 
@@ -739,7 +806,8 @@ Correlation values were saved in file `r file.path(results.dir, "circRNA_gene_ex
 corr.density.plot <- ggplot(data = genic_circrnas_corr, mapping = aes(x = corr)) + geom_density(aes(y=..scaled..))
 corr.density.plot <- corr.density.plot + theme_bw() + ggtitle("CircRNA-gene expression correlation distribution") + 
   xlab("Spearman correlation") + ylab("Density") + 
-  theme(text = element_text(size=default.font.size)) + scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) + 
+  theme(text = element_text(size=default.font.size), plot.title = element_text(hjust = 0.5)) + 
+    scale_y_continuous(expand = c(0, 0), limits = c(0, 1)) + 
   scale_x_continuous(expand = c(0, 0), limits = c(-1, 1))
 corr.density.plot
 
@@ -757,14 +825,16 @@ kable(data.frame("Spearman correlation" = unclass(summary(circrna_gene_xpr_bysam
 cor.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr) + 
   geom_boxplot(aes(x = "", y = corr), notch = T, width = .5) + 
   theme_bw() + xlab("") + 
-  ylab("Correlation") + ggtitle("Correlation\ndistribution")
+  ylab("Correlation") + ggtitle("Correlation\ndistribution") + 
+    theme(plot.title = element_text(hjust = 0.5))
 
 cor.abs.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr[
   , .(pos_corr = ifelse(corr > 0, "Positive", "Negative"), corr)][!is.na(corr)]) + 
   geom_boxplot(aes(x = "", y = abs(corr), fill = pos_corr), notch = T, varwidth = T)  + 
   scale_fill_manual(values = c("blue", "red")) + facet_wrap(facets = ~ pos_corr) +
   theme_bw() + guides(fill = FALSE) + xlab("") + ylab("Abs(correlation)") + 
-  ggtitle("Absolute negative and positive\ncorrelation distributions")
+  ggtitle("Absolute negative and positive\ncorrelation distributions") + 
+    theme(plot.title = element_text(hjust = 0.5))
 
 multiplot(cor.boxplot, cor.abs.boxplot, cols = 2)
 #make HTML version of corralation table

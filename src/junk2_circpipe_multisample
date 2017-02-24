@@ -582,6 +582,7 @@ circrna_collect = SConscript(os.path.join(circRNA_collect_dir,
 ## ANALYZE AND REPORT CIRCRNAS                  
 circrna_analyze_dir = 'circrna_analyze'
 env_circrna_analyze = env.Clone()
+env_circrna_analyze['META'] = File(META).abspath
 env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
 env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
 env_circrna_analyze['GENEEXP'] = gene_exp
@@ -615,12 +616,14 @@ read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''read_stats_collect.file <- "${SOURCES[0].abspath}"; '''\
                         '''linear.mapper <- "hisat2"; '''\
                         '''circrna.reads.stats.file <- "${SOURCES[1].abspath}"; '''\
+                        '''meta_file <- "${SOURCES[2].abspath}"; '''\
                         '''rmarkdown::render(input = "$SCONSCRIPT_HOME/read_statistics.Rmd",'''\
                         '''output_file = "$TARGET.abspath", '''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
 read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_statistics.html'),
-                                [reads_stats_collect, collect_circrna_maps_counts], 
+                                [reads_stats_collect, collect_circrna_maps_counts,
+                                File(META).abspath], 
                                 read_stats_report_cmd)
 
 qre_dir = 'qre'
