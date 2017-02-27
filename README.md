@@ -24,8 +24,10 @@ CirComPara is a computational pipeline to detect, quantify, and correlate expres
 Execute the following commands to download and install (locally) in your system the scripts and tools required to run CirComPara. 
 If something goes wrong with the installation process try to manually install the software as described below.
 
-    http://github.com/egaffo/CirComPara
-    cd circompara
+Download and extract [the latest release of CirComPara][circompara_pack_link], or clone the GIT repository, enter CirComPara directory and run the automatic installer script:  
+
+    git clone http://github.com/egaffo/CirComPara
+    cd CirComPara
     ./install_circompara
 
 ### Test your installation
@@ -38,6 +40,8 @@ NB: in the `sed` string change the `/full/circompara/dir/path` path with your in
     sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" meta.csv > analysis/meta.csv
     cd analysis
     ../../circompara
+
+If you plan to use single-end reads, test with `meta_se.csv` file instead of `meta.csv`.  
 
 If you receive some error messages try to follow instructions in **Installation troubleshooting** section.
 
@@ -342,13 +346,17 @@ The core engine is the Scons build tool, which manage the various steps of the a
 **TODO**
 -->
 
-# References
-Coming soon...
+# How to cite
+If you used CirComPara for your analysis, please add the following citation to your references:  
+  
+Gaffo, E., Bonizzato, A., Kronnie, G. te & Bortoluzzi, S. CirComPara: A Multi‐Method Comparative Bioinformatics Pipeline to Detect and Study circRNAs from RNA‐seq Data. Non-Coding RNA 3, 8 (2017). [http://www.mdpi.com/2311-553X/3/1/8][circompara_article]
 
 [scons_link]: http://scons.org/
 [circompara_git_link]: http://github.com/egaffo/CirComPara "circompara Git repository"
-[circompara_pack_link]: http://github.com/egaffo/CirComPara/release/circompara.tar.gz "circompara package"
+[circompara_pack_link]: http://github.com/egaffo/CirComPara/releases/latest "circompara package"
 [test_data_link]: http://github.com/egaffo/CirComPara
 [Cufflinks]: https://github.com/cole-trapnell-lab/cufflinks
 [circompara_link]: http://github.com/egaffo/CirComPara
 [cuffdiff_output]:http://cole-trapnell-lab.github.io/cufflinks/cuffdiff/#cuffdiff-output-files
+[circompara_article]: http://www.mdpi.com/2311-553X/3/1/8
+

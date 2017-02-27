@@ -140,6 +140,7 @@ if env['DESEQ'] == 'True':
 env.SetDefault(ENABLE_FCIRCRNA = 'FALSE')
 
 SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+env['SCONSCRIPT_HOME'] = SCONSCRIPT_HOME
 
 samples_dir = 'samples'
 
@@ -586,6 +587,7 @@ circrna_collect = SConscript(os.path.join(circRNA_collect_dir,
 ## ANALYZE AND REPORT CIRCRNAS                  
 circrna_analyze_dir = 'circrna_analyze'
 env_circrna_analyze = env.Clone()
+env_circrna_analyze['META'] = File(META).abspath
 env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
 env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
 env_circrna_analyze['GENEEXP'] = gene_exp
@@ -606,13 +608,28 @@ mapped_reads_linear_stats_files = get_matching_nodes(runs, '.*processings.*hisat
 read_stats_collect_dir = 'read_stats_collect'
 reads_stats_collect_cmd = '''grep Input ''' +\
                           ' '.join(f.path for f in clean_reads_stats_files) +\
-                          ''' > $TARGET && cat ''' +\
+                          ''' > $TARGET && grep "." ''' +\
                           ' '.join(f.path for f in mapped_reads_linear_stats_files) +\
                           ''' >> $TARGET'''
 reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_stats_collect.txt'), 
                               [clean_reads_stats_files, mapped_reads_linear_stats_files],
                               reads_stats_collect_cmd)
 #Depends(reads_stats_collect, runs)
+
+## report read processing statistics
+read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
+                        '''read_stats_collect.file <- "${SOURCES[0].abspath}"; '''\
+                        '''linear.mapper <- "hisat2"; '''\
+                        '''circrna.reads.stats.file <- "${SOURCES[1].abspath}"; '''\
+                        '''meta_file <- "${SOURCES[2].abspath}"; '''\
+                        '''rmarkdown::render(input = "$SCONSCRIPT_HOME/read_statistics.Rmd",'''\
+                        '''output_file = "$TARGET.abspath", '''\
+                        '''intermediates_dir = dirname("$TARGET.abspath") )' '''
+
+read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_statistics.html'),
+                                [reads_stats_collect, collect_circrna_maps_counts,
+                                File(META).abspath], 
+                                read_stats_report_cmd)
 
 qre_dir = 'qre'
 if env['QRE_FIND'] == 'True':
