@@ -1467,6 +1467,13 @@ if(f.exists_circrnas & exists_gene_overlaps){
 fcircrnas.file <- file.path(results.dir, "fusion_circrnas.csv")
 fchrom.normal.circrnas.file <- file.path(results.dir, "chimeric_chr_canonical_circrnas.csv")
 
+fusion.circrnas <- data.table(circ_id = character(), 
+                              f_circRNA = character(), 
+                              fchr = character(),  
+                              sample_id = character(), 
+                              N = character(),
+                              V1 = character())
+fchrom.normal.circrnas <- fusion.circrnas
 if(enable_fcircrna_report){
     
     if(nrow(f.circrna.rpms.genes) > 0){
@@ -1476,15 +1483,6 @@ if(enable_fcircrna_report){
         
         fchrom.normal.circrnas <- f.circrna.rpms.genes[f_circRNA == "circRNA_fchr"]
         write.csv(x = fchrom.normal.circrnas, file = fchrom.normal.circrnas.file, row.names = F)
-        
-    }else{
-        fusion.circrnas <- data.table(circ_id = character(), 
-                                      f_circRNA = character(), 
-                                      fchr = character(),  
-                                      sample_id = character(), 
-                                      N = character(),
-                                      V1 = character())
-        fchrom.normal.circrnas <- fusion.circrnas
     }
 }
 
