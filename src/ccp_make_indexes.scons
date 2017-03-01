@@ -92,7 +92,7 @@ def writeVars(target, source, env):
 
 write_var = env.Command("annotation_vars.py", lines, writeVars)
 
-Depends(write_var, indexes.items())
+Depends(write_var, indexes.values())
 if "GENEPRED" in env['INDEXES'].split(","):
     if not env['ANNOTATION'] == '':
         Depends(write_var, genePred)
