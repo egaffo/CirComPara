@@ -416,7 +416,7 @@ circ.2reads.at.least.2methods.at.least <- circrnas.morethan2methods.medrpm[, .N,
                                                                              , .(reliable = .N),
                                                                              by = sample_id]
 colnames(circ.2reads.at.least.2methods.at.least)[colnames(circ.2reads.at.least.2methods.at.least) == "reliable"] <- coln
-reliable.circ.tab <- merge(circ.2reads.at.least, circ.2reads.at.least.2methods.at.least)
+reliable.circ.tab <- merge(circ.2reads.at.least, circ.2reads.at.least.2methods.at.least, by = "sample_id")
 kable(reliable.circ.tab)
 ```
 
@@ -828,12 +828,16 @@ cor.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr) +
   ylab("Correlation") + ggtitle("Correlation\ndistribution") + 
     theme(plot.title = element_text(hjust = 0.5))
 
-cor.abs.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr[
-  , .(pos_corr = ifelse(corr > 0, "Positive", "Negative"), corr)][!is.na(corr)]) + 
-  geom_boxplot(aes(x = "", y = abs(corr), fill = pos_corr), notch = T, varwidth = T)  + 
+non.na.cors <- circrna_gene_xpr_bysample_corr[
+  , .(pos_corr = ifelse(corr > 0, "Positive", "Negative"), corr)][!is.na(corr)]
+if(length(non.na.cors$pos_corr) == 0){
+    non.na.cors <- as.data.table(list(pos_corr = c("Positive", "Negative"), corr = c(NA, NA)))
+}
+cor.abs.boxplot <- ggplot(data = non.na.cors) +
+  geom_boxplot(aes(x = "", y = abs(corr), fill = pos_corr), notch = T, varwidth = T)  +
   scale_fill_manual(values = c("blue", "red")) + facet_wrap(facets = ~ pos_corr) +
-  theme_bw() + guides(fill = FALSE) + xlab("") + ylab("Abs(correlation)") + 
-  ggtitle("Absolute negative and positive\ncorrelation distributions") + 
+  theme_bw() + guides(fill = FALSE) + xlab("") + ylab("Abs(correlation)") +
+  ggtitle("Absolute negative and positive\ncorrelation distributions") +
     theme(plot.title = element_text(hjust = 0.5))
 
 multiplot(cor.boxplot, cor.abs.boxplot, cols = 2)
