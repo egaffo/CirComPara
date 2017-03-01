@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))
+
+export PATH=$CIRCOMPARA_HOME/bin:$PATH
+
+scons -f $CIRCOMPARA_HOME/src/ccp_make_indexes.scons $1 
+
