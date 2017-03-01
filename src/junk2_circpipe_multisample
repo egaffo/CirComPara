@@ -601,9 +601,9 @@ Depends(circrna_analyze, gene_exp)
 clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
 mapped_reads_linear_stats_files = get_matching_nodes(runs, '.*processings.*hisat2\.log')
 read_stats_collect_dir = 'read_stats_collect'
-reads_stats_collect_cmd = '''grep Input ''' +\
+reads_stats_collect_cmd = '''grep --with-filename Input ''' +\
                           ' '.join(f.path for f in clean_reads_stats_files) +\
-                          ''' > $TARGET && grep "." ''' +\
+                          ''' > $TARGET && grep --with-filename "." ''' +\
                           ' '.join(f.path for f in mapped_reads_linear_stats_files) +\
                           ''' >> $TARGET'''
 reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_stats_collect.txt'), 

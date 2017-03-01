@@ -41,7 +41,7 @@ knitr::opts_chunk$set(fig.width = 12,
 
 read_stats_collect <- as.data.table(data.frame(line = cbind(scan(file = read_stats_collect.file, 
                                                                  what = "character", 
-                                                                 multi.line = T, sep = "\n"))))
+                                                                 multi.line = T, sep = "\n")), stringsAsFactors = F))
 ## samples
 read_stats_collect$Sample <- gsub(pattern = paste(".*samples", "([^", "]*)", ".*", 
                                                   sep = .Platform$file.sep), 
