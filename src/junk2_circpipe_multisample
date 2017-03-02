@@ -384,6 +384,7 @@ deseq_dir = 'deseq'
 
 gene_exp = ''
 if len(samples.keys()) > 1:
+    sample = ''
 
     ## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
     cuffquant_annotation = cuffmerge
@@ -417,7 +418,7 @@ if len(samples.keys()) > 1:
         Depends(cuffdiff, cuffquant)
 
         gene_exp = get_matching_nodes(cuffdiff, ".*genes.read_group_tracking")
-        gene_meta = get_matching_nodes(cuffdiff, ".*read_groups.info")[0]
+        gene_meta = File(get_matching_nodes(cuffdiff, ".*read_groups.info")[0]).abspath
 
         if DESEQ:
             ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
@@ -454,12 +455,30 @@ if len(samples.keys()) > 1:
         Depends(cuffnorm, cuffquant)
 
         gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
-        gene_meta = get_matching_nodes(cuffnorm, ".*read_groups.info")[0]
+        gene_meta = File(get_matching_nodes(cuffnorm, ".*read_groups.info")[0]).abspath
 
 else:
     gene_exp = get_matching_nodes(runs, '.*genes.fpkm_tracking')
     gene_meta = ''
     link_cufflinks_dir = env.Command(cuffdiff_dir, gene_exp[0].dir, SymLink)
+    sample = str(samples.keys()[0])
+
+gene_exp_analysis_template = os.path.join("$SCONSCRIPT_HOME", "gene_expression_analysis.Rmd")
+gene_exp_analysis_cmd = '''Rscript -e 'results.dir <- dirname("${SOURCES[0].abspath}"); '''\
+                        '''meta.file <- "''' + str(gene_meta) + '''"; '''\
+                        '''gene.xpr.file <- "${SOURCES[0].abspath}"; '''\
+			'''sample <- "''' + sample + '''"; '''\
+                        '''rmarkdown::render(input = "''' + \
+			str(gene_exp_analysis_template) + '''", '''\
+                        '''output_file = "$TARGET.abspath", '''\
+                        '''intermediates_dir = dirname("${SOURCES[0].abspath}") )' '''
+gene_exp_analysis_targets = [os.path.join(os.path.dirname(gene_exp[0].path), 
+			     "gene_expression_analysis.html")]
+gene_exp_analysis_sources = [gene_exp]
+gene_exp_analysis = env.Command(gene_exp_analysis_targets, 
+                                gene_exp_analysis_sources, 
+                                gene_exp_analysis_cmd)
+
 
 
 ## COLLECT CIRCRNA RESULTS

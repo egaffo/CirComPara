@@ -1,0 +1,254 @@
+---
+title: "CirComPara: gene expression analysis"
+date: "`r Sys.Date()`"  
+output: 
+  html_document: 
+    keep_md: no
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    theme: "readable"
+---
+
+```{r global_options, include=FALSE}
+## variables to be defined in parent frame
+# results.dir <- "analysis/cuffdiff"
+# meta.file <- "analysis/cuffdiff/read_groups.info"
+# gene.xpr.file <- "analysis/cuffdiff/genes.read_group_tracking"
+# sample #empty if multisample, set != '' if single sample
+
+dir.create(path = results.dir, showWarnings = F, recursive = T)
+knitr::opts_chunk$set(fig.width = 12, 
+                      fig.height = 6, 
+                      dev = c('svglite', 'png'), 
+                      fig.pos = "center",
+                      fig.path = file.path(results.dir, paste0('Figs_geneexp', .Platform$file.sep)),
+                      echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir = results.dir)
+
+library(data.table)
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+library(DESeq2)
+```
+
+```{r load data, include=FALSE}
+if(meta.file != ""){
+    gene_meta <- fread(meta.file, colClasses = c("character", "factor", "character", 
+                                                  "numeric", "numeric", "numeric", 
+                                                  "numeric"))
+    gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
+    
+    intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
+    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
+    intgroup.dt <- merge(intgroup.dt, 
+                         intgroup.dt[, .(samples_per_condition = .N), 
+                                     by = condition][, hue := brewer.pal(8, 
+                                                                         "Set2")[1:length(condition)]][], 
+                         by = "condition")[, color := muted(hue, l = color_luminance)][]
+}
+
+if(meta.file != ""){
+    genes.read_group_tracking <- fread(gene.xpr.file, 
+                                   colClasses = c("character", "factor", "character", 
+                                                  "integer", "numeric", "numeric", 
+                                                  "numeric", "character", "character"))[
+                                                      , .(tracking_id, condition, replicate, raw_frags, FPKM)]
+    setkey(gene_meta, condition, replicate_num)
+    setkey(genes.read_group_tracking, condition, replicate)
+    gene.raw.frags.dt <- dcast(genes.read_group_tracking[gene_meta[, .(sample_id, condition, 
+                                                                       replicate_num)]][, .(gene_id = tracking_id, 
+                                                                                            sample_id, raw_frags)], 
+                               formula = gene_id ~ sample_id, value.var = "raw_frags")
+    
+}else{
+    # tracking_id, class_code, nearest_ref_id, 
+    # gene_id, gene_short_name, tss_id, 
+    # locus, length, coverage, 
+    # FPKM, FPKM_conf_lo, FPKM_conf_hi, 
+    # FPKM_status
+    genes.read_group_tracking <- fread(gene.xpr.file, 
+                                   colClasses = c("character", "character", "character", 
+                                                  "character", "character", "character",
+                                                  "character", "character", "character",
+                                                  "numeric", "numeric", "numeric", "character"))[
+                                                      , .(tracking_id, FPKM)]
+    genes.read_group_tracking$sample_id <- sample
+}
+
+```
+
+# PCA
+```{r plot pca, echo=FALSE}
+if(meta.file != ""){
+    non.value.columns <- c("gene_id")
+    genes.per.sample.matrix <- as.matrix(round(gene.raw.frags.dt[, -non.value.columns, with = FALSE]))
+    rownames(genes.per.sample.matrix) <- gene.raw.frags.dt$gene_id
+    
+    sampleTable <- as.data.frame(gene_meta[, .(sample = sample_id, condition)])
+    rownames(sampleTable) <- as.character(sampleTable[, "sample"])
+    
+    # remove not expressed genes
+    countData <- genes.per.sample.matrix[rowSums(genes.per.sample.matrix) > 0, ]
+    
+    ddsHTSeq <- DESeqDataSetFromMatrix(countData = countData[, row.names(sampleTable)],
+                                       colData = sampleTable,
+                                       design = ~ condition)
+    dds <- DESeq(ddsHTSeq)
+    
+    #rld <- rlog(dds, blind = T)
+    rld <- vst(dds, blind = T)
+    pca <- prcomp(t(assay(rld)), scale. = T)
+    
+    intgroup <- c("condition")
+    percentVar <- pca$sdev^2/sum(pca$sdev^2)
+    ## compute PC variance explained % and plot
+    percentVar.df <- data.frame(PCs = paste0("PC", 1:length(percentVar)), 
+                                Variation_percentage = percentVar*100)
+    percentVar.df$PCs <- factor(percentVar.df$PCs, levels = percentVar.df$PCs, ordered = T)
+    pc.var.explained.plot <- ggplot(data = percentVar.df, aes(x = PCs, y = Variation_percentage)) + 
+        geom_bar(stat = "identity") + 
+        geom_text(aes(label = round(Variation_percentage, 2)), vjust = -.5) + 
+        ylab("Variation explained %") + theme_bw() + 
+        ggtitle("Amount of variation explained by the principal components") + 
+        theme(plot.title = element_text(hjust = 0.5))
+    
+    ## compute and plot PCs
+    intgroup.df <- as.data.frame(colData(rld)[, intgroup, drop = FALSE])
+    group <- if (length(intgroup) > 1) {
+        factor(apply(intgroup.df, 1, paste, collapse = " : "))
+    } else {
+        colData(rld)[[intgroup]]
+    }
+    d <- data.frame(pca$x, group = group, intgroup.df, name = colnames(rld))
+    pca.plot <- ggplot(data = d, aes(PC1, PC2, color=condition, shape=condition, label=name)) + 
+        geom_point(size = 4, color = "black") + geom_point(size = 3, alpha = 1) + coord_fixed() + 
+        geom_text(position="jitter", hjust=0.2, vjust=-0.2, size=6, show.legend = F) +
+        xlab(paste0("PC1: ", round(percentVar[1] * 100), "% variance")) + 
+        ylab(paste0("PC2: ", round(percentVar[2] * 100), "% variance"))+ 
+        scale_color_brewer(palette = "Set2") + scale_x_continuous(expand = c(0.3,0)) +
+        scale_y_continuous(expand = c(0.3,0)) + theme_bw() + 
+        theme(legend.position="bottom") + 
+        ggtitle("Principal Components") + 
+        theme(plot.title = element_text(hjust = 0.5))
+    
+    pc.var.explained.plot
+    pca.plot
+}else{
+    print("PCA not applicable to single sample")
+}
+```
+
+# Gene expressed by sample
+```{r show_gene_expressed_by_sample}
+# get gene expressions
+expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+if(meta.file != ""){
+    setkey(gene_meta, condition, replicate_num)
+    setkey(expressed_genes, condition, replicate)
+    expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+}
+expressed_genes.by.sample <- expressed_genes[, .N, 
+                                             by = .(sample_id, 
+                                                    tracking_id)][, .("Tot. gene expressed" = .N), 
+                                                                  by = sample_id]
+knitr::kable(rbind(expressed_genes.by.sample[order(sample_id),], list("Non-redundant", 
+                                            expressed_genes[, .N, by = tracking_id][, .N])))
+```
+
+```{r plot_gene_expressed_by_sample}
+default.font.size <- 12
+expressed_genes.by.sample.plot <- ggplot(data = expressed_genes.by.sample, 
+                                         mapping = aes(x = sample_id, y = `Tot. gene expressed`,
+                                                       fill = sample_id)) + 
+  geom_bar(stat = "identity", width = .7, colour="black") + 
+  geom_text(stat='identity', aes(label = `Tot. gene expressed`), vjust=-0.3, size=default.font.size*(5/14)) +
+  ggtitle("Gene expressed per sample") + xlab("") + ylab("Number of genes") + 
+  theme_bw()
+## compute limits to remove space from x-axis. Add a 10% increase to the top limit
+expressed_genes.by.sample.plot.limits <- c(0, max(expressed_genes.by.sample$`Tot. gene expressed`)*1.1)
+expressed_genes.by.sample.plot <- expressed_genes.by.sample.plot + guides(fill = FALSE) +
+  theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
+  scale_y_continuous(expand = c(0, 0), limits = expressed_genes.by.sample.plot.limits) + 
+        theme(plot.title = element_text(hjust = 0.5))
+
+if(meta.file != ""){
+    expressed_genes.by.sample.plot + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    expressed_genes.by.sample.plot
+}
+```
+
+# Gene expression distribution by sample
+
+```{r show_gene_expression}
+knitr::kable(sapply(X = split(expressed_genes, expressed_genes$sample_id), 
+       FUN = function(x){summary(x$FPKM)}), caption = "Gene expression (FPKM) distribution")
+```
+
+```{r plot_gene_expression}
+## boxplot expression per sample: genes
+gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes, 
+                                      mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
+  geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
+  ggtitle("Gene expression\nper sample") + theme_bw()
+gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + guides(fill=FALSE) + 
+  theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
+        theme(plot.title = element_text(hjust = 0.5))
+if(meta.file != ""){
+    gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}
+gene.xpr.per.sample.boxplot
+```
+
+# Cumulative expression
+
+```{r cumulative_expression, include=FALSE}
+cum_gene_by_sample <- expressed_genes[order(sample_id, -FPKM), 
+                                      .(csum = cumsum(FPKM), seqid = seq_along(.I), tracking_id), 
+                                      by = .(sample_id)]
+cum_gene_by_sample[, cond_tot := max(csum), by = .(sample_id)][, perc_csum := csum/cond_tot]
+
+if(meta.file != ""){
+    cum_gene_by_sample <- merge(cum_gene_by_sample, intgroup.dt[, .(sample_id, condition)], by = "sample_id")
+}else{
+    cum_gene_by_sample$condition <- "unset"
+}
+```
+
+```{r cumulative_expression_box, fig.width=12, fig.height=6}
+## Cumulative expression plot: genes
+gene.cumsum.per.sample <- ggplot(data = cum_gene_by_sample, mapping = aes(x = seqid, y = perc_csum, 
+                                                                          color = sample_id, linetype = condition)) +
+  geom_line() + ggtitle("Gene cumulative expression") + xlab("Number of genes") +
+  ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) +
+  theme_bw()
+gene.cumsum.per.sample <- gene.cumsum.per.sample +
+  theme(text = element_text(size=default.font.size), legend.position = "bottom") + 
+        theme(plot.title = element_text(hjust = 0.5))
+
+if(meta.file != ""){
+    gene.cumsum.per.sample <- gene.cumsum.per.sample + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]), "Sample") + 
+        guides(color = guide_legend(ncol = intgroup.dt[, .N, by = condition][, .N]), 
+               linetype = guide_legend(direction = "vertical"))
+}else{
+    gene.cumsum.per.sample <- gene.cumsum.per.sample + scale_color_discrete("Sample")
+}
+gene.cumsum.per.sample
+```
+
+# Seesion info
+```{r}
+sessionInfo()
+```
