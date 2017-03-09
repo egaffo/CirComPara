@@ -207,7 +207,7 @@ ggplot(de.circ.chr.hist, aes(x = chr, y = count, group = contrast, fill = contra
     theme(plot.title = element_text(hjust = 0.5))
 ```
 
-# Seesion info
+# Session info
 ```{r}
 sessionInfo()
 ```

@@ -86,7 +86,8 @@ if(meta.file != ""){
 
 ```
 
-# PCA
+# Principal component analysis (PCA) considering gene expression
+
 ```{r plot pca, echo=FALSE}
 if(meta.file != ""){
     non.value.columns <- c("gene_id")
@@ -137,7 +138,7 @@ if(meta.file != ""){
         scale_color_brewer(palette = "Set2") + scale_x_continuous(expand = c(0.3,0)) +
         scale_y_continuous(expand = c(0.3,0)) + theme_bw() + 
         theme(legend.position="bottom") + 
-        ggtitle("Principal Components") + 
+        ggtitle("Samples plotted according to the first two principal components") + 
         theme(plot.title = element_text(hjust = 0.5))
     
     pc.var.explained.plot
@@ -248,7 +249,7 @@ if(meta.file != ""){
 gene.cumsum.per.sample
 ```
 
-# Seesion info
+# Session info
 ```{r}
 sessionInfo()
 ```
