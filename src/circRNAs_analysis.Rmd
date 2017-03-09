@@ -158,7 +158,7 @@ refine_label <- function(labels_list){
 ```
 
 ```{r sample_summary, echo=FALSE, include=FALSE}
-"TODO"
+#"TODO"
 ## meta <- fread(meta.file)
 ## read.preprocessing
 ```
@@ -554,7 +554,8 @@ CircRNA expression by sample have been saved in file `r file.path(results.dir, "
 
 Gene expression is reported in file `r gene_fpkm_file`.
 
-## Expressed genes
+## Expression of genes overlapping circRNAs
+
 
 ```{r show_gene_expressed_by_sample}
 # get gene expressions
@@ -566,18 +567,30 @@ if(gene_meta_file != ""){
                                         colClasses = c("character", "factor", "numeric", 
                                                        "numeric", "numeric", "numeric", 
                                                        "numeric", "character", "character")))
-  expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+  expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)]#[FPKM > 0]
   setkey(gene_meta, condition, replicate_num)
   setkey(expressed_genes, condition, replicate)
   expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
 }else{
   gene_fpkm <- fread(gene_fpkm_file)
-  expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+  expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)]#[FPKM > 0]
   expressed_genes$sample_id <- unique(circrnas.gtf$sample_id)
 }
 
-expressed_genes.by.sample <- expressed_genes[, .N, by = .(sample_id, tracking_id)][, .("Tot. gene expressed" = .N), by = sample_id]
-kable(rbind(expressed_genes.by.sample, list("Non-redundant", expressed_genes[, .N, by = tracking_id][, .N])))
+## select only genes expressing circRNAs, keep also not expressed (FPKM==0) genes
+setkey(circ_to_gene, label)
+circrna_genes <- unique(circ_to_gene[label == "exonic" | label == "intronic", 
+                                     .(circ_id = paste0(chr, ":", circ_start, "-", circ_end, ":", strand), 
+                                       gene_id, gene_name)])
+setkey(circrna_genes, gene_id)
+setkey(expressed_genes, tracking_id)
+expressed_genes <- subset(expressed_genes, tracking_id %in% unique(circrna_genes$gene_id))
+
+## now remove not expressed (FPKM == 0) genes for reporting
+expressed_genes.by.sample <- expressed_genes[FPKM > 0, .N, by = .(sample_id, tracking_id)][, .("Tot. gene expressed" = .N), by = sample_id][order(sample_id),]
+kable(rbind(expressed_genes.by.sample, list("Non-redundant", expressed_genes[, .N, by = tracking_id][, .N])), 
+      caption = "For each sample, the number of genes expressed (FPKM > 0) that overlap a circRNA is reported")
+
 ```
 
 ```{r plot_gene_expressed_by_sample}
@@ -586,7 +599,7 @@ expressed_genes.by.sample.plot <- ggplot(data = expressed_genes.by.sample,
                                                        fill = sample_id)) + 
   geom_bar(stat = "identity", width = .7, colour="black") + 
   geom_text(stat='identity', aes(label = `Tot. gene expressed`), vjust=-0.3, size=default.font.size*(5/14)) +
-  ggtitle("Gene expressed per sample") + xlab("") + ylab("Number of genes") + 
+  ggtitle("Gene expressed (i.e. FPKM > 0) that overlap circRNAs") + xlab("") + ylab("Number of genes") + 
   theme_bw()
 ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
 expressed_genes.by.sample.plot.limits <- c(0, max(expressed_genes.by.sample$`Tot. gene expressed`)*1.1)
@@ -621,7 +634,7 @@ kable(sapply(X = split(circrnas.morethan2methods.medrpm, circrnas.morethan2metho
 
 circrna.xpr.per.sample.boxplot <- ggplot(data = circrnas.morethan2methods.medrpm, 
                                          mapping = aes(x = sample_id, y = medRPM, fill = sample_id)) + 
-  geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("RPM") + 
+  geom_boxplot(notch = T, varwidth = T) + scale_y_log10() + xlab(NULL) + ylab("RPM") + #labels = scales::comma
   ggtitle("CircRNA expression\nper sample") + theme_bw()
 circrna.xpr.per.sample.boxplot <- circrna.xpr.per.sample.boxplot + guides(fill=FALSE) + 
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
@@ -629,16 +642,19 @@ circrna.xpr.per.sample.boxplot <- circrna.xpr.per.sample.boxplot + guides(fill=F
 
 ```
 
-## Gene expression distribution by sample
+## Expression distribution of genes overlapping circRNAs, per each sample
 
 ```{r show_gene_expression}
 kable(sapply(X = split(expressed_genes, expressed_genes$sample_id), 
-       FUN = function(x){summary(x$FPKM)}), caption = "Gene expression (FPKM) distribution")
+       FUN = function(x){summary(x$FPKM)}), caption = "Gene expression (FPKM) distribution of genes overlapping circRNAs")
+
+kable(sapply(X = split(expressed_genes[FPKM > 0], expressed_genes[FPKM > 0]$sample_id), 
+       FUN = function(x){summary(x$FPKM)}), caption = "Gene expression (FPKM) distribution of genes overlapping circRNAs: only expressed genes")
 ```
 
-## CircRNA and gene expression plots
+## CircRNA and host gene expression plots
 
-### Expression distribution
+### Expression distribution of circRNAs and of genes overlapping circRNAs
 
 Notes on boxplot decorations:  
 
@@ -647,10 +663,10 @@ Notes on boxplot decorations:
 
 ```{r plot_gene_expression}
 ## boxplot expression per sample: genes
-gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes, 
+gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes[FPKM > 0], 
                                       mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
-  geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
-  ggtitle("Gene expression\nper sample") + theme_bw()
+  geom_boxplot(notch = T, varwidth = T) + scale_y_log10() + xlab(NULL) + ylab("FPKM") + #labels = scales::comma
+  ggtitle("CircRNA-overlapping gene expression\nper sample") + theme_bw()
 gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + guides(fill=FALSE) + 
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
         theme(plot.title = element_text(hjust = 0.5))
@@ -697,7 +713,7 @@ if(gene_meta_file != ""){
 ## Cumulative expression plot: circRNAs
 circrna.cumsum.per.sample <- ggplot(data = cum_by_sample, mapping = aes(x = seqid, y = perc_csum, 
                                                                         color = sample_id, linetype = condition)) +
-  geom_line() + ggtitle("CircRNAs cumulative expression") + xlab("Number of circRNAs") +
+  geom_line() + ggtitle("Cumulative circRNA expression") + xlab("Number of circRNAs") +
   ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) + 
     theme_bw()
 circrna.cumsum.per.sample <- circrna.cumsum.per.sample +
@@ -707,7 +723,7 @@ circrna.cumsum.per.sample <- circrna.cumsum.per.sample +
 ## Cumulative expression plot: genes
 gene.cumsum.per.sample <- ggplot(data = cum_gene_by_sample, mapping = aes(x = seqid, y = perc_csum, 
                                                                           color = sample_id, linetype = condition)) +
-  geom_line() + ggtitle("Gene cumulative expression") + xlab("Number of genes") +
+  geom_line() + ggtitle("Cumulative circRNA-overlapping gene expression") + xlab("Number of genes") +
   ylab("Cumulative expression") + scale_y_continuous(labels = scales::percent) +
   theme_bw()
 gene.cumsum.per.sample <- gene.cumsum.per.sample +
@@ -730,7 +746,7 @@ if(gene_meta_file != ""){
 multiplot(circrna.cumsum.per.sample, gene.cumsum.per.sample, cols=2)
 ```
 
-## Correlation of circRNA and gene expression 
+## Correlation of circRNA and circRNA-overlapping gene expression 
 
 ```{r correlation, echo=FALSE, include=FALSE}
 #median circRNA expression (circrna detected by at least 2 methods)
@@ -744,10 +760,6 @@ circ_xpr_all_sample <- merge(circ_xpr_by_sample,
 circ_xpr_all_sample$medRPM[is.na(circ_xpr_all_sample$medRPM)] <- 0.0
 
 # select only circRNAs that are overlapping a gene
-setkey(circ_to_gene, label)
-circrna_genes <- unique(circ_to_gene[label == "exonic" | label == "intronic", 
-                                     .(circ_id = paste0(chr, ":", circ_start, "-", circ_end, ":", strand), 
-                                       gene_id, gene_name)])
 # attach circRNA expression
 genic_circrnas <- merge(circrna_genes, circ_xpr_all_sample, 
                         all.x = T, all.y = F, by = "circ_id")[!is.na(medRPM)]
@@ -791,12 +803,15 @@ write.csv(x = circrna_gene_xpr_bysample_corr,
 
 ```
 
-Expressed circRNAs | Exonic or intronic circRNAs
-------------------: | ---------------------------:
-`r circ_xpr_by_sample[, .N, by = circ_id][, .N]` | `r genic_circrnas[, .N, by = circ_id][, .N]`
+Correlations were computed considering exonic or intronic circRNAs (i.e. excluding intergenic circRNAs), and circRNA-overlapping genes including not expressed ones.  
+
+
+|                              Expressed circRNAs|                  Exonic or intronic circRNAs|
+|-----------------------------------------------:| -------------------------------------------:|
+|`r circ_xpr_by_sample[, .N, by = circ_id][, .N]`| `r genic_circrnas[, .N, by = circ_id][, .N]`|
 
 In total, `r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N], 0)` correlations were computed involving `r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = circ_id][, .N], 0)` circRNAs and 
-`r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = gene_id][, .N], 0)` genes.  
+`r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_bysample_corr[! is.na(corr)][, .N, by = gene_id][, .N], 0)` genes. It can happen that correlation computation failed for some gene/circRNA because of null expression in too many samples.   
 
 Correlation values were saved in file `r file.path(results.dir, "circRNA_gene_expression_correlation.csv")`
 
