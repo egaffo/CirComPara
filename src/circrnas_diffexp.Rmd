@@ -18,6 +18,7 @@ output:
 # results.dir
 # circrnas.per.sample.file
 # meta.file
+fdr.thr <- 0.1
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 12, 
@@ -32,12 +33,13 @@ knitr::opts_chunk$set(fig.width = 12,
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_knit$set(root.dir = results.dir)
 
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(DESeq2))
+suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(VennDiagram))
 ```
 
 ```{r load data, echo=FALSE, include=FALSE}
-suppressPackageStartupMessages(library(data.table))
-suppressPackageStartupMessages(library(DESeq2))
-
 non.value.columns <- c("circ_id", "gene_ids", "gene_names", 
                        "label", "chr", "start", "end", "strand")
 circrnas.per.sample <- fread(circrnas.per.sample.file)
@@ -60,9 +62,27 @@ dds <- DESeq(ddsHTSeq)
 
 # Summary
 
+Groups cosidered: `r paste0(unique(sampleTable$condition), collapse = ", ")`  
 
+```{r samples and condition}
+datatable(data = as.data.table(sampleTable)[, .(sample, condition)],
+          rownames = F, 
+          style = "bootstrap", class = "compact display", 
+          caption = "Samples and their condition", 
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+```
 
-# PCA plot
+The analysis considered `r as.data.table(sampleTable)[, .N, by = sample][, .N]` samples grouped in `r as.data.table(sampleTable)[, .N, by = condition][, .N]` conditions.  
+
+```{r number of samples per condition}
+datatable(data = as.data.table(sampleTable)[, .(samples = .N), by = condition],
+          rownames = F, 
+          style = "bootstrap", class = "compact display", 
+          caption = "Number of replicates for each condition group", 
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+```
+
+# Principal component analysis (PCA) considering circRNA expression
 ```{r pca, echo=FALSE}
 ## PCA plot
 #rld <- rlog(dds, blind = T)
@@ -101,7 +121,7 @@ pca.plot <- ggplot(data = d, aes(PC1, PC2, color=condition, shape=condition, lab
     scale_color_brewer(palette = "Set2") + scale_x_continuous(expand = c(0.3,0)) +
     scale_y_continuous(expand = c(0.3,0)) + theme_bw() + 
     theme(legend.position="bottom") + 
-    ggtitle("Principal Components") + 
+    ggtitle("Samples plotted according to the first two principal components") + 
     theme(plot.title = element_text(hjust = 0.5))
 ```
 
@@ -110,7 +130,7 @@ pc.var.explained.plot
 pca.plot
 ```
 
-# CircRNA differential expression
+# Differential expression test counts 
 
 ```{r differential expression, echo=FALSE}
 # resultsNames(dds)
@@ -121,29 +141,168 @@ for(i in 1:(dim(conditions)[1]-1)){
     for(j in 1:dim(conditions)[2])
         if(conditions[i,j] == 0){
             contrast.name <- paste(rownames(conditions)[i], "vs", colnames(conditions)[j])
-            res <- results(dds, contrast = c("condition", rownames(conditions)[i], colnames(conditions)[j]))
+            res <- results(dds, 
+                           contrast = c("condition", rownames(conditions)[i], colnames(conditions)[j]), 
+                           alpha = fdr.thr)
             #res$circ_id <- rownames(res)
             res.contrast.names <- c(res.contrast.names, contrast.name)
             res.contrasts <- c(res.contrasts, res)
         }
 }
 names(res.contrasts) <- res.contrast.names
+```
 
+The contrasts considered were: `r paste0(res.contrast.names, collapse = ", ")`.  
+
+```{r differentially expressed circRNA counts, include=FALSE}
 test.results.dt <- rbindlist(lapply(res.contrasts, 
                                     function(x)as.data.table(as.data.frame(x, row.names = rownames(x)), 
                                                              keep.rownames = T)), 
                              idcol = "contrast")
 colnames(test.results.dt)[colnames(test.results.dt) == "rn"] <- "circ_id"
 
+test.results.dt[, significant := ifelse(padj <= fdr.thr, "yes", "no")]
 # res.contrast.summary <- function(x){
 #     print(names(x))
 #     print(summary(x[[1]]))
 # }
 # sapply(res.contrasts, res.contrast.summary)
-sapply(res.contrasts, summary)
+#sapply(res.contrasts, summary)
 ```
 
-## Differential expressed circRNA table
+The number of significantly (FDR <= `r fdr.thr`) differential expressed circRNAs (DECs) is reported in the table below.  
+
+```{r summary de genes per condition}
+datatable(data = test.results.dt[significant == "yes", .(`Tot. DECs` = .N), by = contrast],
+          rownames = F, 
+          style = "bootstrap", class = "compact display", 
+          caption = "Number of differentially expressed circRNAs for each contrast",
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+```
+
+
+```{r MA plot, fig.height=12, dev='jpeg'}
+ma.plot <- ggplot(data = test.results.dt, 
+                  mapping = aes(x = baseMean, y = log2FoldChange, 
+                                color = significant)) + 
+    geom_point(size = 1, alpha = 0.5) + scale_x_log10()
+if(length(res.contrast.names) > 1){
+    ma.plot <- ma.plot + facet_grid(facets = contrast ~ . , scales = "free")
+}
+ma.plot + xlab("Average RPM") + ylab(expression(Log[2](FC))) +
+    scale_color_manual(name = "Differentially expressed", 
+                       values = c("black", "red"), na.value = "gray") + 
+    theme(legend.position="bottom")
+```
+
+The number of DECs shared among the contrasts is reported below.  
+
+```{r DECs shared}
+shared.counts.table <- dcast(test.results.dt[significant == "yes", ],
+                             formula = circ_id ~ contrast,
+                             value.var = "significant")[, -c("circ_id"),
+                                                        with = F]
+
+datatable(data = crossprod(!is.na(shared.counts.table)), 
+          rownames = T,
+          style = "bootstrap", class = "compact display", 
+          caption = "Number of differentially expressed circRNAs shared among contrasts",
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+
+n.contrasts <- length(unique(test.results.dt[, contrast]))
+if(n.contrasts > 1){
+    fill.colors <- 1:n.contrasts
+    if(n.contrasts < 5){fill.colors <- fill.colors +1}
+    if(n.contrasts < 6){
+    dec.lists.by.contrast <- split(test.results.dt[significant == "yes", circ_id],
+                                   f = test.results.dt[significant == "yes", contrast])
+    #venn(deg.lists.by.contrast) ## venn using gplots
+    vp <- venn.diagram(dec.lists.by.contrast,
+                       fill = fill.colors,
+                       alpha = 0.3, filename = NULL,
+                       main = "Differentially expressed circRNAs shared by the contrasts",
+                       cex = 3, main.cex = 2, cat.cex = 1.5)
+    grid.draw(vp)
+    }else{
+        print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+    }
+}
+```
+
+## Over-expressed circRNAs
+
+```{r up DECs venn}
+## up tab 
+up.shared.counts.table <- dcast(test.results.dt[significant == "yes" & log2FoldChange >= 0, ],
+                             formula = circ_id ~ contrast,
+                             value.var = "significant")[, -c("circ_id"),
+                                                        with = F]
+
+datatable(data = crossprod(!is.na(up.shared.counts.table)), 
+          rownames = T,
+          style = "bootstrap", class = "compact display", 
+          caption = "Number of over expressed circRNAs shared among contrasts",
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+
+## up venn
+n.contrasts <- length(unique(test.results.dt[, contrast]))
+if(n.contrasts > 1){
+    fill.colors <- 1:n.contrasts
+    if(n.contrasts < 5){fill.colors <- fill.colors +1}
+    if(n.contrasts < 6){
+    dec.lists.by.contrast <- split(test.results.dt[significant == "yes" & log2FoldChange >= 0, circ_id],
+                                   f = test.results.dt[significant == "yes" & log2FoldChange >= 0, contrast])
+    #venn(deg.lists.by.contrast) ## venn using gplots
+    vp <- venn.diagram(dec.lists.by.contrast,
+                       fill = fill.colors,
+                       alpha = 0.3, filename = NULL,
+                       main = "Over-expressed circRNAs shared by the contrasts",
+                       cex = 3, main.cex = 2, cat.cex = 1.5)
+    grid.draw(vp)
+    }else{
+        print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+    }
+}
+```
+
+## Lower-expressed circRNAs
+
+```{r down DECs venn}
+## down tab
+down.shared.counts.table <- dcast(test.results.dt[significant == "yes" & log2FoldChange < 0, ],
+                             formula = circ_id ~ contrast,
+                             value.var = "significant")[, -c("circ_id"),
+                                                        with = F]
+
+datatable(data = crossprod(!is.na(down.shared.counts.table)), 
+          rownames = T,
+          style = "bootstrap", class = "compact display", 
+          caption = "Number of lower expressed circRNAs shared among contrasts",
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+
+## down venn
+n.contrasts <- length(unique(test.results.dt[, contrast]))
+if(n.contrasts > 1){
+    fill.colors <- 1:n.contrasts
+    if(n.contrasts < 5){fill.colors <- fill.colors +1}
+    if(n.contrasts < 6){
+    dec.lists.by.contrast <- split(test.results.dt[significant == "yes" & log2FoldChange < 0, circ_id],
+                                   f = test.results.dt[significant == "yes" & log2FoldChange < 0, contrast])
+    #venn(deg.lists.by.contrast) ## venn using gplots
+    vp <- venn.diagram(dec.lists.by.contrast,
+                       fill = fill.colors,
+                       alpha = 0.3, filename = NULL,
+                       main = "Lower-expressed circRNAs shared by the contrasts",
+                       cex = 3, main.cex = 2, cat.cex = 1.5)
+    grid.draw(vp)
+    }else{
+        print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+    }
+}
+```
+
+
+## Differentially expressed circRNA table
 
 ```{r show differential expression test, echo=FALSE}
 res.data.table <- dcast(test.results.dt, formula = circ_id ~ contrast, value.var = c("baseMean", "log2FoldChange",
@@ -180,7 +339,7 @@ DT::datatable(res.data.table.annotated[, (numeric.columns) := round(.SD, 2),
 
 ```
 
-Full results can be found in file `r circrna.diff.exp.table.file`
+Full results of differential expression tests can be found in file `r circrna.diff.exp.table.file`
 
 ```{r other plots, echo=FALSE}
 #plotMA(res, main="DESeq2", ylim=c(-2,2))
@@ -190,7 +349,7 @@ Full results can be found in file `r circrna.diff.exp.table.file`
 #     scale_y_log10()
 ```
 
-# Differentially expressed circRNA localization
+# Differentially expressed circRNA loci
 
 ```{r DE circrna loci, echo=FALSE}
 de.circ.chr.hist <- melt(dcast(test.results.dt[padj <= .1, 
