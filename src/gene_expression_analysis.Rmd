@@ -88,7 +88,7 @@ if(meta.file != ""){
 
 # Principal component analysis (PCA) considering gene expression
 
-```{r plot pca, echo=FALSE}
+```{r compute pca, echo=FALSE}
 if(meta.file != ""){
     non.value.columns <- c("gene_id")
     genes.per.sample.matrix <- as.matrix(round(gene.raw.frags.dt[, -non.value.columns, with = FALSE]))
@@ -141,8 +141,13 @@ if(meta.file != ""){
         ggtitle("Samples plotted according to the first two principal components") + 
         theme(plot.title = element_text(hjust = 0.5))
     
-    pc.var.explained.plot
-    pca.plot
+}
+```
+
+```{r plot pca, echo=FALSE}
+if(meta.file != ""){
+    print(pc.var.explained.plot)
+    print(pca.plot)
 }else{
     print("PCA not applicable to single sample")
 }
@@ -188,6 +193,14 @@ if(meta.file != ""){
     expressed_genes.by.sample.plot
 }
 ```
+
+```{r save gene expression in table format}
+expressed_genes_table.file <- file.path(results.dir, "gene_expression_FPKM_table.csv")
+write.csv(x = dcast(expressed_genes[, .(gene = tracking_id, sample_id, FPKM)], 
+                    formula = gene ~ sample_id, value.var = "FPKM"), 
+          file = expressed_genes_table.file, row.names = F)
+```
+Expression of genes was saved in tabular format in file `r expressed_genes_table.file`.  
 
 # Gene expression distribution by sample
 
@@ -250,6 +263,6 @@ gene.cumsum.per.sample
 ```
 
 # Session info
-```{r}
+```{r sessionInfo}
 sessionInfo()
 ```
