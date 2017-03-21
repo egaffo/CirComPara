@@ -157,7 +157,12 @@ refine_label <- function(labels_list){
   label
 }
 
-## reduce complexity of labels
+# reduce complexity of labels. Simplify into exonic, intronic, intergenic 
+# categories. The function simply assign "exonic" if at least one exon 
+# overlaps the backsplice; otherwise, "intron" if an intron overlaps; 
+# otherwise, "intergenic" for either intergenic and intergenic_spanning_gene;
+# "other" as a backfall label that should not appear.
+# - label: the collapsed labels for a circRNA
 simplify_circrna_labels <- function(label){
     lab <- "other"
     if(grepl("exonic", label)){
@@ -467,6 +472,10 @@ if(gene_meta_file != ""){
                                      by = condition][, hue := brewer.pal(8, 
                                                                          "Set2")[1:length(condition)]][], 
                          by = "condition")[, color := muted(hue, l = color_luminance)][]
+}else{
+    hue <- brewer.pal(8, "Set2")[1]
+    sample_id <- unique(circrnas.gtf[, sample_id])
+    intgroup.dt <- data.table(condition = sample_id, sample_id = sample_id, hue = hue, color = hue)
 }
 
 reliable.circ.tab.long <- melt(data = reliable.circ.tab, id.vars = "sample_id", 
@@ -643,18 +652,6 @@ if(intgroup.dt[, .N, by=condition][, .N] > 1){
     circRNAs.to.gene.per.sample <- merge(circRNAs.to.gene.per.sample, 
                                          intgroup.dt[, .(sample_id, condition)], by = "sample_id")
     
-    # circRNAs.per.gene.per.condition <- combined_gtf[gene_id != ".", 
-    #                                                 .(circ_id = paste0(chr, ":", circ_start,  "-", circ_end, ":", strand),
-    #                                                   gene_name), 
-    #                                                 by = .(gene_id, condition)]
-    # n.circ.per.gene.per.condition <- merge(circRNAs.per.gene.per.condition, 
-    #                                        circrnas.morethan2methods.medrpm.table[, .(circ_id)], 
-    #                                        all = F, by = "circ_id")
-    # n.circ.per.gene.per.condition <- n.circ.per.gene.per.condition[, .(n_circRNAs = length(unique(circ_id)), 
-    #                                                                    circ_ids = paste0(unique(circ_id), 
-    #                                                                                      collapse = "|")), 
-    #                                                                by = .(gene_id, gene_name,
-    #                                                                       condition)][order(condition, -n_circRNAs)]
     n.circ.per.gene.per.condition <- unique(circRNAs.to.gene.per.sample[, .(circ_id, gene_id, gene_name, condition)])[
         , .(n_circRNAs = .N,
             circ_ids = paste0(unique(circ_id), 
@@ -673,8 +670,8 @@ if(intgroup.dt[, .N, by=condition][, .N] > 1){
 if(intgroup.dt[, .N, by=condition][, .N] > 1){
     ## barplot per condition
     circRNAs.per.gene.per.condition.plot <- ggplot(data = circRNAs.per.gene.per.condition, 
-                                                mapping = aes(x = factor(circRNAs_per_gene), 
-                                                              fill = condition)) + 
+                                                   mapping = aes(x = factor(circRNAs_per_gene), 
+                                                                 fill = condition)) + 
         geom_bar(stat = "count") + facet_wrap(facets = ~ condition, scales = "free", 
                                               nrow = intgroup.dt[, .N, by = condition][, .N]) + 
         ggtitle("CircRNAs per gene") + xlab("Number of circRNAs") + ylab("Number of genes") + 
@@ -706,6 +703,7 @@ circrna.categories.tab <- circrnas.morethan2methods.medrpm[
             order(-N), .(Category = sorted_label, "All samples" = N)]
 
 ## by sample
+if(nrow(circrnas.morethan2methods.medrpm) > 0){
 circrna.categories.tab.ext <- dcast(circrnas.morethan2methods.medrpm[
     , .N, by = .(circ_id, sorted_label, sample_id)][
         , .N, by = .(sorted_label, sample_id)], 
@@ -730,6 +728,9 @@ datatable(data = circrna.categories.tab.ext,
           style = "bootstrap", class = "compact display", 
           caption = "Number of circRNAs according to backsplice overlap with gene annotation", 
           fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+}else{
+    print("No reliable circRNAs found :(")
+}
 ```
 
 In the following, circRNA categories are grouped into three main classes: _exonic_, _intronic_, and _intergenic_. We assigned the class _exonic_ when it appears in the circRNA category. For instance, _exonic|intergenic\_spanning\_gene_ class is grouped into _exonic_. If not _exonic_, the class is grouped into _intronic_ when it appears among the categories: for instance, _intergenic\_spanning\_gene|intronic_ is grouped into _intronic_; _exonic|intronic_ is NOT grouped into _intronic_ since it is grouped into _exonic_. The _intergenic_ class groups _intergenic_ and _intergenic\_spanning\_gene_ categories.  
@@ -868,6 +869,7 @@ circ.expr.to.circ.per.gene.plot <- circ.expr.to.circ.per.gene.plot +
 circ.expr.to.circ.per.gene.plot + theme(plot.title = element_text(hjust = 0.5)) + 
     guides(fill = FALSE)
 
+if(gene_meta_file != ""){
 ## discriminate per condition: mean expression across samples, within conditions
 circ.expr.to.circ.per.gene.per.condition <- unique(circ.expr.to.circ.per.gene.per.sample[, .(avgRPM = mean(medRPM)), 
                                                                                          by = .(condition, gene_id, circ_id)])[
@@ -889,6 +891,7 @@ if(gene_meta_file != ""){
                           guide = FALSE)
 }
 circ.expr.to.circ.per.gene.per.condition.plot + theme(plot.title = element_text(hjust = 0.5))
+}
 ```
 
 # CircRNA and gene expression
