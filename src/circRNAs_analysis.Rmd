@@ -364,6 +364,8 @@ write.csv(x = circrnas.morethan2methods.medrpm.table,
           file = file.path(results.dir, circRNA_expression_per_sample.csv.basename), 
           row.names = F)
 
+## the reference to the file is reported in the document section below
+
 ## TODO: save in HTML table with links
 ```
 
@@ -435,6 +437,23 @@ For each method, at least `r min_reads` reads were required to consider a circRN
 With at least `r min_reads` reads | With at least `r min_reads` reads and `r min_methods` methods
 ---------------: | -----------------------------------------:
 `r circrnas.gtf[RPM > 0, .N, by = .(gene_id)][, .N]` | `r circrnas.morethan2methods.medrpm.table[, .N]`
+
+The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per_sample.csv.basename`">`r circRNA_expression_per_sample.csv.basename`</a>. The fields of the table header are explained below:
+
+|Field     |Description                                                                        |
+|----------|---------------------------------------------------------------------------------- |
+|circ_id   |the circRNA ID, composed as chromosome:start-end:strand (+/-)                      |
+|gene_ids  |the circRNA-overlapping gene IDs, separated by a \| character                      |
+|gene_names|the circRNA-overlapping gene symbols, separated by a \| character                  |
+|label     |circRNA caracterization according to gene annotation, separated by a \| character *|
+|chr       |circRNA chromosome                                                                 |
+|start     |circRNA (backsplice) start position                                                |
+|end       |circRNA (backsplice) end position                                                  |
+|strand    |circRNA (backsplice) strand                                                        |
+|sample_id |circRNA expression in the sample **                                                | 
+
+\*  The order of the labels correnspond to the order of the overlapping genes. Labels are not repeated thogh, and the number of different label may be lower than the number of different genes.  
+\*\* CircRNA expression is reported in reads per million mapped (RPM) computed as the median RPM of the circRNA detection methods used.  
 
 ## CircRNAs detected by sample
 
@@ -509,13 +528,6 @@ The following analysis regards the subset of `r circrnas.morethan2methods.medrpm
 N.B: only genes for which the circRNA has label _exonic_ or _intronic_ were considered. _intergenic\_spanning\_gene_ circRNA-overlapping genes were not considered.
 ```{r circrnas_per_gene, echo=FALSE, include=TRUE}
 ## Number of circRNAs per gene
-# this commented code counts also genes for which circRNA label is intergenic_spanning_gene!
-# setkey(combined_gtf, gene_id)
-# circRNAs.per.gene <- combined_gtf[gene_id != ".", 
-#                                   .(circ_id = paste0(chr, ":", circ_start,  "-", circ_end, ":", strand),
-#                                     gene_name), 
-#                                   by = .(gene_id)] #, chr, circ_start,  circ_end, strand
-
 # this code does NOT count genes for which circRNA label is intergenic_spanning_gene!
 circRNAs.to.gene <- subset(circ_to_gene[, .(.N, label = paste0(unique(label), collapse = "|")), 
                                          by = .(chr, circ_start, circ_end, strand, gene_id, gene_name)][
@@ -525,13 +537,7 @@ circRNAs.to.gene <- subset(circ_to_gene[, .(.N, label = paste0(unique(label), co
                             circ_id %in% circrnas.morethan2methods.medrpm[
                                 , .N ,by = circ_id][, circ_id])[label != "intergenic_spanning_gene"]
 
-## subset circRNAs.per.gene to only reliable circRNAs
-# n.circ.per.gene <- merge(circRNAs.per.gene, 
-#                          circrnas.morethan2methods.medrpm.table[, .(circ_id)], 
-#                          all = F, by = "circ_id")
-# n.circ.per.gene <- n.circ.per.gene[, .(n_circRNAs = length(unique(circ_id)), 
-#                      circ_ids = paste0(unique(circ_id), collapse = "|")), 
-#                  by = .(gene_id, gene_name)][order(-n_circRNAs)]
+## count circRNAs per gene and set the list of circRNAs of the gene
 n.circ.per.gene <- subset(circRNAs.to.gene, 
                           circ_id %in% circrnas.morethan2methods.medrpm.table$circ_id)[
                               , .(n_circRNAs = .N, 
@@ -545,7 +551,6 @@ write.csv(x = n.circ.per.gene,
           row.names = F)
 
 ## overwrite 'circRNAs.per.gene' variable to save space
-# circRNAs.per.gene <- n.circ.per.gene[, .(gene_id, gene_name, circRNAs_per_gene = n_circRNAs)]
 circRNAs.per.gene <- circRNAs.to.gene[, .(circRNAs_per_gene = .N), by = gene_id][order(-circRNAs_per_gene)]
 
 ```
