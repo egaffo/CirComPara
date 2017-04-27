@@ -74,7 +74,8 @@ if "GENEPRED" in env['INDEXES'].split(","):
         genePred = env.Command(genePred_targets, File(env['ANNOTATION']),
                                ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
                                 'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
-                                'paste - ${TARGETS[1]} > ${TARGETS[2]}']
+                                'paste - ${TARGETS[1]} | sed "s_^\t\([^\t]*\)\t\(.*\)_\1\t\1\t\2_" '\
+                                '> ${TARGETS[2]}']
                               )
         lines.append(Value('GENEPRED="' + os.path.abspath(str(genePred[2])) + '"'))
         lines.append(Value('ANNOTATION="' + File(env['ANNOTATION']).abspath + '"'))
