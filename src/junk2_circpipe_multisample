@@ -241,7 +241,8 @@ if GENEPRED == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METH
     genePred = env.Command(genePred_targets, File(ANNOTATION),
                            ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
                             'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
-                            'paste - ${TARGETS[1]} > ${TARGETS[2]}']
+                            'paste - ${TARGETS[1]} | sed "s_^\t\([^\t]*\)\t\(.*\)_\1\t\1\t\2_" '\
+			    '> ${TARGETS[2]}']
                           )
     ## slow command
     #'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
