@@ -40,11 +40,11 @@ vars.Add('META', 'The metadata table file where you specify the project samples,
 vars.Add('CPUS', 'Set number of CPUs', '4')
 vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
 vars.Add('PREPROCESSOR_PARAMS',
-        '''Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string '''\
-        '''defaults to '''\
-        '''MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ''',
+        'Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string '\
+        'defaults to '\
+        'MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ',
         '')
-vars.Add('ANNOTATION', 'Gene annotation (Ensembl GFF)', '')
+vars.Add('ANNOTATION', 'Gene annotation file (like Ensembl GTF/GFF)', '')
 vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', '')
 vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
 vars.Add('BWA_PARAMS','Extra parameters for BWA','')
@@ -76,13 +76,16 @@ vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods t
 vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
          'reconstruction. Default only quantifies genes and transcripts from the given '\
          'annotation GTF file', 'False')
-vars.Add('DIFF_EXP', 'Set True to enable differential expression computation. '\
-	'Only available if more than one sample and more than one condition are given', 'False')
-vars.Add('DESEQ', 'Set True to enable differential expression computation also with DESeq2. '\
-	'Only available if more than one sample and more than one condition are given', 'False')
+vars.Add('DIFF_EXP', 'Set True to enable differential expression computation for linear genes/transcripts. '\
+     	 'Only available if more than one sample and more than one condition are given. '\
+         'N.B: differential expression tests for circRNAs is not yet implemented', 'False')
+vars.Add('DESEQ', '(Experimental) Set True to enable differential gene expression computation '\
+         'also with DESeq2. Only available if more than one sample and more than one condition are given', 
+         'False')
 vars.Add('CUFFNORM_EXTRA_PARAMS', 'Extra parameters to use if using Cuffnorm',
 	'--output-format cuffdiff')
-vars.Add('QRE_FIND', 'Set True to toggle analysis of QKI response elements sequences', 'False')
+vars.Add('QRE_FIND', '(Experimental) Set True to toggle analysis of QKI response elements sequences', 
+         'False')
 vars.Add('READSTAT_METHODS', 'Comma separated list of methods to use for read statistics. '\
          'Currently supported: fastqc,fastx', 'fastqc')
 vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
