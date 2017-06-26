@@ -218,36 +218,51 @@ if genome_indexes_to_build:
                                 variant_dir = annotation_dir, duplicate = 0,
                                 exports = '''env_build_indexes ''')
 
-    if GENOME_INDEX == '' :
-	GENOME_INDEX	= os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] #remove the .1.ht2 suffix
+    if GENOME_INDEX == '':
+        GENOME_INDEX = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] #remove the .1.ht2 suffix
+    else:
+        indexes['HISAT2'] = [GENOME_INDEX + suffix for suffix in hisat2_index_suffixes]
 
-    if SEGEMEHL_INDEX == '' and (CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS):
-	SEGEMEHL_INDEX	= os.path.abspath(str(indexes['SEGEMEHL'][0]))
+    if CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS:
+        if SEGEMEHL_INDEX == '':
+	        SEGEMEHL_INDEX	= os.path.abspath(str(indexes['SEGEMEHL'][0]))
+        else:
+            indexes['SEGEMEHL'] = [SEGEMEHL_INDEX]
 
-    if BWA_INDEX    == '' and (CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS):
-	BWA_INDEX	= os.path.abspath(str(indexes['BWA'][0]))[0:-4] #remove the .amb suffix
+    if CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS:
+        if BWA_INDEX == '':
+        	BWA_INDEX = os.path.abspath(str(indexes['BWA'][0]))[0:-4] #remove the .amb suffix
+        else:
+            indexes['BWA'] = [BWA_INDEX + suffix for suffix in bwa_index_suffixes]
 
-    if BOWTIE2_INDEX == '' and (CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS):
-	BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6] #remove .1.bt2 suffix
+    if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
+        if BOWTIE2_INDEX == '':
+        	BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6] #remove .1.bt2 suffix
+        else:
+            indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes]
 
-    if STAR_INDEX   == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS):
-	STAR_INDEX	= os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) #index dir
+    if CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS:
+        if STAR_INDEX == '': 
+        	STAR_INDEX	= os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) #index dir
+        else:
+            indexes['STAR'] = [os.path.join(STAR_INDEX, 'SA')]
 
 ## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
-if GENEPRED == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS):
-    genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info',
-                                                           '${SOURCES[0].filebase}.genePred',
-                                                           '${SOURCES[0].filebase}.genePred.wgn']]
-    genePred = env.Command(genePred_targets, File(ANNOTATION),
-                           ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
-                            'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
-                            'paste - ${TARGETS[1]} | sed "s_^\t\([^\t]*\)\t\(.*\)_\1\t\1\t\2_" '\
-			    '> ${TARGETS[2]}']
-                          )
-    ## slow command
-    #'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
-    #'paste - ${TARGETS[1]} > ${TARGETS[2]}'
-    GENEPRED = genePred[2]
+if CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS:
+    if GENEPRED == '': 
+        genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info',
+                                                               '${SOURCES[0].filebase}.genePred',
+                                                               '${SOURCES[0].filebase}.genePred.wgn']]
+        genePred = env.Command(genePred_targets, File(ANNOTATION),
+                               ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
+                                'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
+                                'paste - ${TARGETS[1]} | sed "s_^\t\([^\t]*\)\t\(.*\)_\1\t\1\t\2_" '\
+    			    '> ${TARGETS[2]}']
+                              )
+        ## slow command
+        #'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
+        #'paste - ${TARGETS[1]} > ${TARGETS[2]}'
+        GENEPRED = genePred[2]
 
 ## PROCESS SAMPLES
 runs = []
