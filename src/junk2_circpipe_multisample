@@ -164,58 +164,43 @@ with open(META) as csvfile:
 annotation_dir = 'junk2_dbs'
 
 ## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
-if translocations:
-    ## RESET GENOME INDEXES TO BUILD TRANSLOCATED GENOME ONES
-    GENOME_INDEX = ''
-    SEGEMEHL_INDEX = ''
-    BWA_INDEX == ''
-    BOWTIE2_INDEX = ''
-    STAR_INDEX = ''
-    GENEPRED = ''
-
-    ## COMPUTE TRANSLOCATED GENOME SEQUENCE AND GENE ANNOTATION
-    env_translocate_genome = env
-    env_translocate_genome.Append(TRANSLOCATIONS = list(translocations))
-    env_translocate_genome['GENOME'] = GENOME_FASTA
-    #env_translocated_genome.Append(ANNOTATION = ANNOTATION)
-    translocated_genome = env.SConscript(os.path.join(annotation_dir, 'junk2_translocate_genome'),
-                                         src_dir = SCONSCRIPT_HOME,
-                                         variant_dir = annotation_dir, duplicate = 0,
-                                         exports = '''env_translocate_genome ''')
-    GENOME_FASTA = File(translocated_genome[0][0]).abspath
-    env['GENOME_FASTA'] = GENOME_FASTA
-    ANNOTATION = File(translocated_genome[1][0]).abspath
-else:
-    #print "No translocations defined"
-    translocated_genome = [[File(GENOME_FASTA)], [ANNOTATION]]
-
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
 hisat2_index_suffixes  = ['.1.ht2', '.2.ht2', '.3.ht2', '.4.ht2',
                           '.5.ht2', '.6.ht2', '.7.ht2', '.8.ht2']
 bowtie2_index_suffixes = ['.1.bt2', '.2.bt2', '.3.bt2', '.4.bt2', '.rev.1.bt2', '.rev.2.bt2']
 bwa_index_suffixes     = ['.amb', '.ann', '.bwt', '.pac', '.sa']
 
-indexes = {'HISAT2':    [GENOME_INDEX + suffix for suffix in hisat2_index_suffixes],
-           'SEGEMEHL':  [SEGEMEHL_INDEX],
-           'BWA':       [BWA_INDEX + suffix for suffix in bwa_index_suffixes],
-           'BOWTIE2':   [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes],
-           'STAR':      [os.path.join(STAR_INDEX, 'SA')]}
-
+indexes ={}
 genome_indexes_to_build = []
-if GENOME_INDEX == '': genome_indexes_to_build.append('HISAT2')
 
-if SEGEMEHL_INDEX == '' and (CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS):
-	genome_indexes_to_build.append('SEGEMEHL')
+if GENOME_INDEX == '':
+    genome_indexes_to_build.append('HISAT2')
+else:
+    indexes['HISAT2'] = [GENOME_INDEX + suffix for suffix in hisat2_index_suffixes]
 
-if BWA_INDEX == '' and (CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS):
-	genome_indexes_to_build.append('BWA')
+if CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS:
+    if SEGEMEHL_INDEX == '':
+        genome_indexes_to_build.append('SEGEMEHL')
+    else:
+        indexes['SEGEMEHL'] = [SEGEMEHL_INDEX]
 
-if BOWTIE2_INDEX == '' and (CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS):
-	genome_indexes_to_build.append('BOWTIE2')
+if CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS:
+    if BWA_INDEX == '':
+        genome_indexes_to_build.append('BWA')
+    else:
+        indexes['BWA'] = [BWA_INDEX + suffix for suffix in bwa_index_suffixes]
 
-if STAR_INDEX == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS):
-	genome_indexes_to_build.append('STAR')
+if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
+    if BOWTIE2_INDEX == '':
+	    genome_indexes_to_build.append('BOWTIE2')
+    else:
+        indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes] 
 
+if CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS:
+    if STAR_INDEX == '':
+	    genome_indexes_to_build.append('STAR')
+    else:
+        indexes['STAR'] = [os.path.join(STAR_INDEX, 'SA')]
 
 if genome_indexes_to_build:
 
@@ -234,45 +219,51 @@ if genome_indexes_to_build:
                                 variant_dir = annotation_dir, duplicate = 0,
                                 exports = '''env_build_indexes ''')
 
-    if GENOME_INDEX == '' :
-	GENOME_INDEX	= os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] #remove the .1.ht2 suffix
+    if GENOME_INDEX == '':
+        GENOME_INDEX = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] #remove the .1.ht2 suffix
+    else:
+        indexes['HISAT2'] = [GENOME_INDEX + suffix for suffix in hisat2_index_suffixes]
 
-    if SEGEMEHL_INDEX == '' and (CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS):
-	SEGEMEHL_INDEX	= os.path.abspath(str(indexes['SEGEMEHL'][0]))
+    if CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS:
+        if SEGEMEHL_INDEX == '':
+	        SEGEMEHL_INDEX	= os.path.abspath(str(indexes['SEGEMEHL'][0]))
+        else:
+            indexes['SEGEMEHL'] = [SEGEMEHL_INDEX]
 
-    if BWA_INDEX    == '' and (CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS):
-	BWA_INDEX	= os.path.abspath(str(indexes['BWA'][0]))[0:-4] #remove the .amb suffix
+    if CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS:
+        if BWA_INDEX == '':
+        	BWA_INDEX = os.path.abspath(str(indexes['BWA'][0]))[0:-4] #remove the .amb suffix
+        else:
+            indexes['BWA'] = [BWA_INDEX + suffix for suffix in bwa_index_suffixes]
 
-    if BOWTIE2_INDEX == '' and (CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS):
-	BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6] #remove .1.bt2 suffix
+    if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
+        if BOWTIE2_INDEX == '':
+        	BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6] #remove .1.bt2 suffix
+        else:
+            indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes]
 
-    if STAR_INDEX   == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS):
-	STAR_INDEX	= os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) #index dir
-
-    for k in indexes.keys():
-	Depends(indexes[k], translocated_genome[0][0])
-
-#    Depends(indexes['HISAT2'], translocated_genome[0][0])
-#    Depends(indexes['SEGEMEHL'], translocated_genome[0][0])
-#    Depends(indexes['BWA'], translocated_genome[0][0])
-#    Depends(indexes['BOWTIE2'], translocated_genome[0][0])
-#    Depends(indexes['STAR'], translocated_genome[0][0])
+    if CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS:
+        if STAR_INDEX == '': 
+        	STAR_INDEX	= os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) #index dir
+        else:
+            indexes['STAR'] = [os.path.join(STAR_INDEX, 'SA')]
 
 ## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
-if GENEPRED == '' and (CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS):
-    genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info',
-                                                           '${SOURCES[0].filebase}.genePred',
-                                                           '${SOURCES[0].filebase}.genePred.wgn']]
-    genePred = env.Command(genePred_targets, File(ANNOTATION),
-                           ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
-                            'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
-                            'paste - ${TARGETS[1]} | sed "s_^\t\([^\t]*\)\t\(.*\)_\1\t\1\t\2_" '\
-			    '> ${TARGETS[2]}']
-                          )
-    ## slow command
-    #'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
-    #'paste - ${TARGETS[1]} > ${TARGETS[2]}'
-    GENEPRED = genePred[2]
+if CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS:
+    if GENEPRED == '': 
+        genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info',
+                                                               '${SOURCES[0].filebase}.genePred',
+                                                               '${SOURCES[0].filebase}.genePred.wgn']]
+        genePred = env.Command(genePred_targets, File(ANNOTATION),
+                               ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
+                                'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
+                                'paste - ${TARGETS[1]} | sed "s_^\t\([^\t]*\)\t\(.*\)_\1\t\1\t\2_" '\
+    			    '> ${TARGETS[2]}']
+                              )
+        ## slow command
+        #'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
+        #'paste - ${TARGETS[1]} > ${TARGETS[2]}'
+        GENEPRED = genePred[2]
 
 ## PROCESS SAMPLES
 runs = []
@@ -317,16 +308,9 @@ for sample in sorted(samples.keys()):
     runs.append(run_sample)
 
     for k in indexes.keys():
-	Depends(run_sample, indexes[k])
+        if indexes[k]: 
+            Depends(run_sample, indexes[k])
 
-    if translocations:
-	Depends(run_sample, translocated_genome)
-
-#    Depends(run_sample, indexes['STAR'])
-#    Depends(run_sample, indexes['HISAT2'])
-#    Depends(run_sample, indexes['BOWTIE2'])
-#    Depends(run_sample, indexes['SEGEMEHL'])
-#    Depends(run_sample, indexes['BWA'])
     if CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS:
 	Depends(run_sample, GENEPRED) #genePred[2])
 
