@@ -92,6 +92,9 @@ vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
                         'define the circRNA as reliable. If this value exceeds the number '\
                         'of methods specified, it will be set to the number of methods.', 2)
 vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
+vars.Add('BYPASS_LINEAR', 'Skip analysis of linear transcripts. This will also skip '\
+			  'the analysis of linear-to-circular expression correlation',
+	 'False')
 
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
@@ -334,120 +337,130 @@ def get_matching_nodes(nodelist, rexpression):
     return files
 
 cuffmerge_dir = 'cuffmerge'
-if TOGGLE_TRANSCRIPTOME_RECONSTRUCTION:
-    transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
-    if len(transcripts_gtf_files) > 1:
-       cuffmerge_cpus = CPUS
-       cuffmerge_annotation = ANNOTATION
-       cuffmerge_genome_fasta = GENOME_FASTA
-       cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
-                               src_dir = SCONSCRIPT_HOME,
-                               variant_dir = cuffmerge_dir, duplicate = 0,
-                               exports = 'env transcripts_gtf_files cuffmerge_cpus '''
-                               '''cuffmerge_annotation cuffmerge_genome_fasta''')
-    else:
-        cuffmerge = transcripts_gtf_files
-else:
-    ## just to recycle 'cuffmerge' variable
-    cuffmerge = ANNOTATION
-
-## RETRIEVE TRANSCRIPT SEQUENCES
-transcript_sequences_annotation = cuffmerge
-transcript_sequences_genome = GENOME_FASTA
 transcript_sequences_dir = 'transcript_sequences'
-transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
-                                               'junk2_transcript_fastas'), 
-                                  src_dir = SCONSCRIPT_HOME,
-                                  variant_dir = transcript_sequences_dir, duplicate = 0,
-                                  exports = '''env transcript_sequences_annotation '''
-                                  '''transcript_sequences_genome''')
-
-alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
-alignments = get_matching_nodes(runs, alignment_matching_regexp)
-
 cuffquant_dir = 'cuffquant'
 cuffdiff_dir = 'cuffdiff'
 deseq_dir = 'deseq'
 
-gene_exp = ''
-if len(samples.keys()) > 1:
+if env['BYPASS_LINEAR'] == 'False':
 
-    ## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
-    cuffquant_annotation = cuffmerge
-    cuffquant_alignments = alignments
-    cuffquant_genome_fasta = GENOME_FASTA
-    cuffquant_extra_params = CUFFQUANT_EXTRA_PARAMS
-
-    cuffquant_cpus = CPUS
-
-    cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
-                           src_dir = SCONSCRIPT_HOME,
-                           variant_dir = cuffquant_dir, duplicate = 0,
-                           exports = '''env cuffquant_alignments cuffquant_annotation '''
-                           '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
-
-    Depends(cuffquant, [cuffmerge, alignments])
-
-    if len(conditions.keys()) > 1 and DIFF_EXP:
-        ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
-        cuffdiff_cpus = CPUS
-        cuffdiff_conditions = conditions
-        cuffdiff_annotation = cuffmerge
-        cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
-        cuffdiff_extra_params = CUFFDIFF_EXTRA_PARAMS
-        cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
-                              src_dir = SCONSCRIPT_HOME,
-                              variant_dir = cuffdiff_dir, duplicate = 0,
-                              exports = '''env cuffdiff_cpus cuffdiff_conditions '''
-                              '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
-        
-        Depends(cuffdiff, cuffquant)
-
-        gene_exp = get_matching_nodes(cuffdiff, ".*genes.read_group_tracking")
-        gene_meta = get_matching_nodes(cuffdiff, ".*read_groups.info")[0]
-
-        if DESEQ:
-            ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
-            deseq_annotation = cuffmerge
-            deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
-            metafile = File(META).abspath
-            deseq_cpus = CPUS
-            deseq_stranded = 'no'
-            if 'fr-firststrand' in CUFFLINKS_PARAMS:
-            	deseq_stranded = 'yes'
-            else:
-            	deseq_stranded = 'no'
-            deseq = SConscript(os.path.join(deseq_dir, 'junk2_DESeq'),
-            					src_dir = SCONSCRIPT_HOME,
-            					variant_dir = deseq_dir, duplicate = 0,
-                                exports = '''env deseq_annotation deseq_alignments '''
-                                        '''metafile deseq_cpus deseq_stranded ''')
-            Depends(deseq, [cuffmerge, alignments])
-
-    else:
-        ## Normalize expression values: CUFFNORM
-        env_cuffnorm = env.Clone()
-        env_cuffnorm['CPUS'] = CPUS
-        env_cuffnorm['ANNOTATION'] = cuffmerge
-        env_cuffnorm['QUANT_FILES']= get_matching_nodes(cuffquant, '.*\.cxb')
-        env_cuffnorm['EXTRA_PARAMS']= CUFFNORM_EXTRA_PARAMS #TODO: set strandness when required
-        env_cuffnorm['LABELS'] = conditions
-
-        cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffnorm'),
-                              src_dir = SCONSCRIPT_HOME,
-                              variant_dir = cuffdiff_dir, duplicate = 0,
-                              exports = '''env_cuffnorm''')
-        
-        Depends(cuffnorm, cuffquant)
-
-        gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
-        gene_meta = get_matching_nodes(cuffnorm, ".*read_groups.info")[0]
+	if TOGGLE_TRANSCRIPTOME_RECONSTRUCTION:
+	    transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
+	    if len(transcripts_gtf_files) > 1:
+	       cuffmerge_cpus = CPUS
+	       cuffmerge_annotation = ANNOTATION
+	       cuffmerge_genome_fasta = GENOME_FASTA
+	       cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
+	                               src_dir = SCONSCRIPT_HOME,
+	                               variant_dir = cuffmerge_dir, duplicate = 0,
+	                               exports = 'env transcripts_gtf_files cuffmerge_cpus '''
+	                               '''cuffmerge_annotation cuffmerge_genome_fasta''')
+	    else:
+	        cuffmerge = transcripts_gtf_files
+	else:
+	    ## just to recycle 'cuffmerge' variable
+	    cuffmerge = ANNOTATION
+	
+	## RETRIEVE TRANSCRIPT SEQUENCES
+	transcript_sequences_annotation = cuffmerge
+	transcript_sequences_genome = GENOME_FASTA
+	transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
+	                                               'junk2_transcript_fastas'), 
+	                                  src_dir = SCONSCRIPT_HOME,
+	                                  variant_dir = transcript_sequences_dir, duplicate = 0,
+	                                  exports = '''env transcript_sequences_annotation '''
+	                                  '''transcript_sequences_genome''')
+	
+	alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
+	alignments = get_matching_nodes(runs, alignment_matching_regexp)
+	
+	gene_exp = ''
+	if len(samples.keys()) > 1:
+	
+	    ## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
+	    cuffquant_annotation = cuffmerge
+	    cuffquant_alignments = alignments
+	    cuffquant_genome_fasta = GENOME_FASTA
+	    cuffquant_extra_params = CUFFQUANT_EXTRA_PARAMS
+	
+	    cuffquant_cpus = CPUS
+	
+	    cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
+	                           src_dir = SCONSCRIPT_HOME,
+	                           variant_dir = cuffquant_dir, duplicate = 0,
+	                           exports = '''env cuffquant_alignments cuffquant_annotation '''
+	                           '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
+	
+	    Depends(cuffquant, [cuffmerge, alignments])
+	
+	    if len(conditions.keys()) > 1 and DIFF_EXP:
+	        ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
+	        cuffdiff_cpus = CPUS
+	        cuffdiff_conditions = conditions
+	        cuffdiff_annotation = cuffmerge
+	        cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
+	        cuffdiff_extra_params = CUFFDIFF_EXTRA_PARAMS
+	        cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
+	                              src_dir = SCONSCRIPT_HOME,
+	                              variant_dir = cuffdiff_dir, duplicate = 0,
+	                              exports = '''env cuffdiff_cpus cuffdiff_conditions '''
+	                              '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
+	        
+	        Depends(cuffdiff, cuffquant)
+	
+	        gene_exp = get_matching_nodes(cuffdiff, ".*genes.read_group_tracking")
+	        gene_meta = get_matching_nodes(cuffdiff, ".*read_groups.info")[0]
+	
+	        if DESEQ:
+	            ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
+	            deseq_annotation = cuffmerge
+	            deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
+	            metafile = File(META).abspath
+	            deseq_cpus = CPUS
+	            deseq_stranded = 'no'
+	            if 'fr-firststrand' in CUFFLINKS_PARAMS:
+	            	deseq_stranded = 'yes'
+	            else:
+	            	deseq_stranded = 'no'
+	            deseq = SConscript(os.path.join(deseq_dir, 'junk2_DESeq'),
+	            					src_dir = SCONSCRIPT_HOME,
+	            					variant_dir = deseq_dir, duplicate = 0,
+	                                exports = '''env deseq_annotation deseq_alignments '''
+	                                        '''metafile deseq_cpus deseq_stranded ''')
+	            Depends(deseq, [cuffmerge, alignments])
+	
+	    else:
+	        ## Normalize expression values: CUFFNORM
+	        env_cuffnorm = env.Clone()
+	        env_cuffnorm['CPUS'] = CPUS
+	        env_cuffnorm['ANNOTATION'] = cuffmerge
+	        env_cuffnorm['QUANT_FILES']= get_matching_nodes(cuffquant, '.*\.cxb')
+	        env_cuffnorm['EXTRA_PARAMS']= CUFFNORM_EXTRA_PARAMS #TODO: set strandness when required
+	        env_cuffnorm['LABELS'] = conditions
+	
+	        cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffnorm'),
+	                              src_dir = SCONSCRIPT_HOME,
+	                              variant_dir = cuffdiff_dir, duplicate = 0,
+	                              exports = '''env_cuffnorm''')
+	        
+	        Depends(cuffnorm, cuffquant)
+	
+	        gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
+	        gene_meta = get_matching_nodes(cuffnorm, ".*read_groups.info")[0]
+	
+	else:
+	    gene_exp = get_matching_nodes(runs, '.*genes.fpkm_tracking')
+	    gene_meta = ''
+	    link_cufflinks_dir = env.Command(cuffdiff_dir, gene_exp[0].dir, SymLink)
 
 else:
-    gene_exp = get_matching_nodes(runs, '.*genes.fpkm_tracking')
-    gene_meta = ''
-    link_cufflinks_dir = env.Command(cuffdiff_dir, gene_exp[0].dir, SymLink)
+	
+	print "BYPASS_LINEAR = " + env['BYPASS_LINEAR'] +\
+	      ": skipping linear transcript analysis"
 
+	cuffmerge = ANNOTATION
+	gene_exp = env.Command('empty_geneexp.csv', '', 'touch $TARGET')
+	gene_meta = ''
 
 ## COLLECT CIRCRNA RESULTS
 circRNA_collect_dir = 'circRNA_collection'

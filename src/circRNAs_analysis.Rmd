@@ -536,29 +536,34 @@ Gene expression is reported in file `r gene_fpkm_file`.
 
 ```{r show_gene_expressed_by_sample}
 # get gene expressions
-if(gene_meta_file != ""){
-  gene_meta <- fread(gene_meta_file)
-  
-  gene_fpkm <- as.data.table(read.table(file = gene_fpkm_file, header = T, sep = "\t", dec = ".", 
-                                        colClasses = c("character", "factor", "numeric", 
-                                                       "numeric", "numeric", "numeric", 
-                                                       "numeric", "character", "character")))
-  expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
-  gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
-  setkey(gene_meta, condition, replicate_num)
-  setkey(expressed_genes, condition, replicate)
-  expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+if(file.info(gene_fpkm_file)$size > 0){
+    if(gene_meta_file != ""){
+        gene_meta <- fread(gene_meta_file)
+        
+        gene_fpkm <- as.data.table(read.table(file = gene_fpkm_file, header = T, sep = "\t", dec = ".", 
+                                              colClasses = c("character", "factor", "numeric", 
+                                                             "numeric", "numeric", "numeric", 
+                                                             "numeric", "character", "character")))
+        expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+        gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
+        setkey(gene_meta, condition, replicate_num)
+        setkey(expressed_genes, condition, replicate)
+        expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+    }else{
+        gene_fpkm <- fread(gene_fpkm_file)
+        expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+        expressed_genes$sample_id <- unique(circrnas.gtf$sample_id)
+    }
+    
+    expressed_genes.by.sample <- expressed_genes[, .N, by = .(sample_id, tracking_id)][, .("Tot. gene expressed" = .N), by = sample_id]
+    kable(rbind(expressed_genes.by.sample, list("Non-redundant", expressed_genes[, .N, by = tracking_id][, .N])))
 }else{
-  gene_fpkm <- fread(gene_fpkm_file)
-  expressed_genes <- gene_fpkm[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
-  expressed_genes$sample_id <- unique(circrnas.gtf$sample_id)
+    "Linear gene expression analysis not enabled"
 }
-
-expressed_genes.by.sample <- expressed_genes[, .N, by = .(sample_id, tracking_id)][, .("Tot. gene expressed" = .N), by = sample_id]
-kable(rbind(expressed_genes.by.sample, list("Non-redundant", expressed_genes[, .N, by = tracking_id][, .N])))
 ```
 
 ```{r plot_gene_expressed_by_sample}
+if(file.info(gene_fpkm_file)$size > 0){
 expressed_genes.by.sample.plot <- ggplot(data = expressed_genes.by.sample, 
                                          mapping = aes(x = sample_id, y = `Tot. gene expressed`,
                                                        fill = sample_id)) + 
@@ -572,6 +577,7 @@ expressed_genes.by.sample.plot <- expressed_genes.by.sample.plot + guides(fill =
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
   scale_y_continuous(expand = c(0, 0), limits = expressed_genes.by.sample.plot.limits)
 expressed_genes.by.sample.plot
+}
 ```
 
 ## CircRNA expression distribution by sample
@@ -601,8 +607,10 @@ circrna.xpr.per.sample.boxplot <- circrna.xpr.per.sample.boxplot + guides(fill=F
 ## Gene expression distribution by sample
 
 ```{r show_gene_expression}
+if(file.info(gene_fpkm_file)$size > 0){
 kable(sapply(X = split(expressed_genes, expressed_genes$sample_id), 
        FUN = function(x){summary(x$FPKM)}), caption = "Gene expression (FPKM) distribution")
+}
 ```
 
 ## CircRNA and gene expression plots
@@ -615,6 +623,7 @@ Notes on boxplot decorations:
 - boxes are drawn with widths proportional to the square-roots of the number of observations in the groups  
 
 ```{r plot_gene_expression}
+if(file.info(gene_fpkm_file)$size > 0){
 ## boxplot expression per sample: genes
 gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes, 
                                       mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
@@ -622,11 +631,16 @@ gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes,
   ggtitle("Gene expression\nper sample") + theme_bw()
 gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + guides(fill=FALSE) + 
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1))
+}
 ```
 
 
 ```{r plot_circ_gene_expr}
+if(file.info(gene_fpkm_file)$size > 0){
 multiplot(circrna.xpr.per.sample.boxplot, gene.xpr.per.sample.boxplot, cols = 2)
+}else{
+    circrna.xpr.per.sample.boxplot
+}
 ```
 
 ### Cumulative expression
@@ -637,10 +651,12 @@ cum_by_sample <- circrnas.morethan2methods.medrpm[order(sample_id, -medRPM),
                                                   by = .(sample_id)]
 cum_by_sample[, cond_tot := max(csum), by = .(sample_id)][, perc_csum := csum/cond_tot]
 
+if(file.info(gene_fpkm_file)$size > 0){
 cum_gene_by_sample <- expressed_genes[order(sample_id, -FPKM), 
                                       .(csum = cumsum(FPKM), seqid = seq_along(.I), tracking_id), 
                                       by = .(sample_id)]
 cum_gene_by_sample[, cond_tot := max(csum), by = .(sample_id)][, perc_csum := csum/cond_tot]
+}
 ```
 
 ```{r cumulative_expression_box, fig.width=12, fig.height=4}
@@ -651,6 +667,7 @@ circrna.cumsum.per.sample <- ggplot(data = cum_by_sample, mapping = aes(x = seqi
 circrna.cumsum.per.sample <-circrna.cumsum.per.sample +
   theme(text = element_text(size=default.font.size), legend.position = "bottom")
 
+if(file.info(gene_fpkm_file)$size > 0){
 ## Cumulative expression plot: genes
 gene.cumsum.per.sample <- ggplot(data = cum_gene_by_sample, mapping = aes(x = seqid, y = perc_csum, color = sample_id)) +
   geom_line() + ggtitle("Gene cumulative expression") + xlab("Number of genes") +
@@ -660,18 +677,20 @@ gene.cumsum.per.sample <- gene.cumsum.per.sample +
   theme(text = element_text(size=default.font.size), legend.position = "bottom")
 
 multiplot(circrna.cumsum.per.sample, gene.cumsum.per.sample, cols=2)
+}else{
+    circrna.cumsum.per.sample
+}
+
 
 ```
 
 ## Correlation of circRNA and gene expression 
 
 ```{r correlation, echo=FALSE, include=FALSE}
+
 #median circRNA expression (circrna detected by at least 2 methods)
 circ_xpr_by_sample <- circrna.rpms.genes[circrnas.morethan2methods][
-  medRPM>0, .(medRPM), by = .(circ_id, sample_id)]
-
-# avg gene expression
-gene_xpr_by_sample <- expressed_genes[, .(gene_id = tracking_id, sample_id, FPKM)]
+    medRPM>0, .(medRPM), by = .(circ_id, sample_id)]
 
 # select only gene and circRNAs that are overlapping
 setkey(circ_to_gene, label)
@@ -679,26 +698,34 @@ circrna_genes <- unique(circ_to_gene[label == "exonic" | label == "intronic",
                                      .(circ_id = paste0(chr, ":", circ_start, "-", circ_end, ":", strand), 
                                        gene_id, gene_name)])
 genic_circrnas <- merge(circrna_genes, circ_xpr_by_sample, all = F, by = "circ_id")
-genic_circrnas <-merge(genic_circrnas, gene_xpr_by_sample, all.x = T, all.y = F, by = c("gene_id", "sample_id"))
 
-# compute coorelations (matrix?)
-genic_circrnas_corr <- genic_circrnas[, .(corr = cor(medRPM, FPKM, method = "spearman")), 
-                                      by = .(circ_id, gene_id)]
-
-circrna_gene_xpr_bysample_corr <- genic_circrnas
-if(nrow(genic_circrnas) > 0){
-  # put correlations in tabular format
-  circrna_gene_xpr_bysample <- dcast(genic_circrnas, 
-                                     formula = circ_id + gene_id + gene_name~ sample_id, 
-                                     value.var = c("FPKM", "medRPM"), 
-                                     fill = 0)
-  circrna_gene_xpr_bysample_corr <- merge(circrna_gene_xpr_bysample, genic_circrnas_corr, by = c("circ_id", "gene_id"))
+if(file.info(gene_fpkm_file)$size > 0){    
+    
+    # avg gene expression
+    gene_xpr_by_sample <- expressed_genes[, .(gene_id = tracking_id, sample_id, FPKM)]
+    
+    genic_circrnas <-merge(genic_circrnas, gene_xpr_by_sample, all.x = T, all.y = F, by = c("gene_id", "sample_id"))
+    
+    # compute coorelations (matrix?)
+    genic_circrnas_corr <- genic_circrnas[, .(corr = cor(medRPM, FPKM, method = "spearman")), 
+                                          by = .(circ_id, gene_id)]
+    
+    circrna_gene_xpr_bysample_corr <- genic_circrnas
+    if(nrow(genic_circrnas) > 0){
+        # put correlations in tabular format
+        circrna_gene_xpr_bysample <- dcast(genic_circrnas, 
+                                           formula = circ_id + gene_id + gene_name~ sample_id, 
+                                           value.var = c("FPKM", "medRPM"), 
+                                           fill = 0)
+        circrna_gene_xpr_bysample_corr <- merge(circrna_gene_xpr_bysample, genic_circrnas_corr, by = c("circ_id", "gene_id"))
+    }
+    #save table
+    write.csv(x = circrna_gene_xpr_bysample_corr, 
+              file = file.path(results.dir, "circRNA_gene_expression_correlation.csv"), 
+              row.names = F)
+}else{
+    circrna_gene_xpr_bysample_corr <- data.table(mock = numeric())
 }
-#save table
-write.csv(x = circrna_gene_xpr_bysample_corr, 
-          file = file.path(results.dir, "circRNA_gene_expression_correlation.csv"), 
-          row.names = F)
-
 ```
 
 Expressed circRNAs | Exonic or intronic circRNAs
@@ -711,6 +738,7 @@ In total, `r ifelse(nrow(circrna_gene_xpr_bysample_corr) > 0, circrna_gene_xpr_b
 Correlation values were saved in file `r file.path(results.dir, "circRNA_gene_expression_correlation.csv")`
 
 ```{r corr_density_plot}
+if(file.info(gene_fpkm_file)$size > 0){
 # plot correlations
 corr.density.plot <- ggplot(data = circrna_gene_xpr_bysample_corr, mapping = aes(x = corr)) + geom_density()
 corr.density.plot <- corr.density.plot + theme_bw() + ggtitle("CircRNA-gene expression correlation distribution") + 
@@ -727,23 +755,26 @@ kable(data.frame("Spearman correlation" = unclass(summary(circrna_gene_xpr_bysam
 
 kable(data.frame("Spearman correlation" = unclass(summary(circrna_gene_xpr_bysample_corr[corr < 0]$corr))), 
       caption = "Negative correlations distribution")
+}
 ```
 
 ```{r correlations_box, fig.width=12, fig.height=4}
-cor.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr) + 
-  geom_boxplot(aes(x = "", y = corr), notch = T, width = .5) + 
-  theme_bw() + xlab("") + 
-  ylab("Correlation") + ggtitle("Correlation\ndistribution")
-
-cor.abs.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr[
-  , .(pos_corr = ifelse(corr > 0, "Positive", "Negative"), corr)][!is.na(corr)]) + 
-  geom_boxplot(aes(x = "", y = abs(corr), fill = pos_corr), notch = T, varwidth = T)  + 
-  scale_fill_manual(values = c("blue", "red")) + facet_wrap(facets = ~ pos_corr) +
-  theme_bw() + guides(fill = FALSE) + xlab("") + ylab("Abs(correlation)") + 
-  ggtitle("Absolute negative and positive\ncorrelation distributions")
-
-multiplot(cor.boxplot, cor.abs.boxplot, cols = 2)
-#make HTML version of corralation table
+if(file.info(gene_fpkm_file)$size > 0){
+    cor.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr) + 
+        geom_boxplot(aes(x = "", y = corr), notch = T, width = .5) + 
+        theme_bw() + xlab("") + 
+        ylab("Correlation") + ggtitle("Correlation\ndistribution")
+    
+    cor.abs.boxplot <- ggplot(data = circrna_gene_xpr_bysample_corr[
+        , .(pos_corr = ifelse(corr > 0, "Positive", "Negative"), corr)][!is.na(corr)]) + 
+        geom_boxplot(aes(x = "", y = abs(corr), fill = pos_corr), notch = T, varwidth = T)  + 
+        scale_fill_manual(values = c("blue", "red")) + facet_wrap(facets = ~ pos_corr) +
+        theme_bw() + guides(fill = FALSE) + xlab("") + ylab("Abs(correlation)") + 
+        ggtitle("Absolute negative and positive\ncorrelation distributions")
+    
+    multiplot(cor.boxplot, cor.abs.boxplot, cols = 2)
+    #make HTML version of corralation table
+}
 ```
 
 
