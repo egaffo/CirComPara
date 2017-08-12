@@ -114,7 +114,10 @@ except NameError:
     vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
 	     'reconstruction. Default only quantifies genes and transcripts from the given '\
 	     'annotation GTF file', 'False')
-   
+    vars.Add('BYPASS_LINEAR', 'Skip analysis of linear transcripts. This will also skip '\
+	     'the analysis of linear-to-circular expression correlation',
+	     'False')
+
     env = Environment(variables = vars,
                       ENV = os.environ)
     Help(vars.GenerateHelpText(env))
@@ -222,19 +225,23 @@ mappings    = env.SConscript(os.path.join(build_dir, junk2_mapping),
                              '''hisat2_cpus''')
 results.append(mappings)
 
-## EXPRESSION ANALYSIS
-expression_cpus = CPUS
-expression_genome_fasta = GENOME_FASTA 
-expression_annotation = ANNOTATION
-expression_cufflinks_params = CUFFLINKS_PARAMS
-expression_toggle_transcriptome_reconstruction = TOGGLE_TRANSCRIPTOME_RECONSTRUCTION
 mapping_file = mappings[0]
-expression  = env.SConscript(os.path.join(build_dir, junk2_expression), 
-                             variant_dir = build_dir, src_dir = SRC_DIR, 
-                             duplicate = 0, exports = '''env mapping_file '''
-                             '''sample_name expression_cpus expression_genome_fasta '''
-                             '''expression_annotation expression_cufflinks_params '''
-			     '''expression_toggle_transcriptome_reconstruction''')
+if env['BYPASS_LINEAR'] == 'False':
+	## EXPRESSION ANALYSIS
+	expression_cpus = CPUS
+	expression_genome_fasta = GENOME_FASTA 
+	expression_annotation = ANNOTATION
+	expression_cufflinks_params = CUFFLINKS_PARAMS
+	expression_toggle_transcriptome_reconstruction = TOGGLE_TRANSCRIPTOME_RECONSTRUCTION
+	expression  = env.SConscript(os.path.join(build_dir, junk2_expression), 
+	                             variant_dir = build_dir, src_dir = SRC_DIR, 
+	                             duplicate = 0, exports = '''env mapping_file '''
+	                             '''sample_name expression_cpus expression_genome_fasta '''
+	                             '''expression_annotation expression_cufflinks_params '''
+				     '''expression_toggle_transcriptome_reconstruction''')
+else:
+	expression = env.Command('mock_expression.txt', mappings, 'touch $TARGET')
+
 results.append(expression)
 
 ## CIRCRNA DETECTION
