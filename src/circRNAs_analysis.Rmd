@@ -413,7 +413,7 @@ circ.2reads.at.least.2methods.at.least <- circrnas.morethan2methods.medrpm[, .N,
                                                                              , .(reliable = .N),
                                                                              by = sample_id]
 colnames(circ.2reads.at.least.2methods.at.least)[colnames(circ.2reads.at.least.2methods.at.least) == "reliable"] <- coln
-reliable.circ.tab <- merge(circ.2reads.at.least, circ.2reads.at.least.2methods.at.least)
+reliable.circ.tab <- merge(circ.2reads.at.least, circ.2reads.at.least.2methods.at.least, by = "sample_id")
 kable(reliable.circ.tab)
 ```
 
