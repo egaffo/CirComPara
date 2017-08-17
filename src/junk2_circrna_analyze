@@ -45,11 +45,10 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''gene_fpkm_file <- "${SOURCES[2].abspath}"; '''\
                         '''min_methods <- ${MIN_METHODS}; '''\
                         '''min_reads <- ${MIN_READS}; '''\
+                        '''meta_file <- "$META"; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", '''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
-#                        '''knitr::knit2html("$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd", '''\
-#                        '''output = "$TARGET", force_v1 = F)' '''
 
 circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
 circrnas_analysis_sources = [env['CIRCRNAS'], env['CIRCGENES'], env['GENEEXP']]

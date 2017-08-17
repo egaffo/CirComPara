@@ -26,6 +26,7 @@ CirComPara analysis results are presented in this page. Different sections displ
 # gene_fpkm_file
 # min_methods ## minimum number of methods detecting a circRNA to define it "reliable"
 # min_reads
+# meta_file
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 6, 
@@ -461,7 +462,7 @@ if(gene_meta_file != ""){
     gene_meta <- fread(gene_meta_file)
     gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
     
-    intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
+    intgroup.dt <- gene_meta[, .(sample_id, condition)][order(condition, sample_id)]
     intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
     intgroup.dt <- merge(intgroup.dt, 
                          intgroup.dt[, .(samples_per_condition = .N), 
@@ -469,9 +470,18 @@ if(gene_meta_file != ""){
                                                                          "Set2")[1:length(condition)]][], 
                          by = "condition")[, color := muted(hue, l = color_luminance)][]
 }else{
-    hue <- brewer.pal(8, "Set2")[1]
-    sample_id <- unique(circrnas.gtf[, sample_id])
-    intgroup.dt <- data.table(condition = sample_id, sample_id = sample_id, hue = hue, color = hue)
+    meta <- unique(fread(meta_file)[, .(sample_id = sample, condition)])
+    intgroup.dt <- meta[, .(sample_id, condition)][order(condition, sample_id)]
+    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
+    intgroup.dt <- merge(intgroup.dt, 
+                         intgroup.dt[, .(samples_per_condition = .N), 
+                                     by = condition][, hue := brewer.pal(8, 
+                                                                         "Set2")[1:length(condition)]][], 
+                         by = "condition")[, color := muted(hue, l = color_luminance)][]
+    
+    # hue <- brewer.pal(8, "Set2")[1]
+    # sample_id <- unique(circrnas.gtf[, sample_id])
+    # intgroup.dt <- data.table(condition = sample_id, sample_id = sample_id, hue = hue, color = hue)
 }
 
 ```
@@ -517,12 +527,7 @@ reliable.circ.barplot <- reliable.circ.barplot + guides(fill = FALSE) +
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
   scale_y_continuous(expand = c(0, 0), limits = reliable.circ.barplot.limits)
 
-if(gene_meta_file != ""){
-    reliable.circ.barplot + scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
-}else{
-    reliable.circ.barplot
-}
-
+reliable.circ.barplot + scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
 ```
 
 ## Categories of detected circRNAs 
@@ -853,7 +858,7 @@ circ.expr.to.circ.per.gene.per.sample[, circRNAs_per_gene := .N, by = .(sample_i
 ```{r CircRNA expression vs circRNAs expressed per gene plots, fig.width=12, fig.height=8}
 ## boxplot
 circ.expr.to.circ.per.gene.per.sample.plot <- ggplot(data = circ.expr.to.circ.per.gene.per.sample, 
-                                          mapping = aes(x = factor(circRNAs_per_gene), y = medRPM)) + 
+                                                     mapping = aes(x = factor(circRNAs_per_gene), y = medRPM)) + 
     geom_boxplot(varwidth = T, aes(fill = sample_id)) + 
     scale_y_log10() + facet_wrap(facets = ~ sample_id, scales = "free_x")
 ## add decorations to plot
@@ -867,7 +872,7 @@ if(gene_meta_file != ""){
 }
 circ.expr.to.circ.per.gene.per.sample.plot + theme(plot.title = element_text(hjust = 0.5)) + 
     guides(fill = FALSE)
-    
+
 ## all samples together: mean expression across samples
 circ.expr.to.circ.per.gene <- unique(circ.expr.to.circ.per.gene.per.sample[, .(avgRPM = mean(medRPM)), 
                                                                            by = .(gene_id, circ_id)])[
@@ -884,27 +889,29 @@ circ.expr.to.circ.per.gene.plot + theme(plot.title = element_text(hjust = 0.5)) 
     guides(fill = FALSE)
 
 if(gene_meta_file != ""){
-## discriminate per condition: mean expression across samples, within conditions
-circ.expr.to.circ.per.gene.per.condition <- unique(circ.expr.to.circ.per.gene.per.sample[, .(avgRPM = mean(medRPM)), 
-                                                                                         by = .(condition, gene_id, circ_id)])[
-                                                                                             , circRNAs_per_gene := .N, by = .(condition, gene_id)][]
-circ.expr.to.circ.per.gene.per.condition.plot <- ggplot(data = circ.expr.to.circ.per.gene.per.condition, 
-                                                        mapping = aes(x = factor(circRNAs_per_gene), y = avgRPM,
-                                                                      fill = condition)) + 
-    geom_boxplot(varwidth = T) + scale_y_log10() +  
-    facet_wrap(facets = ~ condition, scales = "free", nrow = intgroup.dt[, .N, by = condition][, .N])
-## add decorations to plot
-circ.expr.to.circ.per.gene.per.condition.plot <- circ.expr.to.circ.per.gene.per.condition.plot + 
-    ggtitle("CircRNAs per gene vs circRNA expression") + xlab("Number of circRNAs") + ylab("CircRNA RPM") + 
-    theme_bw() + 
-    theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=90, hjust=1))
-if(gene_meta_file != ""){
+    ## discriminate per condition: mean expression across samples, within conditions
+    circ.expr.to.circ.per.gene.per.condition <- unique(circ.expr.to.circ.per.gene.per.sample[, .(avgRPM = mean(medRPM)), 
+                                                                                             by = .(condition, gene_id,
+                                                                                                    circ_id)])[
+                                                                                                 , circRNAs_per_gene := .N, 
+                                                                                                 by = .(condition, gene_id)][]
+    circ.expr.to.circ.per.gene.per.condition.plot <- ggplot(data = circ.expr.to.circ.per.gene.per.condition, 
+                                                            mapping = aes(x = factor(circRNAs_per_gene), y = avgRPM,
+                                                                          fill = condition)) + 
+        geom_boxplot(varwidth = T) + scale_y_log10() +  
+        facet_wrap(facets = ~ condition, scales = "free", nrow = intgroup.dt[, .N, by = condition][, .N])
+    ## add decorations to plot
+    circ.expr.to.circ.per.gene.per.condition.plot <- circ.expr.to.circ.per.gene.per.condition.plot + 
+        ggtitle("CircRNAs per gene vs circRNA expression") + xlab("Number of circRNAs") + ylab("CircRNA RPM") + 
+        theme_bw() + 
+        theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=90, hjust=1))
+    
     circ.expr.to.circ.per.gene.per.condition.plot <- circ.expr.to.circ.per.gene.per.condition.plot + 
         scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
                                             nm = unique(intgroup.dt[, condition])),
                           guide = FALSE)
-}
-circ.expr.to.circ.per.gene.per.condition.plot + theme(plot.title = element_text(hjust = 0.5))
+    
+    circ.expr.to.circ.per.gene.per.condition.plot + theme(plot.title = element_text(hjust = 0.5))
 }
 ```
 
@@ -1120,9 +1127,9 @@ if(file.info(gene_fpkm_file)$size > 0){
 
 
 ```{r plot_circ_gene_expr, fig.width=12, fig.height=4}
+circrna.xpr.per.sample.boxplot <- circrna.xpr.per.sample.boxplot + 
+    scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
 if(gene_meta_file != ""){
-    circrna.xpr.per.sample.boxplot <- circrna.xpr.per.sample.boxplot + 
-        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
     if(file.info(gene_fpkm_file)$size > 0){
         gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + 
             scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
@@ -1130,6 +1137,8 @@ if(gene_meta_file != ""){
     }else{
         circrna.xpr.per.sample.boxplot
     }
+}else{
+    circrna.xpr.per.sample.boxplot
 }
 ```
 
@@ -1142,11 +1151,12 @@ cum_by_sample <- circrnas.morethan2methods.medrpm[order(sample_id, -medRPM),
                                                   by = .(sample_id)]
 cum_by_sample[, cond_tot := max(csum), by = .(sample_id)][, perc_csum := csum/cond_tot]
 
-if(gene_meta_file != ""){
-    cum_by_sample <- merge(cum_by_sample, intgroup.dt[, .(sample_id, condition)], by = "sample_id")
-}else{
-    cum_by_sample$condition <- "unset"
-}
+# if(gene_meta_file != ""){
+#     cum_by_sample <- merge(cum_by_sample, intgroup.dt[, .(sample_id, condition)], by = "sample_id")
+# }else{
+#     cum_by_sample$condition <- "unset"
+# }
+cum_by_sample <- merge(cum_by_sample, intgroup.dt[, .(sample_id, condition)], by = "sample_id")
 
 if(file.info(gene_fpkm_file)$size > 0){
     ## cumulative expression of expressed circRNA-overlapping genes
@@ -1173,6 +1183,10 @@ circrna.cumsum.per.sample <- ggplot(data = cum_by_sample, mapping = aes(x = seqi
 circrna.cumsum.per.sample <- circrna.cumsum.per.sample +
     theme(text = element_text(size=default.font.size), legend.position = "bottom") + 
     theme(plot.title = element_text(hjust = 0.5))
+circrna.cumsum.per.sample <- circrna.cumsum.per.sample + 
+    scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]), "Sample") + 
+    guides(color = guide_legend(ncol = intgroup.dt[, .N, by = condition][, .N]), 
+           linetype = guide_legend(direction = "vertical"))
 
 if(file.info(gene_fpkm_file)$size > 0){
     ## Cumulative expression plot: genes
@@ -1186,16 +1200,11 @@ if(file.info(gene_fpkm_file)$size > 0){
         theme(plot.title = element_text(hjust = 0.5))
     
     if(gene_meta_file != ""){
-        circrna.cumsum.per.sample <- circrna.cumsum.per.sample + 
-            scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]), "Sample") + 
-            guides(color = guide_legend(ncol = intgroup.dt[, .N, by = condition][, .N]), 
-                   linetype = guide_legend(direction = "vertical"))
         gene.cumsum.per.sample <- gene.cumsum.per.sample + 
             scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]), "Sample") + 
             guides(color = guide_legend(ncol = intgroup.dt[, .N, by = condition][, .N]), 
                    linetype = guide_legend(direction = "vertical"))
     }else{
-        circrna.cumsum.per.sample <- circrna.cumsum.per.sample + scale_color_discrete("Sample")
         gene.cumsum.per.sample <- gene.cumsum.per.sample + scale_color_discrete("Sample")
     }
     multiplot(circrna.cumsum.per.sample, gene.cumsum.per.sample, cols=2)
