@@ -130,9 +130,10 @@ results = []
 ## GET INPUT READ FILE FULL PATH
 raw_reads = [File(f).abspath for f in READS]
 
-sample_name = os.path.basename(Dir('.').path)
-if sample_name=='.':
-    sample_name = os.path.basename(Dir('.').abspath)
+#sample_name = os.path.basename(Dir('.').path)
+#if sample_name=='.':
+#    sample_name = os.path.basename(Dir('.').abspath)
+sample_name = env['SAMPLE']
 
 ### RETIRIEVE CANONICALLY UNMAPPED READS
 unmapped_reads_dir = 'unmapped_reads'

@@ -51,7 +51,7 @@ junk2_circrnas        = 'junk2_sample_circrna_methods'
 Import('*')
 
 try:
-    env = env.Clone()
+    env = env_circpipe.Clone()
     CPUS         = sample_cpus
     GENOME_INDEX = sample_genome_index
     GENOME_FASTA = sample_genome_fasta
@@ -204,10 +204,12 @@ if len(preprocess[0]) > 2:
     else:
         clean_reads.append(preprocess[0][1])
 
-#env['SAMPLE'] = os.path.basename(Dir('.').path)
-sample_name = os.path.basename(Dir('.').path)
-if sample_name=='.':
-    sample_name = os.path.basename(Dir('.').abspath)
+##env['SAMPLE'] = os.path.basename(Dir('.').path)
+#sample_name = os.path.basename(Dir('.').path)
+#if sample_name=='.':
+#    sample_name = os.path.basename(Dir('.').abspath)
+
+sample_name = env['SAMPLE']
 
 ## ALIGN TO GENOME
 #mapper = MAPPER

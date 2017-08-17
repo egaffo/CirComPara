@@ -305,11 +305,13 @@ for sample in sorted(samples.keys()):
 
     circrna_methods = CIRCRNA_METHODS
 
+    env_circpipe = env.Clone()
+    env_circpipe['SAMPLE'] = sample
     sample_dir = os.path.join(samples_dir, sample)
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'),
                             src_dir = SCONSCRIPT_HOME,
                             variant_dir = sample_dir, duplicate = 0,
-                            exports = '''env sample_cpus sample_genome_index '''
+                            exports = '''env_circpipe sample_cpus sample_genome_index '''
                             '''sample_genome_fasta sample_preprocessor '''
                             '''sample_preprocessor_params '''
                             '''sample_adapter_file sample_annotation '''
