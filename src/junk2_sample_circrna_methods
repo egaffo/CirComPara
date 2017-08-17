@@ -282,8 +282,10 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'circexplorer2_star' in C
 	                                '''star_reads_to_map '''\
 	                                '''star_index star_extra_params '''\
 	                                '''star_annotation''')
-	 
-	Chimeric_out_junction = star[1]
+	
+	results.append(star)
+	
+	Chimeric_out_junction = star[0][1]
 
 	## parse STAR alignments with CIRCexplorer2
 	circexplorer2_env = env.Clone()

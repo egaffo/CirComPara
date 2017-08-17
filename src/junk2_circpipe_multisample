@@ -519,17 +519,26 @@ find_circ_mappings_pattern = '.*find_circ_mapped_reads_count\.txt'
 CIRI_mappings_pattern = '.*CIRI_mapped_reads_count\.txt'
 # CIRCexplorer mapped reads
 CIRCexplorer_mappings_pattern = '.*CIRCExplorer_mapped_reads_count\.txt'
+# BWA mapped reads
+BWA_mappings_pattern = '.*BWA_mapped_reads_count\.txt'
+# STAR mapped reads
+STAR_mappings_pattern = '.*STAR_mapped_reads_count\.txt'
+
 
 testrealign_mappings     = get_matching_nodes(runs, testrealign_mappings_pattern)
 find_circ_mappings    = get_matching_nodes(runs, find_circ_mappings_pattern)
 ciri_mappings         = get_matching_nodes(runs, CIRI_mappings_pattern)
 CIRCexplorer_mappings = get_matching_nodes(runs, CIRCexplorer_mappings_pattern)
+bwa_mappings         = get_matching_nodes(runs, BWA_mappings_pattern)
+star_mappings         = get_matching_nodes(runs, STAR_mappings_pattern)
 
+collect_circrna_maps_counts_targets = [testrealign_mappings, find_circ_mappings, 
+                                       ciri_mappings, CIRCexplorer_mappings,
+				       bwa_mappings, star_mappings]
 collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
 collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir, 
                                                        'circrna_maps_counts.txt'), 
-                                          [testrealign_mappings, find_circ_mappings, 
-                                          ciri_mappings, CIRCexplorer_mappings], 
+                                          collect_circrna_maps_counts_targets, 
                                           collect_circrna_maps_counts_cmd)
 
 env_merge_sample_circrnas = env.Clone()

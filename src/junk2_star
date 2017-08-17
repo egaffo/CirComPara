@@ -89,6 +89,14 @@ star = env.Command(star_targets, READS, [chdir_working_cmd + ' && '+\
 
 env.Precious(star[0]) # do not delete old alignment file untill the new one has been computed
 
+## COUNT AND REPORT MAPPED READS
+mappings_file = star[0]
+mapped_reads_target = os.path.join(star_out_dir, 'STAR_mapped_reads_count.txt')
+mapped_reads_cmd    = '''samtools view -F 4 ${SOURCE} '''\
+                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
+mapped_reads        = env.Command(mapped_reads_target, mappings_file, mapped_reads_cmd)
+
+
 Clean('.', star_out_dir)
 
-Return('star')
+Return('star mapped_reads')
