@@ -73,6 +73,8 @@ ciri_compared = None
 find_circ_compared = None
 testrealign_compared = None
 CIRCexplorer2_star_compared = None
+CIRCexplorer2_bwa_compared = None
+CIRCexplorer2_segemehl_compared = None
 
 if not ''.join([str(f) for f in Flatten(testrealign_nodes)]) == '':
 
