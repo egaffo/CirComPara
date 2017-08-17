@@ -207,26 +207,6 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
 
 		Depends(circexplorer2_segemehl, testrealign)
 
-
-if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'ciri' in CIRCRNA_METHODS:
-    ## CIRI
-    ciri_cpus = CPUS
-    ciri_reads = raw_reads
-    ciri_genome_fasta = GENOME_FASTA
-    ciri_sample = sample_name
-    ciri_bwa_index = BWA_INDEX
-    ciri_bwa_extra_parameters = BWA_PARAMS 
-    ciri_script = CIRI
-    ciri_annotation = ANNOTATION
-    ciri_extra_parameters = CIRI_EXTRA_PARAMS
-    
-    ciri = env.SConscript(os.path.join(build_dir, junk2_ciri), 
-                          variant_dir = build_dir, src_dir = SRC_DIR, 
-                          duplicate = 0, 
-                          exports = 'env ciri_cpus ciri_bwa_index ciri_reads ciri_genome_fasta ciri_sample ciri_bwa_extra_parameters ciri_annotation ciri_script ciri_extra_parameters ')
-    
-    results.append(ciri)
-
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'findcirc' in CIRCRNA_METHODS:
     ## FIND_CIRC
     junk2_findcirc    = 'junk2_findcirc'
@@ -300,9 +280,9 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'circexplorer2_star' in C
 	results.append(circexplorer2_star)	
 	Depends(circexplorer2_star, star)
 
-if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'circexplorer2_bwa' in \
-	CIRCRNA_METHODS:
-    
+if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
+	any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 'ciri']]):
+
     bwa_env = env.Clone()
     bwa_env['CPUS'] = CPUS
     bwa_env['READS'] = raw_reads
@@ -317,20 +297,35 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'circexplorer2_bwa' in \
     
     results.append(bwa)
 
-    RNA_seq_bwa_sam = bwa[0]
-    ## parse BWA alignments with CIRCexplorer2
-    circexplorer2_env = env.Clone()
-    circexplorer2_env['FUSION_FILE'] = RNA_seq_bwa_sam
-    circexplorer2_env['ALIGNER'] = 'BWA'
-    circexplorer2_bwa = env.SConscript(os.path.join(build_dir, 
-    						'ccp_circexplorer2.scons'),
-    			variant_dir = build_dir, src_dir = SRC_DIR,
-                            duplicate = 0,
-    			exports = '''circexplorer2_env''')
-    
-    results.append(circexplorer2_bwa)
-    Depends(circexplorer2_bwa, bwa)
+    if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
+	'circexplorer2_bwa' in CIRCRNA_METHODS:
 
+        RNA_seq_bwa_sam = bwa[0]
+        ## parse BWA alignments with CIRCexplorer2
+        circexplorer2_env = env.Clone()
+        circexplorer2_env['FUSION_FILE'] = RNA_seq_bwa_sam
+        circexplorer2_env['ALIGNER'] = 'BWA'
+        circexplorer2_bwa = env.SConscript(os.path.join(build_dir, 
+        						'ccp_circexplorer2.scons'),
+        			variant_dir = build_dir, src_dir = SRC_DIR,
+                                duplicate = 0,
+        			exports = '''circexplorer2_env''')
+        
+        results.append(circexplorer2_bwa)
+        Depends(circexplorer2_bwa, bwa)
+
+    if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'ciri' in CIRCRNA_METHODS:
+
+        ## parse BWA alignments with CIRI
+        env_ciri = env.Clone()
+        env_ciri['BWA_ALIGN'] = bwa[0] 
+        ciri = env.SConscript(os.path.join(build_dir, 'ccp_ciri.scons'), 
+                              variant_dir = build_dir, src_dir = SRC_DIR, 
+                              duplicate = 0, 
+                              exports = 'env_ciri')
+        
+        results.append(ciri)
+        Depends(ciri, bwa)
 
 Clean('.', build_dir)
 Clean('.', unmapped_reads_dir)
