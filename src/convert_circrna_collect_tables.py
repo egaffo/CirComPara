@@ -9,7 +9,7 @@ def format_gtf_line(chrom, source, feature, start, end, score, strand, frame,
     line = '\t'.join([chrom, source, feature, start, end, score, strand, frame, group])
     return line
 
-def format_circexplorer(line, outformat):
+def format_circexplorer(line, outformat, ce_version):
     fields = line 
     if outformat == 'gtf':
         sample = fields[0]
@@ -21,7 +21,7 @@ def format_circexplorer(line, outformat):
         gene_id = chrom + ':' + start + '-' + end + ':' + strand
         transcript_id = gene_id + '.' + sample
         
-        outline = format_gtf_line(chrom, 'circexplorer', 'backsplice', 
+        outline = format_gtf_line(chrom, ce_version, 'backsplice', 
                                   start, end, score, strand, '.', 
                                   gene_id, transcript_id, 'sample_id "' + sample + '";')
     elif outformat == 'bed6':
@@ -95,7 +95,9 @@ if __name__ == '__main__':
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('input', default = '-', help = 'A csv file or piped stream (default -)')
     parser.add_argument('-p', '--program', type = str, 
-                        choices = ['ciri', 'circexplorer', 'findcirc', 'testrealign'], 
+                        choices = ['ciri', 'circexplorer', 'findcirc', 'testrealign', 
+                                    'circexplorer2_star', 'circexplorer2_bwa', 
+                                    'circexplorer2_segemehl'], 
                         required = True, dest = 'program', 
                         help = 'The program that generated the input file')
     parser.add_argument('-f', '--format', type = str, 
@@ -115,8 +117,9 @@ if __name__ == '__main__':
   
         outline = ''
         
-        if args.program == 'circexplorer':
-            outline = format_circexplorer(line, args.outformat)
+        if args.program in ['circexplorer', 'circexplorer2_star',
+                            'circexplorer2_bwa', 'circexplorer2_segemehl']:
+            outline = format_circexplorer(line, args.outformat, args.program)
         elif args.program == 'ciri':
             outline = format_ciri(line, args.outformat)
         elif args.program == 'findcirc':

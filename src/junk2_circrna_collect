@@ -38,7 +38,11 @@ except NameError:
 methods = {'CIRCEXPLORER': 'circexplorer',
 	   'CIRI': 'ciri',
 	   'FINDCIRC': 'findcirc',
-	   'TESTREALIGN': 'testrealign'}
+	   'TESTREALIGN': 'testrealign',
+       'CIRCEXPLORER2_STAR': 'circexplorer2_star',
+       'CIRCEXPLORER2_BWA': 'circexplorer2_bwa',
+       'CIRCEXPLORER2_SEGEMEHL': 'circexplorer2_segemehl'
+       }
 
 ## collect circRNAs in a single GTF annotation file
 circ_gtf_sources = []
