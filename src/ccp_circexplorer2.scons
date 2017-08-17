@@ -17,7 +17,6 @@ doi:10.1101/gr.202895.115.
 
 import os 
 
-
 Import('*')
 
 try:
@@ -35,6 +34,8 @@ except NameError:
                             'tophat_fusion/accepted_hits.bam for TopHat-Fusion, '\
                             'mapsplice_out/fusions_raw.txt for Mapsplice', 
             'Chimeric.out.junction')
+    vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
+    vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -45,6 +46,7 @@ except NameError:
         Exit(1)
 
 out_dir = 'CIRCexplorer2_' + env['ALIGNER'].lower()
+results = []
 
 #TopHat-Fusion, STAR, MapSplice, BWA, segemel
 if env['ALIGNER'].lower() == 'star':
@@ -70,7 +72,25 @@ CIRCexplorer2 = env.Command(CIRCexplorer2_targets,
                             CIRCexplorer2_sources, 
                             CIRCexplorer2_cmd)
 
-Return('CIRCexplorer2')
+results.append(CIRCexplorer2)
+
+if not env['GENEPRED'] == '':
+    CIRCexplorer2_annotate_targets = [os.path.join(out_dir, 'annotate', f) 
+                                    for f in ['annotated_fusion.txt', 
+                                    'circ_fusion.txt']]
+    CIRCexplorer2_annotate_sources = [File(env['GENEPRED']),
+                                      File(env['GENOME_FASTA']),
+                                      CIRCexplorer2[0]]
+    CIRCexplorer2_annotate_cmd = 'CIRCexplorer2 annotate -r ${SOURCES[0]} '\
+                                '-g ${SOURCES[1]} ${SOURCES[2].dir}'
+    CIRCexplorer2_annotate = env.Command(CIRCexplorer2_annotate_targets,
+                                        CIRCexplorer2_annotate_sources,
+                                        CIRCexplorer2_annotate_cmd)
+
+    results.append(CIRCexplorer2_annotate)
+
+
+Return('results')
 
 Clean('.', out_dir)
 
