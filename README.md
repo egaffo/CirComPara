@@ -138,7 +138,7 @@ PREPROCESSOR: The preprocessing method. Set "" for no preprocessing
 PREPROCESSOR_PARAMS: Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string defaults to MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 
     default: 
     
-CIRI: The full path to the CIRI_vx.x.pl perl script
+CIRI: (DEPRECATED) The full path to the CIRI_vx.x.pl perl script. By default the symlink in CirComPara bin/ directory will be used
     default: 
 
 CIRI_EXTRA_PARAMS: CIRI additional parameters
@@ -190,6 +190,18 @@ DESEQ: Set True to enable differential expression computation also with DESeq2. 
     default: False
 
 QRE_FIND: Set True to toggle analysis of QKI response elements sequences
+    default: False
+
+READSTAT_METHODS: Comma separated list of methods to use for read statistics. Currently supported: fastqc, fastx
+    default: fastqc
+
+MIN_METHODS: Number of methods that commmonly detect a circRNA to define the circRNA as reliable. If this value exceeds the number of methods specified, it will be set to the number of methods
+    default: 2
+
+MIN_READS: Number of reads to consider a circRNA as expressed
+    default: 2
+
+BYPASS_LINEAR: Skip analysis of linear transcripts. This will also skip the analysis of linear-to-circular expression correlation
     default: False
 ```
 

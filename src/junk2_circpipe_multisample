@@ -46,7 +46,8 @@ vars.Add('PREPROCESSOR_PARAMS',
         '')
 vars.Add('ANNOTATION', 'Gene annotation file (like Ensembl GTF/GFF)', '')
 vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', '')
-vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
+vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
+	'By default the symlink in CirComPara bin/ directory will be used', '')
 vars.Add('BWA_PARAMS','Extra parameters for BWA','')
 
 vars.Add('GENOME_INDEX', '''The index of the reference genome for HISAT2''', '')
