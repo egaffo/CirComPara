@@ -71,9 +71,14 @@ vars.Add('CUFFDIFF_EXTRA_PARAMS',
          'Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
          ' --multi-read-correct', '')
 vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
-vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods to use. '\
-	     'Repeated values will be collapsed. Default: use all methods available (empty string)', 
-         '')
+vars.Add('CIRCRNA_METHODS', 
+	 'Comma separated list of circRNA detection methods to use. '\
+	 'Repeated values will be collapsed. Currently supported: ciri, find_circ, '\
+	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, circexplorer (version 1, '\
+	 'DEPRECATED: use circexplorer2_star instead), testrealign (unfiltered segemehl, '\
+	 'DEPRECATED: use circexplorer2_segemehl for a better filtering of segemehl predictions). '\
+	 'Set an empty string to use all methods available (including deprecated methods). ', 
+         'ciri,find_circ,circexplorer2_star,circexplorer2_bwa,circexplorer2_segemehl')
 vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
          'reconstruction. Default only quantifies genes and transcripts from the given '\
          'annotation GTF file', 'False')
