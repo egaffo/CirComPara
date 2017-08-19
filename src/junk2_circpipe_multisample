@@ -117,6 +117,7 @@ ANNOTATION   = env['ANNOTATION']
 SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
 BWA_INDEX      = env['BWA_INDEX']
 BWA_PARAMS     = env['BWA_PARAMS']
+env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
 CIRI           = env['CIRI']
 CIRI_EXTRA_PARAMS = env['CIRI_EXTRA_PARAMS']
 BOWTIE2_INDEX  = env['BOWTIE2_INDEX']
