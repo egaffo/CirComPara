@@ -36,7 +36,7 @@ junk2_segemehl_mapping = 'junk2_segemehl_mapping'
 Import('*')
 
 try:
-    env = env.Clone()
+    env = env_sample_circrna_methods.Clone()
     CPUS         = sample_cpus
     GENOME_FASTA = sample_genome_fasta
     ANNOTATION   = sample_annotation

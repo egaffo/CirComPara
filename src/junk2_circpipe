@@ -314,11 +314,12 @@ if strandness_pattern.search(hisat2_extra_params):
 
 ## select which circRNA methods have to be performed
 circrna_methods = CIRCRNA_METHODS
-
+env_sample_circrna_methods = env.Clone()
+env_sample_circrna_methods.Replace(READS = sample_raw_reads)
 circrnas = env.SConscript(os.path.join(build_dir, junk2_circrnas), 
                         src_dir = SRC_DIR, 
                         variant_dir = build_dir, duplicate = 0,
-                        exports = '''env sample_cpus sample_genome_fasta '''
+                        exports = '''env_sample_circrna_methods sample_cpus sample_genome_fasta '''
                         '''sample_annotation sample_raw_reads sample_segemehl_index '''
                         '''ciri_bwa_index ciri_bwa_extra_parameters '''
                         '''ciri_script bowtie2_index star_index gene_pred '''
