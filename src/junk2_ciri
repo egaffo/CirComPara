@@ -82,6 +82,8 @@ except NameError:
     CIRI_ANNOTATION = env['CIRI_ANNOTATION']
     EXTRA_PARAMS    = env['EXTRA_PARAMS']
 
+env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
+
 bwa_cpus = CPUS
 
 out_dir = 'ciri_out'
@@ -106,7 +108,7 @@ bwa_cmd = 'bwa mem $(-t ' + bwa_cpus + '$) ' + BWA_PARAMS + ' ' + BWA_INDEX +\
           ' ' + read_bwa_par + ' > ${TARGETS[0].filebase}'
 ## Run CIRI on mappings
 ## multithread -T option works from v2 of CIRI
-ciri_cmd = 'perl ' + CIRI + ' -T $(' + CPUS + '$) -I ${TARGETS[0].filebase} -O ${TARGETS[1].file} -F ' +\
+ciri_cmd = 'perl $CIRI -T $(' + CPUS + '$) -I ${TARGETS[0].filebase} -O ${TARGETS[1].file} -F ' +\
            GENOME_FASTA + ' ' + ciri_parameters
 ## Compress the mapping file to save disk space
 compress_cmd = 'gzip ${TARGETS[0].filebase}'

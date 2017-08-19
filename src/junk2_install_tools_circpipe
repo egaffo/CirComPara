@@ -152,7 +152,7 @@ CIRI_target = [os.path.join(tools_dir, CIRI_zip),
 #CIRI_source = 
 CIRI = env.Command(CIRI_target, [], ['wget -O ${TARGETS[0]} ' + CIRI_link,
                                      'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRI[1], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "CIRI.pl"), CIRI[1], SymLink)
 
 
 # FIND-CIRC
