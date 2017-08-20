@@ -14,7 +14,7 @@ def format_circexplorer(line, outformat):
     if outformat == 'gtf':
         sample = fields[0]
         chrom   = fields[1]
-        start   = str(int(fields[2]) + 1) # CIRCexplorer gives BED12 coordinates
+        start   = str(int(float(fields[2])) + 1) # CIRCexplorer gives BED12 coordinates
         end     = fields[3]
         strand  = fields[6]
         score   = fields[13]
@@ -52,7 +52,7 @@ def format_findcirc(line, outformat):
     if outformat == 'gtf':
         sample = fields[0]
         chrom   = fields[1]
-        start   = str(int(fields[2]) + 1) # findcirc gives BED coordinates
+        start   = str(int(float(fields[2])) + 1) # findcirc gives BED coordinates
         end     = fields[3]
         strand  = fields[6]
         score   = fields[5]
@@ -72,7 +72,7 @@ def format_testrealign(line, outformat):
     if outformat == 'gtf':
         sample = fields[0]
         chrom   = fields[1]
-        start   = str(int(fields[2]) + 1) # testrealign gives BED coordinates
+        start   = str(int(float(fields[2])) + 1) # testrealign gives BED coordinates
         end     = fields[3]
         strand  = fields[5]
         score   = fields[6]
