@@ -2,14 +2,17 @@
 
 export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))
 
-## install Scons
 mkdir $CIRCOMPARA_HOME/tools
-cd $CIRCOMPARA_HOME/tools
-wget -N -c http://prdownloads.sourceforge.net/scons/scons-local-2.5.0.tar.gz
+## check whether Scons is installed and install it if not
+## install Scons
+command -v scons >/dev/null 2>&1 ||\
+{ echo >&2 "I require Scons but it's not installed. Installing Scons..."; 
+cd $CIRCOMPARA_HOME/tools;
+wget -N -c http://prdownloads.sourceforge.net/scons/scons-local-2.5.1.tar.gz;
 mkdir -p scons
-tar -xf scons-local-2.5.0.tar.gz -C scons
-ln -s $CIRCOMPARA_HOME/tools/scons/scons.py $CIRCOMPARA_HOME/bin/scons
-cd -
+tar -xf scons-local-2.5.1.tar.gz -C scons ; 
+ln -s $CIRCOMPARA_HOME/tools/scons/scons.py $CIRCOMPARA_HOME/bin/scons;
+cd - ;}
 
 cd $CIRCOMPARA_HOME/bin
 ln -s ../src/*.py .
