@@ -60,15 +60,6 @@ except KeyError:
 
 env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
-## set logging id
-log_id = "[READ PREPROCESSING]"
-try:
-    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
-except KeyError:
-    env['LOG_PREFIX'] = log_id
-
-env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
-
 preprocess_dir = 'preprocess'
 preprocessings = []
 preprocessing_stats = []

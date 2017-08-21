@@ -155,27 +155,9 @@ except NameError:
 
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
-#env['SAMPLE'] = os.path.basename(Dir('.').path)
-sample_name = os.path.basename(Dir('.').path)
-if sample_name=='.':
-    sample_name = os.path.basename(Dir('.').abspath)
-
 ## set logging id
-log_id = "[CIRCPIPE " + sample_name + "]"
-try:
-    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
-except KeyError:
-    env['LOG_PREFIX'] = log_id
-
-env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
-
-#env['SAMPLE'] = os.path.basename(Dir('.').path)
-sample_name = os.path.basename(Dir('.').path)
-if sample_name=='.':
-    sample_name = os.path.basename(Dir('.').abspath)
-
-## set logging id
-log_id = "[CIRCPIPE " + sample_name + "]"
+env.SetDefault(SAMPLE = '[CIRCOMPARA SINGLE SAMPLE]')
+log_id = '[SAMPLE ' + env['SAMPLE'] + ']'
 try:
     env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
 except KeyError:

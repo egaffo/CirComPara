@@ -134,15 +134,6 @@ except KeyError:
 
 env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
-## set logging id
-log_id = "[CIRCRNA METHODS]"
-try:
-    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
-except KeyError:
-    env['LOG_PREFIX'] = log_id
-
-env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
-
 results = []
 
 ## GET INPUT READ FILE FULL PATH

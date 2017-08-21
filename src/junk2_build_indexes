@@ -50,15 +50,6 @@ except KeyError:
 
 env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
-## set logging id
-log_id = "[BUILD INDEXES]"
-try:
-    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
-except KeyError:
-    env['LOG_PREFIX'] = log_id
-
-env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
-
 ## SET DEFAULT VALUES FOR (OPTIONAL) EXTRA PARAMETERS
 env.SetDefault(HISAT2_EXTRA_PARAMS  = '')
 env.SetDefault(BWA_EXTRA_PARAMS     = '')

@@ -62,16 +62,7 @@ except NameError:
     	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
 
 ## set logging id
-log_id = "[QUANTIFY EXPR]"
-try:
-    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
-except KeyError:
-    env['LOG_PREFIX'] = log_id
-
-env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
-
-## set logging id
-log_id = "[QUANTIFY EXPR]"
+log_id = "[QUANTIFY LINEAR EXPR]"
 try:
     env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
 except KeyError:
