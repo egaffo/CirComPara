@@ -109,3 +109,4 @@ mapped_reads        = env.Command(mapped_reads_target, mappings_file, mapped_rea
 Clean('.', star_out_dir)
 
 Return('star mapped_reads')
+

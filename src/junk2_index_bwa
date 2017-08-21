@@ -41,6 +41,15 @@ except KeyError:
 
 env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
+## set logging id
+log_id = "[INDEXING BWA]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 GENOME      = env['GENOME'].split(',')
 env.SetDefault(INDEXING_ALGORITHM = 'bwtsw') # set a default value in case it was not defined
 INDEXING_ALGORITHM = env['INDEXING_ALGORITHM']

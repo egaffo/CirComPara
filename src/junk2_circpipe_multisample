@@ -322,6 +322,48 @@ else:
     pass
 
 
+## set logging
+log_id = "[CIRCPIPE MULTI]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+## must set variable into ENV for spawn function being able to read it
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
+try:
+    LOGLEVEL = env['LOGLEVEL']
+except KeyError:
+    LOGLEVEL = 0 ## default logging level: no modifications to output messages
+
+if LOGLEVEL == 1:
+    ## prepend script name and datetime to output
+    env['SPAWN'] = labelled_spawn 
+    env['PRINT_CMD_LINE_FUNC'] = print_cmd_line
+elif LOGLEVEL == 2:
+    ## TODO
+    ## prepend script name and datetime to output and save it to file;
+    ## hide stdout and stderr; show full commands and also save them
+    ## to log file
+    #env['ENV']['LOGFILE'] = 'log.stdout'
+    #env['SPAWN'] = labelled_spawn_logfile
+    #env['PRINT_CMD_LINE_FUNC'] = print_cmd_line
+    pass
+elif LOGLEVEL == 3:
+    ## TODO
+    ## prepend script name and datetime to output and save it to file;
+    ## hide stdout and stderr; show targets being built; 
+    ## save full commands to log file
+    pass
+elif LOGLEVEL == 4:
+    ## TODO
+    ## hide everything; save full commands to log file;
+    ## prepend script name and datetime to output and save it to log file
+    pass
+else:
+    pass
+
+
 samples_dir = 'samples'
 
 ## GRUB METADATA

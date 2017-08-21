@@ -64,6 +64,15 @@ except KeyError:
 
 env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
+## set logging id
+log_id = "[READ MAPPING]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 mapping_dir = 'mappings'
 #make_mapping_dir = env.Command(Dir(mapping_dir), [], Mkdir('$TARGET'))
 mappings = []

@@ -56,6 +56,15 @@ except KeyError:
 
 env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
+## set logging id
+log_id = "[READ STATISTICS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 statistics_dir = 'fastx_stats'
 
 readset_basename = os.path.splitext(os.path.basename(readset))[0]

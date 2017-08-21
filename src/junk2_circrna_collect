@@ -12,7 +12,6 @@ Import('*')
 
 try:
     env = env_circrna_collect.Clone()
-
 except NameError:
     vars = Variables('vars.py')
     vars.Add('CSVS', '''A comma-separated list with the four circRNA result collection csv'''\
@@ -43,6 +42,15 @@ methods = {'CIRCEXPLORER': 'circexplorer',
        'CIRCEXPLORER2_BWA': 'circexplorer2_bwa',
        'CIRCEXPLORER2_SEGEMEHL': 'circexplorer2_segemehl'
        }
+
+## set logging id
+log_id = "[COLLECT CIRCRNAS]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
 ## collect circRNAs in a single GTF annotation file
 circ_gtf_sources = []

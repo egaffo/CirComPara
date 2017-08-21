@@ -77,6 +77,15 @@ except KeyError:
 
 env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
 
+## set logging id
+log_id = "[CIRCEXPLORER]"
+try:
+    env['LOG_PREFIX'] = env['LOG_PREFIX'] + log_id
+except KeyError:
+    env['LOG_PREFIX'] = log_id
+
+env['ENV']['LOG_PREFIX'] = env['LOG_PREFIX']
+
 ## GET INPUT READ FILE FULL PATH
 raw_reads = [File(f) for f in READS]
 
