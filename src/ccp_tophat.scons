@@ -32,11 +32,11 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env
-    CPUS = tophat_cpus
-    READS = reads_to_map
-    TOPHAT_INDEX = tophat_index
-    TOPHAT_PARAMS = tophat_extra_params 
+    env = env_tophat.Clone()
+    #CPUS = tophat_cpus
+    #READS = reads_to_map
+    #TOPHAT_INDEX = tophat_index
+    #TOPHAT_PARAMS = tophat_extra_params 
 
 except NameError:
     vars = Variables('vars.py')
@@ -57,24 +57,21 @@ except NameError:
     # These are the variables given from the command line when the SConscript is called
     # standalone
     env = cmdline_env
-    CPUS = env['CPUS']
-    TOPHAT_INDEX = env['TOPHAT_INDEX'] # Assume you have already your TopHat genome index
-    READS = env['READS'].split(',')
-    TOPHAT_PARAMS = env['TOPHAT_PARAMS']
+    env.Replace(READS = env['READS'].split(','))
  
 tophat_out_dir = 'tophat_out'
-chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, tophat_out_dir) 
-tophat_cmd = '''tophat -o . ''' + TOPHAT_PARAMS +\
-             ''' $(-p '''  + CPUS + '''$) ''' + TOPHAT_INDEX
+#chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, tophat_out_dir) 
+tophat_cmd = '''tophat2 -o ${TARGETS[0].dir}''' \
+             ''' $TOPHAT_PARAMS $(-p $CPUS $) $TOPHAT_INDEX '''
 
-READS = [File(f) for f in READS]
+READS = [File(f) for f in env['READS']]
 
-if len(READS)>1:
+if len(READS) > 1:
     tophat_cmd = tophat_cmd + ''' ${SOURCES[0].abspath} ${SOURCES[1].abspath} '''
 else:
     tophat_cmd = tophat_cmd + ''' $SOURCE.abspath '''
 
-chdir_parent_cmd = '''cd ''' + Dir('#').abspath
+#chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
 tophat_targets = [os.path.join(tophat_out_dir, f) for f in ['accepted_hits.bam', 
                                                             'junctions.bed',
@@ -82,12 +79,24 @@ tophat_targets = [os.path.join(tophat_out_dir, f) for f in ['accepted_hits.bam',
                                                             'deletions.bed',
                                                             'unmapped.bam']]
 
-tophat = env.Command(tophat_targets, READS, [chdir_working_cmd + ' && '+\
-                                             tophat_cmd + ' && ' +\
-                                             chdir_parent_cmd])
+#tophat = env.Command(tophat_targets, READS, 
+#                    [chdir_working_cmd + ' && '+\
+#                    tophat_cmd + ' && ' +\
+#                    chdir_parent_cmd])
+tophat = env.Command(tophat_targets, READS, 
+                    tophat_cmd)
 
-env.Precious(tophat[0]) # do not delete old alignment file untill the new one has been computed
+
+# do not delete old alignment file untill the new one has been computed
+env.Precious(tophat[0])
+
+results = { 'ALIGNMENTS' : tophat[0],
+            'JUNCTIONS' : tophat[1],
+            'INSERTIONS': tophat[2],
+            'DELETIONS' : tophat[3],
+            'UNMAPPED'  : tophat[4]
+            }
 
 Clean('.', tophat_out_dir)
 
-Return('tophat')
+Return('results')

@@ -26,7 +26,8 @@ except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
     vars.Add('ALIGNER', 'The aligner used to map backsplices. Supported'\
-                        'aligners: STAR,BWA,segemehl,TopHat2,Mapsplice',\
+                        'aligners: STAR,BWA,segemehl,TopHat-Fusion,TopHat-Fusion-PE,'\
+                        'Mapsplice. Use TopHat-Fusion-PE if paired-end reads.',
              'STAR')
     vars.Add('FUSION_FILE', 'The file to be parsed, depending on the aligner: '\
                             'Chimeric.out.junction for STAR, RNA_seq_bwa.sam '\
@@ -48,6 +49,8 @@ except NameError:
 out_dir = 'CIRCexplorer2_' + env['ALIGNER'].lower()
 results = []
 
+env['OPTIONS'] = ''
+
 #TopHat-Fusion, STAR, MapSplice, BWA, segemel
 if env['ALIGNER'].lower() == 'star':
     ALIGNER = 'STAR'
@@ -58,13 +61,17 @@ if env['ALIGNER'].lower() == 'bwa':
 if env['ALIGNER'].lower() == 'segemehl':
     ALIGNER = 'segemehl'
 
-if env['ALIGNER'].lower() == 'tophat-fusion':
+if env['ALIGNER'].lower() == 'tophat_fusion':
     ALIGNER = 'TopHat-Fusion'
+
+if env['ALIGNER'].lower() == 'tophat_fusion_pe':
+    ALIGNER = 'TopHat-Fusion'
+    env.Replace(OPTIONS = '--pe')
 
 if env['ALIGNER'].lower() == 'mapsplice':
     ALIGNER = 'MapSplice'
  
-CIRCexplorer2_cmd = 'CIRCexplorer2 parse -o $TARGET.dir -t ' + \
+CIRCexplorer2_cmd = 'CIRCexplorer2 parse $OPTIONS -o $TARGET.dir -t ' + \
                     ALIGNER + ' $SOURCE'
 CIRCexplorer2_targets = os.path.join(out_dir, 'fusion_junction.bed')
 CIRCexplorer2_sources = [File(env['FUSION_FILE'])]

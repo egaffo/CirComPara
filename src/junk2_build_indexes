@@ -12,7 +12,7 @@ import os
 
 Import('*')
 try:
-    env = env_build_indexes
+    env = env_build_indexes.Clone()
 except NameError as ne:
     print 'junk2_build_indexes: command line execution.'
 
@@ -25,9 +25,10 @@ except NameError as ne:
                        'Comma separated.', '')
     vars.Add('HISAT2_EXTRA_PARAMS', 'Extra parameters for htseq2-build', '')
     vars.Add('BWA_EXTRA_PARAMS', 'Extra parameters for bwa index', '')
-    vars.Add('BOWTIE2_EXTRA_PARAMS', 'Extra parameters for bowtie22-build', '')
+    vars.Add('BOWTIE2_EXTRA_PARAMS', 'Extra parameters for bowtie2-build', '')
     vars.Add('SEGEMEHL_EXTRA_PARAMS', 'Extra parameters for segemehl.x -x', '')
     vars.Add('STAR_EXTRA_PARAMS', 'Extra parameters for STAR --genomeGenerate', '')
+    vars.Add('BOWTIE_EXTRA_PARAMS', 'Extra parameters for bowtie-build', '')
     
     
     env = Environment(ENV=os.environ, SHELL = '/bin/bash',
@@ -47,6 +48,7 @@ env.SetDefault(BWA_EXTRA_PARAMS     = '')
 env.SetDefault(BOWTIE2_EXTRA_PARAMS = '')
 env.SetDefault(SEGEMEHL_EXTRA_PARAMS = '')
 env.SetDefault(STAR_EXTRA_PARAMS    = '')
+env.SetDefault(BOWTIE_EXTRA_PARAMS = '')
 
 indexes_dir = 'indexes'
 indexes = {}
@@ -97,6 +99,7 @@ if 'BWA' in env['INDEXES'].split(','):
     indexes['BWA'] = index
     Clean('.', index_dir)
 
+
 if 'BOWTIE2' in env['INDEXES'].split(','):
     
     env_index_bowtie2 = env
@@ -111,6 +114,23 @@ if 'BOWTIE2' in env['INDEXES'].split(','):
                             exports = '''env_index_bowtie2 ''')
     indexes['BOWTIE2'] = index
     Clean('.', index_dir)
+
+
+if 'BOWTIE' in env['INDEXES'].split(','):
+    
+    env_index_bowtie = env.Clone()
+    env_index_bowtie['CPUS'] = env['CPUS']
+    env_index_bowtie['GENOME'] = ','.join([File(f).abspath for f in env['GENOME'].split(',')])
+    env_index_bowtie['EXTRA_PARAMS'] = env['BOWTIE_EXTRA_PARAMS']
+
+    index_dir = os.path.join(indexes_dir, 'bowtie')
+    index = SConscript(os.path.join(index_dir, 'ccp_index_bowtie.scons'), 
+                            src_dir = SCONSCRIPT_HOME, 
+                            variant_dir = index_dir, duplicate = 0,
+                            exports = '''env_index_bowtie ''')
+    indexes['BOWTIE'] = index
+    Clean('.', index_dir)
+
 
 if 'STAR' in env['INDEXES'].split(','):
     
