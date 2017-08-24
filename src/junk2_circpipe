@@ -67,6 +67,7 @@ try:
     CIRI           = ciri
     CIRI_EXTRA_PARAMS = ciri_extra_parameters
     BOWTIE2_INDEX  = bowtie2_index
+    env['BOWTIE2_INDEX']  = bowtie2_index
 
     STAR_INDEX = star_index
     GENEPRED   = gene_pred

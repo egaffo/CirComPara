@@ -259,4 +259,44 @@ CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [],
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLink)
 #env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
 
+# BOWTIE v1
+# v1.2.1.1, v1.2.1, and v1.2 do not work!
+#BOWTIE1_zip = 'bowtie-1.2.1.1-linux-x86_64.zip'
+#BOWTIE1_link = 'https://sourceforge.net/projects/bowtie-bio/files/bowtie/'\
+#		'1.2.1.1/' + BOWTIE1_zip
+#BOWTIE1_dir = 'bowtie-1.2.1.1'
+#BOWTIE1_zip = 'bowtie-1.2.1-linux-x86_64.zip'
+#BOWTIE1_link = 'https://sourceforge.net/projects/bowtie-bio/files/bowtie/'\
+#               '1.2.1/' + BOWTIE1_zip
+#BOWTIE1_dir = 'bowtie-1.2.1'
+BOWTIE1_zip = 'bowtie-1.1.2-linux-x86_64.zip'
+BOWTIE1_link = 'https://sourceforge.net/projects/bowtie-bio/files/bowtie/'\
+               '1.1.2/' + BOWTIE1_zip
+BOWTIE1_dir = 'bowtie-1.1.2'
+
+BOWTIE1_target = [os.path.join(tools_dir, BOWTIE1_zip), 
+                  os.path.join(tools_dir, BOWTIE1_dir, 'bowtie'),
+                  os.path.join(tools_dir, BOWTIE1_dir, 'bowtie-build')]
+BOWTIE1 = env.Command(BOWTIE1_target, 
+                      [], 
+                      ['wget -O ${TARGETS[0]} ' + BOWTIE1_link,
+                       'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}']
+                     )
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE1[1], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE1[2], SymLink)
+
+# TOPHAT2
+tophat2_dir = 'tophat-2.1.0.Linux_x86_64' #'tophat-2.1.1.Linux_x86_64'
+tophat2_tar = 'tophat-2.1.0.Linux_x86_64.tar.gz' #'tophat-2.1.1.Linux_x86_64.tar.gz' 
+tophat2_url = 'https://ccb.jhu.edu/software/tophat/downloads/' + tophat2_tar
+
+tophat2_target = [os.path.join(tools_dir, tophat2_tar), 
+                  os.path.join(tools_dir, tophat2_dir, 'tophat2')]
+
+tophat2 = env.Command(tophat2_target, 
+                      [], 
+                      ['wget -O ${TARGETS[0]} ' + tophat2_url, 
+                       'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}']
+                     )
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), tophat2[1], SymLink)
 

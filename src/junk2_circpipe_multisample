@@ -101,7 +101,9 @@ vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
 vars.Add('BYPASS_LINEAR', 'Skip analysis of linear transcripts. This will also skip '\
 			  'the analysis of linear-to-circular expression correlation',
 	 'False')
-
+vars.Add('BOWTIE_INDEX', '''The index of the reference genome for BOWTIE '''\
+			 '''when using CIRCexplorer2_tophat''','')
+vars.Add('TOPHAT_PARAMS', 'Extra parameters to pass to TopHat', '')
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)
@@ -136,11 +138,16 @@ CUFFQUANT_EXTRA_PARAMS = env['CUFFQUANT_EXTRA_PARAMS']
 CUFFDIFF_EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS']
 CUFFNORM_EXTRA_PARAMS = env['CUFFNORM_EXTRA_PARAMS']
 
+env.SetDefault(TOPHAT_PARAMS = '')
+
 TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
 	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
 
 CIRCRNA_METHODS = sorted(set([m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]))
+
+#if 'circexplorer2_tophat' in CIRCRNA_METHODS:
+#	env.AppendUnique(TOPHAT_PARAMS = ['--bowtie1'])
 
 DIFF_EXP = False
 if env['DIFF_EXP'] == 'True':
@@ -212,7 +219,7 @@ if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['ciri',
 
 if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
     if BOWTIE2_INDEX == '':
-	    genome_indexes_to_build.append('BOWTIE2')
+        genome_indexes_to_build.append('BOWTIE2')
     else:
         indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes] 
 
@@ -222,6 +229,20 @@ if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer'
 	    genome_indexes_to_build.append('STAR')
     else:
         indexes['STAR'] = [os.path.join(STAR_INDEX, 'SA')]
+
+
+bowtie_index_suffixes = ['.1.ebwt', '.2.ebwt', 
+			 '.3.ebwt', '.4.ebwt',	
+			 '.rev.1.ebwt', '.rev.2.ebwt']
+if CIRCRNA_METHODS == [''] or \
+	'circexplorer2_tophat' in CIRCRNA_METHODS or \
+	'--bowtie1' in env['TOPHAT_PARAMS']:
+
+    if env['BOWTIE_INDEX'] == '':
+	    genome_indexes_to_build.append('BOWTIE')
+    else:
+        indexes['BOWTIE'] = [BOWTIE_INDEX + suffix for suffix in \
+				bowtie_index_suffixes] 
 
 if genome_indexes_to_build:
 
@@ -234,6 +255,7 @@ if genome_indexes_to_build:
     env_build_indexes['BOWTIE2_EXTRA_PARAMS']   = ''
     env_build_indexes['SEGEMEHL_EXTRA_PARAMS']  = ''
     env_build_indexes['STAR_EXTRA_PARAMS']      = ''
+    env_build_indexes['BOWTIE_EXTRA_PARAMS']   = '' #'$( --threads $CPUS $)'
 
     indexes = SConscript(os.path.join(annotation_dir, 'junk2_build_indexes'),
                                 src_dir = SCONSCRIPT_HOME,
@@ -241,45 +263,61 @@ if genome_indexes_to_build:
                                 exports = '''env_build_indexes ''')
 
     if GENOME_INDEX == '':
-        GENOME_INDEX = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6] #remove the .1.ht2 suffix
+	#remove the .1.ht2 suffix
+        GENOME_INDEX = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6]
         env.Replace(GENOME_INDEX = GENOME_INDEX)
     else:
-        indexes['HISAT2'] = [GENOME_INDEX + suffix for suffix in hisat2_index_suffixes]
+        indexes['HISAT2'] = [GENOME_INDEX + suffix for suffix in \
+							hisat2_index_suffixes]
 
-    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['testrealign', 'circexplorer2_segemehl']]):
-    #if CIRCRNA_METHODS == [''] or 'testrealign' in CIRCRNA_METHODS:
+    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['testrealign', 
+							'circexplorer2_segemehl']]):
         if SEGEMEHL_INDEX == '':
 	        SEGEMEHL_INDEX	= os.path.abspath(str(indexes['SEGEMEHL'][0]))
         	env.Replace(SEGEMEHL_INDEX = SEGEMEHL_INDEX)
         else:
             indexes['SEGEMEHL'] = [SEGEMEHL_INDEX]
 
-    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['ciri', 'circexplorer2_bwa']]):
-    #if CIRCRNA_METHODS == [''] or 'ciri' in CIRCRNA_METHODS:
+    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['ciri', 
+							     'circexplorer2_bwa']]):
         if BWA_INDEX == '':
-        	BWA_INDEX = os.path.abspath(str(indexes['BWA'][0]))[0:-4] #remove the .amb suffix
+		#remove the .amb suffix
+        	BWA_INDEX = os.path.abspath(str(indexes['BWA'][0]))[0:-4]
         	env.Replace(BWA_INDEX = BWA_INDEX)
         else:
             indexes['BWA'] = [BWA_INDEX + suffix for suffix in bwa_index_suffixes]
 
     if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
         if BOWTIE2_INDEX == '':
-        	BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6] #remove .1.bt2 suffix
+		#remove .1.bt2 suffix
+        	BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
+		env.Replace(BOWTIE2_INDEX = BOWTIE2_INDEX)
         else:
-            indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes]
+            indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix \
+							 in bowtie2_index_suffixes]
     if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer',
 							'circexplorer2_star']]):
-    #if CIRCRNA_METHODS == [''] or 'circexplorer' in CIRCRNA_METHODS:
         if STAR_INDEX == '': 
-        	STAR_INDEX	= os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) #index dir
+		#index dir
+        	STAR_INDEX =os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) 
 		env.Replace(STAR_INDEX = STAR_INDEX)
         else:
             indexes['STAR'] = [os.path.join(STAR_INDEX, 'SA')]
 
+    if CIRCRNA_METHODS == [''] or \
+	'circexplorer2_tophat' in CIRCRNA_METHODS or \
+	'--bowtie1' in env['TOPHAT_PARAMS']:
+        if env['BOWTIE_INDEX'] == '':
+		#remove .1.ebwt suffix
+        	BOWTIE_INDEX = os.path.abspath(str(indexes['BOWTIE'][0]))[0:-7]
+		env.Replace(BOWTIE_INDEX = BOWTIE_INDEX)
+        else:
+            indexes['BOWTIE'] = [BOWTIE_INDEX + suffix for suffix in bowtie_index_suffixes]
+
 ## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
 if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer', 
                             'circexplorer2_bwa', 'circexplorer2_star', 
-                            'circexplorer2_segemehl']]):
+                            'circexplorer2_segemehl', 'circexplorer2_tophat']]):
     if GENEPRED == '': 
         genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info',
                                                                '${SOURCES[0].filebase}.genePred',
@@ -326,6 +364,13 @@ for sample in sorted(samples.keys()):
 
     env_circpipe = env.Clone()
     env_circpipe['SAMPLE'] = sample
+    env_circpipe['READS'] = sample_raw_reads
+    env_circpipe['CIRCRNA_METHODS'] = CIRCRNA_METHODS
+    if len(env_circpipe['READS']) > 1:
+	env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
+							'circexplorer2_tophat_pe', m) for \
+						m in env_circpipe['CIRCRNA_METHODS']])
+
     sample_dir = os.path.join(samples_dir, sample)
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'),
                             src_dir = SCONSCRIPT_HOME,
@@ -346,7 +391,7 @@ for sample in sorted(samples.keys()):
 
     if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer', 
                             'circexplorer2_bwa', 'circexplorer2_star', 
-                            'circexplorer2_segemehl']]):
+                            'circexplorer2_segemehl', 'circexplorer2_tophat']]):
 	Depends(run_sample, GENEPRED) #genePred[2])
 
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
@@ -541,18 +586,21 @@ CIRCexplorer_mappings_pattern = '.*CIRCExplorer_mapped_reads_count\.txt'
 BWA_mappings_pattern = '.*BWA_mapped_reads_count\.txt'
 # STAR mapped reads
 STAR_mappings_pattern = '.*STAR_mapped_reads_count\.txt'
+# TopHat mapped reads
+tophat_mappings_pattern = '.*tophat_mapped_reads_count\.txt'
 
-
-testrealign_mappings     = get_matching_nodes(runs, testrealign_mappings_pattern)
+testrealign_mappings  = get_matching_nodes(runs, testrealign_mappings_pattern)
 find_circ_mappings    = get_matching_nodes(runs, find_circ_mappings_pattern)
 ciri_mappings         = get_matching_nodes(runs, CIRI_mappings_pattern)
 CIRCexplorer_mappings = get_matching_nodes(runs, CIRCexplorer_mappings_pattern)
-bwa_mappings         = get_matching_nodes(runs, BWA_mappings_pattern)
+bwa_mappings          = get_matching_nodes(runs, BWA_mappings_pattern)
 star_mappings         = get_matching_nodes(runs, STAR_mappings_pattern)
+tophat_mappings       = get_matching_nodes(runs, tophat_mappings_pattern)
 
 collect_circrna_maps_counts_targets = [testrealign_mappings, find_circ_mappings, 
                                        ciri_mappings, CIRCexplorer_mappings,
-				       bwa_mappings, star_mappings]
+				       bwa_mappings, star_mappings, 
+				       tophat_mappings]
 collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
 collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir, 
                                                        'circrna_maps_counts.txt'), 
@@ -570,10 +618,6 @@ merge_sample_circrnas = SConscript(os.path.join(circRNA_collect_dir,
 
 
 env_circrna_collect = env.Clone()
-#env_circrna_collect['CSVS'] = {'CIRCEXPLORER': CIRCexplorer_compared,
-#			'CIRI': ciri_compared,
-#			'FINDCIRC': find_circ_compared,
-#			'TESTREALIGN': testrealign_compared}
 env_circrna_collect['CSVS'] = merge_sample_circrnas
 env_circrna_collect['GTF'] = cuffmerge
 circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 

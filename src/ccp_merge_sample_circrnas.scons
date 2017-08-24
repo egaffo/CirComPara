@@ -41,6 +41,8 @@ CIRCexplorer_nodes = []
 CIRCexplorer2_star_nodes    = []
 CIRCexplorer2_bwa_nodes     = []
 CIRCexplorer2_segemehl_nodes= []
+CIRCexplorer2_tophat_pe_nodes= []
+CIRCexplorer2_tophat_nodes= []
 
 for sample in samples:
     testrealign_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
@@ -66,6 +68,17 @@ for sample in samples:
                                              os.path.join('CIRCexplorer2_segemehl', 
                                                            'annotate', 
                                                            'circ_fusion.txt')))
+    CIRCexplorer2_tophat_pe_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+                                             os.path.sep +
+                                             os.path.join('CIRCexplorer2_tophat_pe', 
+                                                           'annotate', 
+                                                           'circ_fusion.txt')))
+    CIRCexplorer2_tophat_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+                                             os.path.sep +
+                                             os.path.join('CIRCexplorer2_tophat', 
+                                                           'annotate', 
+                                                           'circ_fusion.txt')))
+
 
 ## collect testrealign
 CIRCexplorer_compared = None
@@ -75,6 +88,8 @@ testrealign_compared = None
 CIRCexplorer2_star_compared = None
 CIRCexplorer2_bwa_compared = None
 CIRCexplorer2_segemehl_compared = None
+CIRCexplorer2_tophat_pe_compared = None
+CIRCexplorer2_tophat_compared = None
 
 if not ''.join([str(f) for f in Flatten(testrealign_nodes)]) == '':
 
@@ -174,6 +189,24 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_segemehl_nodes)]) == '':
                                     CIRCexplorer2_segemehl_comapared_cmd)
     Depends(CIRCexplorer2_segemehl_compared, CIRCexplorer2_segemehl_nodes)
 
+if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_pe_nodes)]) == '':
+    CIRCexplorer2_tophat_nodes = CIRCexplorer2_tophat_pe_nodes
+
+if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_nodes)]) == '':
+    ## collect CIRCexplorer2_tophat
+    CIRCexplorer2_tophat_files = ','.join([f.path for f in Flatten(CIRCexplorer2_tophat_nodes)])    
+    CIRCexplorer2_tophat_labels = ','.join(samples)
+    CIRCexplorer2_tophat_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                         '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_tophat_labels +\
+                         ''' -i ''' + CIRCexplorer2_tophat_files + ''' -o $TARGET''')
+    CIRCexplorer2_tophat_comapared_target = os.path.join(circRNA_collect_dir, 
+                                        'CIRCexplorer2_tophat_compared.csv')
+    CIRCexplorer2_tophat_compared = env.Command(CIRCexplorer2_tophat_comapared_target, 
+                                    CIRCexplorer2_tophat_nodes, 
+                                    CIRCexplorer2_tophat_comapared_cmd)
+    Depends(CIRCexplorer2_tophat_compared, CIRCexplorer2_tophat_nodes)
+
+
 
 ## compose a dict with the results
 sample_results = {'CIRCEXPLORER': CIRCexplorer_compared,
@@ -182,7 +215,8 @@ sample_results = {'CIRCEXPLORER': CIRCexplorer_compared,
                 'TESTREALIGN': testrealign_compared,
                 'CIRCEXPLORER2_STAR': CIRCexplorer2_star_compared,
                 'CIRCEXPLORER2_BWA': CIRCexplorer2_bwa_compared,
-                'CIRCEXPLORER2_SEGEMEHL': CIRCexplorer2_segemehl_compared
+                'CIRCEXPLORER2_SEGEMEHL': CIRCexplorer2_segemehl_compared,
+                'CIRCEXPLORER2_TOPHAT': CIRCexplorer2_tophat_compared
                 }
 
 Return('sample_results')

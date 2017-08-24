@@ -3,7 +3,7 @@ This SConscript detects and annotates circular RNAs from RNA-seq data according 
 CIRCExplorer [1] protocol.
 
 Software dependencies are inherited from the CIRCOMPARA-SConscripts used:
-* junk2_tophat
+* ccp_tophat
 
 When called from a SConscript it imports the following variables:
 * circexplorer_env
@@ -23,7 +23,7 @@ References:
 import os 
 
 ## SET SCRIPT NAMES. 
-junk2_tophat      = 'junk2_tophat'
+ccp_tophat      = 'ccp_tophat.scons'
 
 Import('*')
 
@@ -97,7 +97,7 @@ if ALIGNER.lower() == 'tophat':
     tophat_extra_params = ''' --fusion-search -a 6 --microexon-search '''\
                           '''-m 2 --bowtie1 --no-coverage-search --fusion-min-dist 500 '''
     
-    tophat = env.SConscript(os.path.join(fusion_mappings_dir, 'junk2_tophat'),
+    tophat = env.SConscript(os.path.join(fusion_mappings_dir, ccp_tophat),
                               variant_dir = fusion_mappings_dir, src_dir = SRC_DIR,
                               duplicate = 0, exports = '''env tophat_cpus reads_to_map '''\
                                                        '''tophat_index tophat_extra_params''')
