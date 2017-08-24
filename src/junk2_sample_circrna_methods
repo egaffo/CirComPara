@@ -305,31 +305,30 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
         Depends(ciri, bwa)
 
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
-	'circexplorer2_tophat' in CIRCRNA_METHODS:
+	'circexplorer2_tophat' in CIRCRNA_METHODS or \
+    'circexplorer2_tophat_pe' in CIRCRNA_METHODS:
 
     ## align reads usign TopHat-Fusion
     env_tophat = env.Clone()
-    if '--bowtie1' in env_tophat['TOPHAT_PARAMS']:
-        env_tophat['TOPHAT_INDEX']  = env['BOWTIE_INDEX']
-    else:
-	env_tophat['TOPHAT_INDEX']  = env['BOWTIE2_INDEX'] 
-
+    env_tophat['TOPHAT_INDEX']  = env['BOWTIE_INDEX']
     env_tophat.AppendUnique(TOPHAT_PARAMS = ['--fusion-search', 
-					     '--keep-fasta-order',
-				       	     '--no-coverage-search'])
+                                             '--keep-fasta-order',
+				       	                     '--no-coverage-search',
+                                             '--bowtie1'])
 
     tophat = env.SConscript(os.path.join(build_dir, 'ccp_tophat.scons'),
                               variant_dir = build_dir, src_dir = SRC_DIR,
                               duplicate = 0, exports = '''env_tophat''')
     
     results.append(tophat['ALIGNMENTS'])
+    results.append(tophat['MAPPED_READS'])
 
     ## parse TopHat alignments with CIRCexplorer2
     circexplorer2_env = env.Clone()
     circexplorer2_env['FUSION_FILE'] = tophat['ALIGNMENTS']
     circexplorer2_env['ALIGNER'] = 'tophat_fusion'
     if len(env['READS']) > 1:
-       circexplorer2_env.Replace(ALIGNER = 'tophat_fusion_pe')
+       circexplorer2_env.Replace(ALIGNER = 'tophat_pe')
     circexplorer2_tophat = env.SConscript(os.path.join(build_dir, 
     						'ccp_circexplorer2.scons'),
     			variant_dir = build_dir, src_dir = SRC_DIR,

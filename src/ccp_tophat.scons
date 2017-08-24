@@ -97,6 +97,14 @@ results = { 'ALIGNMENTS' : tophat[0],
             'UNMAPPED'  : tophat[4]
             }
 
+## COUNT AND REPORT MAPPED READS
+mapped_reads_target = os.path.join(tophat_out_dir, 'tophat_mapped_reads_count.txt')
+mapped_reads_cmd    = '''zcat ${SOURCE} | samtools view -F 4 - '''\
+                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
+mapped_reads        = env.Command(mapped_reads_target, results['ALIGNMENTS'], mapped_reads_cmd)
+
+results['MAPPED_READS'] = mapped_reads
+
 Clean('.', tophat_out_dir)
 
 Return('results')

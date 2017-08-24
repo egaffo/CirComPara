@@ -41,7 +41,8 @@ methods = {'CIRCEXPLORER': 'circexplorer',
 	   'TESTREALIGN': 'testrealign',
        'CIRCEXPLORER2_STAR': 'circexplorer2_star',
        'CIRCEXPLORER2_BWA': 'circexplorer2_bwa',
-       'CIRCEXPLORER2_SEGEMEHL': 'circexplorer2_segemehl'
+       'CIRCEXPLORER2_SEGEMEHL': 'circexplorer2_segemehl',
+       'CIRCEXPLORER2_TOPHAT': 'circexplorer2_tophat'
        }
 
 ## collect circRNAs in a single GTF annotation file

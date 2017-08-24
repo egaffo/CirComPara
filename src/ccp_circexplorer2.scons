@@ -61,10 +61,10 @@ if env['ALIGNER'].lower() == 'bwa':
 if env['ALIGNER'].lower() == 'segemehl':
     ALIGNER = 'segemehl'
 
-if env['ALIGNER'].lower() == 'tophat_fusion':
+if env['ALIGNER'].lower() == 'tophat':
     ALIGNER = 'TopHat-Fusion'
 
-if env['ALIGNER'].lower() == 'tophat_fusion_pe':
+if env['ALIGNER'].lower() == 'tophat_pe':
     ALIGNER = 'TopHat-Fusion'
     env.Replace(OPTIONS = '--pe')
 
