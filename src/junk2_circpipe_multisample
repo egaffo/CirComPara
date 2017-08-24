@@ -241,7 +241,7 @@ if CIRCRNA_METHODS == [''] or \
     if env['BOWTIE_INDEX'] == '':
 	    genome_indexes_to_build.append('BOWTIE')
     else:
-        indexes['BOWTIE'] = [BOWTIE_INDEX + suffix for suffix in \
+        indexes['BOWTIE'] = [env['BOWTIE_INDEX'] + suffix for suffix in \
 				bowtie_index_suffixes] 
 
 if genome_indexes_to_build:
