@@ -11,13 +11,14 @@ vars = Variables('vars.py')
 vars.Add('INDEXES', 'A comma separated list of read aligner programs for which'\
                     ' the genome index has to be built. Also set GENEPRED if'\
                     'you want to convert annotation from GTF to genePred format', 
-         'HISAT2,BWA,BOWTIE2,SEGEMEHL,STAR,GENEPRED')
+         'HISAT2,BWA,BOWTIE,BOWTIE2,SEGEMEHL,STAR,GENEPRED')
 vars.Add('CPUS', 'Number of cpus to use for multi thread run', '1')
 vars.Add('GENOME', 'The list of input FASTA files composing the genome sequence. '\
                    'Comma separated.', 'genome.fa')
 vars.Add('HISAT2_EXTRA_PARAMS', 'Extra parameters for htseq2-build', '')
 vars.Add('BWA_EXTRA_PARAMS', 'Extra parameters for bwa index', '')
-vars.Add('BOWTIE2_EXTRA_PARAMS', 'Extra parameters for bowtie22-build', '')
+vars.Add('BOWTIE2_EXTRA_PARAMS', 'Extra parameters for bowtie2-build', '')
+vars.Add('BOWTIE_EXTRA_PARAMS', 'Extra parameters for bowtie-build', '')
 vars.Add('SEGEMEHL_EXTRA_PARAMS', 'Extra parameters for segemehl.x -x', '')
 vars.Add('STAR_EXTRA_PARAMS', 'Extra parameters for STAR --genomeGenerate', '')
 vars.Add('ANNOTATION', 'GTF annotation file. Needed to create genePred file.',\
@@ -59,6 +60,10 @@ if "BWA" in env['INDEXES'].split(","):
 if "BOWTIE2" in env['INDEXES'].split(","):
     BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6] #remove .1.bt2 suffix
     lines.append(Value('BOWTIE2_INDEX="' + BOWTIE2_INDEX + '"'))
+
+if "BOWTIE" in env['INDEXES'].split(","):
+    BOWTIE_INDEX	= os.path.abspath(str(indexes['BOWTIE'][0]))[0:-7] #remove .1.bt2 suffix
+    lines.append(Value('BOWTIE_INDEX="' + BOWTIE_INDEX + '"'))
 
 if "STAR" in env['INDEXES'].split(","):
     STAR_INDEX	= os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) #index dir
