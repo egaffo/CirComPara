@@ -326,7 +326,7 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
     ## parse TopHat alignments with CIRCexplorer2
     circexplorer2_env = env.Clone()
     circexplorer2_env['FUSION_FILE'] = tophat['ALIGNMENTS']
-    circexplorer2_env['ALIGNER'] = 'tophat_fusion'
+    circexplorer2_env['ALIGNER'] = 'tophat'
     if len(env['READS']) > 1:
        circexplorer2_env.Replace(ALIGNER = 'tophat_pe')
     circexplorer2_tophat = env.SConscript(os.path.join(build_dir, 
