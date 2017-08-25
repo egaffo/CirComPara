@@ -36,31 +36,42 @@ def SymLink(target, source, env):
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
+
+# basic parameters
 vars.Add('META', 'The metadata table file where you specify the project samples, etc.', 'meta.csv')
-vars.Add('CPUS', 'Set number of CPUs', '4')
-vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
-vars.Add('PREPROCESSOR_PARAMS',
-        'Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string '\
-        'defaults to '\
-        'MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ',
-        '')
 vars.Add('ANNOTATION', 'Gene annotation file (like Ensembl GTF/GFF)', '')
 vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', '')
-vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
-	'By default the symlink in CirComPara bin/ directory will be used', '')
-vars.Add('BWA_PARAMS','Extra parameters for BWA','')
+vars.Add('CIRCRNA_METHODS', 
+	 'Comma separated list of circRNA detection methods to use. '\
+	 'Repeated values will be collapsed. Currently supported: ciri, find_circ, '\
+	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, circexplorer (version 1, '\
+	 'DEPRECATED: use circexplorer2_star instead), testrealign (unfiltered segemehl, '\
+	 'DEPRECATED: use circexplorer2_segemehl for a better filtering of segemehl predictions). '\
+	 'Set an empty string to use all methods available (including deprecated methods). ', 
+         'ciri,find_circ,circexplorer2_star,circexplorer2_bwa,circexplorer2_segemehl')
 
+# non-basic parameters
+vars.Add('CPUS', 'Set number of CPUs', '4')
+vars.Add('GENEPRED', 'The genome annotation in GenePred format', '')
+## aligners indexes
 vars.Add('GENOME_INDEX', '''The index of the reference genome for HISAT2''', '')
 vars.Add('SEGEMEHL_INDEX', '''The .idx index for segemehl''', '')
 vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','')
 vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','')
 vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', '')
+vars.Add('BOWTIE_INDEX', '''The index of the reference genome for BOWTIE '''\
+			 '''when using CIRCexplorer2_tophat''','')
 
-vars.Add('GENEPRED', 'The genome annotation in GenePred format', '')
+## aligners extra parameters
 vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner fixed '''\
          '''parameters '--dta --dta-cufflinks --rg-id <SAMPLE> --no-discordant '''\
          '''--no-mixed --no-overlap'. For instance, '--rna-strandness FR' if stranded reads'''\
          ''' are used.''', '')
+vars.Add('BWA_PARAMS','Extra parameters for BWA','')
+vars.Add('SEGEMEHL_PARAMS', 'SEGEMEHL extra parameters', '')
+vars.Add('TOPHAT_PARAMS', 'Extra parameters to pass to TopHat', '')
+
+## linear transcriptome extra parameters
 vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
         '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
         '''for the sequencing''', '')
@@ -70,15 +81,20 @@ vars.Add('CUFFQUANT_EXTRA_PARAMS',
 vars.Add('CUFFDIFF_EXTRA_PARAMS',
          'Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
          ' --multi-read-correct', '')
+vars.Add('CUFFNORM_EXTRA_PARAMS', 'Extra parameters to use if using Cuffnorm',
+	'--output-format cuffdiff')
+
+## circRNA methods' extra parameters
 vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
-vars.Add('CIRCRNA_METHODS', 
-	 'Comma separated list of circRNA detection methods to use. '\
-	 'Repeated values will be collapsed. Currently supported: ciri, find_circ, '\
-	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, circexplorer (version 1, '\
-	 'DEPRECATED: use circexplorer2_star instead), testrealign (unfiltered segemehl, '\
-	 'DEPRECATED: use circexplorer2_segemehl for a better filtering of segemehl predictions). '\
-	 'Set an empty string to use all methods available (including deprecated methods). ', 
-         'ciri,find_circ,circexplorer2_star,circexplorer2_bwa,circexplorer2_segemehl')
+
+## alternative workflow parameters
+vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
+vars.Add('PREPROCESSOR_PARAMS',
+        'Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string '\
+        'defaults to '\
+        'MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ',
+        '')
+
 vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
          'reconstruction. Default only quantifies genes and transcripts from the given '\
          'annotation GTF file', 'False')
@@ -88,8 +104,6 @@ vars.Add('DIFF_EXP', 'Set True to enable differential expression computation for
 vars.Add('DESEQ', '(Experimental) Set True to enable differential gene expression computation '\
          'also with DESeq2. Only available if more than one sample and more than one condition are given', 
          'False')
-vars.Add('CUFFNORM_EXTRA_PARAMS', 'Extra parameters to use if using Cuffnorm',
-	'--output-format cuffdiff')
 vars.Add('QRE_FIND', '(Experimental) Set True to toggle analysis of QKI response elements sequences', 
          'False')
 vars.Add('READSTAT_METHODS', 'Comma separated list of methods to use for read statistics. '\
@@ -101,9 +115,11 @@ vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
 vars.Add('BYPASS_LINEAR', 'Skip analysis of linear transcripts. This will also skip '\
 			  'the analysis of linear-to-circular expression correlation',
 	 'False')
-vars.Add('BOWTIE_INDEX', '''The index of the reference genome for BOWTIE '''\
-			 '''when using CIRCexplorer2_tophat''','')
-vars.Add('TOPHAT_PARAMS', 'Extra parameters to pass to TopHat', '')
+
+## deprecated parameters (legacy)
+vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
+	'By default the symlink in CirComPara bin/ directory will be used', '')
+
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
                   variables=vars)

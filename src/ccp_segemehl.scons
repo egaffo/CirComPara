@@ -31,13 +31,13 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env
+    env = env_segemehl.Clone()
     CPUS = segemehl_cpus
     READS = reads_to_map
     SAMPLE = sample_id
     SEGEMEHL_INDEX = segemehl_index
     GENOME_FASTA = segemehl_genome_fasta
-    SEGEMEHL_PARAMS = segemehl_extra_params 
+    #SEGEMEHL_PARAMS = segemehl_extra_params 
 
 except NameError:
     vars = Variables('vars.py')
@@ -72,18 +72,18 @@ segemehl_mapping_dir = 'segemehl'
 
 ## MAP READS
 sam_sort_cmd = ''' samtools view -u $(-@''' + CPUS +\
-                            '''$) - | samtools sort -@$(''' + CPUS +\
-                            '''$) -O 'bam' -T $(segemehl_'''+ SAMPLE +\
-                            '''$) > ${TARGETS[0]}'''
+               '''$) - | samtools sort -@$(''' + CPUS +\
+               '''$) -O 'sam' -T $(segemehl_'''+ SAMPLE +\
+               '''$) | gzip > ${TARGETS[0]}'''
 
-if len(READS)>1:
-    segemehl_map_cmd = '''segemehl.x -s ''' + SEGEMEHL_PARAMS +\
+if len(READS) > 1:
+    segemehl_map_cmd = '''segemehl.x -s $SEGEMEHL_PARAMS '''\
                        ''' -i ''' + SEGEMEHL_INDEX + ''' -d ''' + GENOME_FASTA +\
                        ''' -q ${SOURCES[0]} -p ${SOURCES[1]} -S''' +\
                        ''' $(-t {}$) '''.format(CPUS) +\
                        '''-u ${TARGETS[1].base} -C -T | ''' + sam_sort_cmd
 else:
-    segemehl_map_cmd = '''segemehl.x -s ''' + SEGEMEHL_PARAMS +\
+    segemehl_map_cmd = '''segemehl.x -s $SEGEMEHL_PARAMS '''\
                        ''' -i ''' + SEGEMEHL_INDEX + ''' -d ''' + GENOME_FASTA +\
                        ''' -q $SOURCE -S'''+ ''' $(-t {}$) '''.format(CPUS) +\
                        '''-u ${TARGETS[1].base} -C -T | ''' + sam_sort_cmd
@@ -91,12 +91,18 @@ else:
 segemehl_unmatched_target = "{}_unmatched.fastq.gz".format(SAMPLE)
 segemehl_map_cmd = segemehl_map_cmd + ''' && gzip ${TARGETS[1].base}'''
 
-segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, "{}.bam".format(SAMPLE)), 
+segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, "{}.sam.gz".format(SAMPLE)), 
                             os.path.join(segemehl_mapping_dir, segemehl_unmatched_target)],
                            [READS], segemehl_map_cmd)
 
 env.Precious(segemehl_map[0]) # do not delete old alignment file untill the new one has been computed
 
+## COUNT AND REPORT MAPPED READS
+mapped_reads_target = 'segemehl_mapped_reads_count.txt'
+mapped_reads_cmd    = '''zcat ${SOURCE} | samtools view -F 4 - '''\
+                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
+mapped_reads        = env.Command(mapped_reads_target, segemehl_map[0], mapped_reads_cmd) 
+
 Clean('.', segemehl_mapping_dir)
 
-Return('segemehl_map')
+Return('segemehl_map mapped_reads')
