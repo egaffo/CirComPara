@@ -8,22 +8,15 @@ RNA-seq reads to a reference genome using 'TopHat2' [1].
     of insertions, deletions and gene fusions. 
     Genome Biology 14, R36 (2013).
 
-Software dependencies:
- * Samtools-1.1
-
-When called from a SConscript it imports the following variables:
- * env
- * tophat_cpus
- * reads_to_map
- * tophat_index
- * tophat_extra_params
-
 Returns:
-    ['accepted_hits.bam', 
-     'junctions.bed',
-     'insertions.bed',
-     'deletions.bed',
-     'unmapped.bam']
+{ 'ALIGNMENTS' : 'accepted_hits.bam',
+  'JUNCTIONS' : 'junctions.bed',
+  'INSERTIONS': 'insertions.bed',
+  'DELETIONS' : 'deletions.bed',,
+  'UNMAPPED'  : 'unmapped.bam',
+  'MAPPED_READS': 'tophat_mapped_reads_count.txt'
+}
+
 '''
 
 import os
@@ -33,10 +26,6 @@ Import('*')
 try:
     # these are the variables passed with 'exports' from a calling SConscript
     env = env_tophat.Clone()
-    #CPUS = tophat_cpus
-    #READS = reads_to_map
-    #TOPHAT_INDEX = tophat_index
-    #TOPHAT_PARAMS = tophat_extra_params 
 
 except NameError:
     vars = Variables('vars.py')
@@ -60,7 +49,6 @@ except NameError:
     env.Replace(READS = env['READS'].split(','))
  
 tophat_out_dir = 'tophat_out'
-#chdir_working_cmd = '''cd ''' + os.path.join(Dir('.').abspath, tophat_out_dir) 
 tophat_cmd = '''tophat2 -o ${TARGETS[0].dir}''' \
              ''' $TOPHAT_PARAMS $(-p $CPUS $) $TOPHAT_INDEX '''
 
@@ -71,18 +59,12 @@ if len(READS) > 1:
 else:
     tophat_cmd = tophat_cmd + ''' $SOURCE.abspath '''
 
-#chdir_parent_cmd = '''cd ''' + Dir('#').abspath
-
 tophat_targets = [os.path.join(tophat_out_dir, f) for f in ['accepted_hits.bam', 
                                                             'junctions.bed',
                                                             'insertions.bed',
                                                             'deletions.bed',
                                                             'unmapped.bam']]
 
-#tophat = env.Command(tophat_targets, READS, 
-#                    [chdir_working_cmd + ' && '+\
-#                    tophat_cmd + ' && ' +\
-#                    chdir_parent_cmd])
 tophat = env.Command(tophat_targets, READS, 
                     tophat_cmd)
 
@@ -99,7 +81,7 @@ results = { 'ALIGNMENTS' : tophat[0],
 
 ## COUNT AND REPORT MAPPED READS
 mapped_reads_target = os.path.join(tophat_out_dir, 'tophat_mapped_reads_count.txt')
-mapped_reads_cmd    = '''zcat ${SOURCE} | samtools view -F 4 - '''\
+mapped_reads_cmd    = '''samtools view -F 4 - '''\
                       '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
 mapped_reads        = env.Command(mapped_reads_target, results['ALIGNMENTS'], mapped_reads_cmd)
 
