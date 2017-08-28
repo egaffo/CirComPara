@@ -81,7 +81,7 @@ results = { 'ALIGNMENTS' : tophat[0],
 
 ## COUNT AND REPORT MAPPED READS
 mapped_reads_target = os.path.join(tophat_out_dir, 'tophat_mapped_reads_count.txt')
-mapped_reads_cmd    = '''samtools view -F 4 - '''\
+mapped_reads_cmd    = '''samtools view -F 4 $SOURCE '''\
                       '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
 mapped_reads        = env.Command(mapped_reads_target, results['ALIGNMENTS'], mapped_reads_cmd)
 
