@@ -10,6 +10,9 @@ Returns:
 
 import os
 
+def SymLink(target, source, env):
+    os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+
 Import('*')
 
 try:
@@ -41,5 +44,9 @@ command = '''bowtie-build -f --seed 1 '''+\
           '''$BOWTIE_EXTRA_PARAMS ''' + ','.join(source) +\
           ''' ${TARGETS[0].dir}''' + os.path.sep + target_basename 
 index = env.Command(target, source, command)
+
+link_genome_fasta = env.Command(os.path.join(str(File(index[0]).dir), '${SOURCES[0].file}'), 
+                                File(GENOME), 
+                                SymLink)
 
 Return('index')
