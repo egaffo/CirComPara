@@ -613,14 +613,14 @@ bwa_mappings          = get_matching_nodes(runs, BWA_mappings_pattern)
 star_mappings         = get_matching_nodes(runs, STAR_mappings_pattern)
 tophat_mappings       = get_matching_nodes(runs, tophat_mappings_pattern)
 
-collect_circrna_maps_counts_targets = [testrealign_mappings, find_circ_mappings, 
+collect_circrna_maps_counts_sources = [testrealign_mappings, find_circ_mappings, 
                                        ciri_mappings, CIRCexplorer_mappings,
 				       bwa_mappings, star_mappings, 
 				       tophat_mappings]
 collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
 collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir, 
                                                        'circrna_maps_counts.txt'), 
-                                          collect_circrna_maps_counts_targets, 
+                                          collect_circrna_maps_counts_sources, 
                                           collect_circrna_maps_counts_cmd)
 
 env_merge_sample_circrnas = env.Clone()
@@ -685,8 +685,9 @@ read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
 read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_statistics.html'),
-                                [reads_stats_collect, collect_circrna_maps_counts,
-                                File(META).abspath], 
+                                [reads_stats_collect, collect_circrna_maps_counts, 
+                                File(META).abspath, 
+				collect_circrna_maps_counts_sources],
                                 read_stats_report_cmd)
 
 qre_dir = 'qre'
