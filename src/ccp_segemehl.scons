@@ -98,7 +98,8 @@ segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, "{}.sam.gz".forma
 env.Precious(segemehl_map[0]) # do not delete old alignment file untill the new one has been computed
 
 ## COUNT AND REPORT MAPPED READS
-mapped_reads_target = 'segemehl_mapped_reads_count.txt'
+mapped_reads_target = os.path.join(segemehl_mapping_dir, 
+                                   'segemehl_mapped_reads_count.txt')
 mapped_reads_cmd    = '''zcat ${SOURCE} | samtools view -F 4 - '''\
                       '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
 mapped_reads        = env.Command(mapped_reads_target, segemehl_map[0], mapped_reads_cmd) 
