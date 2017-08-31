@@ -8,7 +8,6 @@ Software dependencies are inherited from the CIRCOMPARA-SConscripts used:
  * junk2_findcirc
  * junk2_tophat
  * junk2_bamtofastq
- * junk2_CIRCExplorer
 
 Imports:
  * env
@@ -205,27 +204,6 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'findcirc' in CIRCRNA_MET
                                exports = '''env find_circ_cpus find_circ_bt2_idx find_circ_reads '''\
                                          '''find_circ_genome find_circ_sample''')
     results.append(find_circ)
-
-if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'circexplorer' in CIRCRNA_METHODS:
-    ## CIRCexplorer
-    junk2_circexplorer  = 'junk2_CIRCExplorer'
-    circexplorer_env    = env
-    circexplorer_cpus   = CPUS
-    circexplorer_reads  = raw_reads
-    circexplorer_genome_index   = STAR_INDEX
-    circexplorer_genome_fasta   = GENOME_FASTA
-    circexplorer_annotation     = ANNOTATION
-    gene_pred_annotation        = GENEPRED
-    circexplorer_aligner        = 'Star'
-    
-    circexplorer = env.SConscript(os.path.join(build_dir, junk2_circexplorer),
-                                  variant_dir = build_dir, src_dir = SRC_DIR,
-                                  duplicate = 0,
-                                  exports = '''circexplorer_env circexplorer_cpus '''\
-                                            '''circexplorer_reads circexplorer_genome_index '''\
-                                            '''circexplorer_genome_fasta circexplorer_annotation '''\
-                                            '''gene_pred_annotation circexplorer_aligner''')
-    results.append(circexplorer)
 
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'circexplorer2_star' in CIRCRNA_METHODS:
 	## alignments with STAR

@@ -168,20 +168,6 @@ FINDCIRC = env.Command(FINDCIRC_target, [], ['wget -O $TARGET  ' + FINDCIRC_link
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FINDCIRC[1], SymLink)
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FINDCIRC[2], SymLink)
 
-# CIRCEXPLORER
-#CIRCEXPLORER_zip = 'CIRCexplorer_v1.1.9.zip'
-#CIRCEXPLORER_link = 'https://github.com/YangLab/CIRCexplorer/archive/1.1.9.zip'
-CIRCEXPLORER_dir = os.path.join(tools_dir, 'CIRCexplorer')
-CIRCEXPLORER_target = [os.path.join(CIRCEXPLORER_dir, 'bin', 'CIRCexplorer.py'), 
-                       os.path.join(CIRCEXPLORER_dir, 'bin', 'star_parse.py')]
-#CIRCEXPLORER_source = 
-CIRCEXPLORER = env.Command(CIRCEXPLORER_target, [], 
-                           ['pip install --install-option="--prefix=' +\
-                           os.path.abspath(CIRCEXPLORER_dir) +\
-                           '" CIRCexplorer'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER[0], SymLink)
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER[1], SymLink)
-
 # FASTX-TOOLKIT
 libgtextutils_tar   = 'libgtextutils-0.7.tar.gz'
 libgtextutils_link  = 'https://github.com/agordon/libgtextutils/releases/download/0.7/' +\

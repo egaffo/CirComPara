@@ -44,8 +44,7 @@ vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', '')
 vars.Add('CIRCRNA_METHODS', 
 	 'Comma separated list of circRNA detection methods to use. '\
 	 'Repeated values will be collapsed. Currently supported: ciri, find_circ, '\
-	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, circexplorer (version 1, '\
-	 'DEPRECATED: use circexplorer2_star instead), testrealign (unfiltered segemehl, '\
+	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, testrealign (unfiltered segemehl, '\
 	 'DEPRECATED: use circexplorer2_segemehl for a better filtering of segemehl predictions). '\
 	 'Set an empty string to use all methods available (including deprecated methods). ', 
          'ciri,find_circ,circexplorer2_star,circexplorer2_bwa,circexplorer2_segemehl')
@@ -240,8 +239,7 @@ if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
     else:
         indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes] 
 
-if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer',
-							'circexplorer2_star']]):
+if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_star']]):
     if STAR_INDEX == '':
 	    genome_indexes_to_build.append('STAR')
     else:
@@ -312,8 +310,7 @@ if genome_indexes_to_build:
         else:
             indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix \
 							 in bowtie2_index_suffixes]
-    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer',
-							'circexplorer2_star']]):
+    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_star']]):
         if STAR_INDEX == '': 
 		#index dir
         	STAR_INDEX =os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) 
@@ -332,9 +329,8 @@ if genome_indexes_to_build:
             indexes['BOWTIE'] = [BOWTIE_INDEX + suffix for suffix in bowtie_index_suffixes]
 
 ## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
-if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer', 
-                            'circexplorer2_bwa', 'circexplorer2_star', 
-                            'circexplorer2_segemehl', 'circexplorer2_tophat']]):
+if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 'circexplorer2_star', 
+				                            'circexplorer2_segemehl', 'circexplorer2_tophat']]):
     if GENEPRED == '': 
         genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info',
                                                                '${SOURCES[0].filebase}.genePred',
@@ -406,9 +402,9 @@ for sample in sorted(samples.keys()):
         if indexes[k]: 
             Depends(run_sample, indexes[k])
 
-    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer', 
-                            'circexplorer2_bwa', 'circexplorer2_star', 
-                            'circexplorer2_segemehl', 'circexplorer2_tophat']]):
+    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 
+							'circexplorer2_star', 
+				                        'circexplorer2_segemehl', 'circexplorer2_tophat']]):
 	Depends(run_sample, GENEPRED) #genePred[2])
 
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED

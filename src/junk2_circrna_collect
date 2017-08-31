@@ -35,8 +35,7 @@ except NameError:
     circrna_analyze_testrealign     = csvs[3]
     GTF = env['GTF']
 
-methods = {'CIRCEXPLORER': 'circexplorer',
-	   'CIRI': 'ciri',
+methods = {'CIRI': 'ciri',
 	   'FINDCIRC': 'findcirc',
 	   'TESTREALIGN': 'testrealign',
        'CIRCEXPLORER2_STAR': 'circexplorer2_star',
