@@ -51,8 +51,6 @@ for sample in samples:
                                               os.path.sep + 'circ_candidates\.bed'))
     ciri_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                          os.path.sep + '.*_ciri\.out'))
-    CIRCexplorer_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
-                                                os.path.sep + '.*CIRCexplorer_circ\.txt'))
     CIRCexplorer2_star_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_star', 
@@ -132,21 +130,6 @@ if not ''.join([str(f) for f in Flatten(ciri_nodes)]) == '':
                                     ciri_comapared_cmd)
     Depends(ciri_compared, ciri_nodes)
     
-if not ''.join([str(f) for f in Flatten(CIRCexplorer_nodes)]) == '':
-
-    ## collect CIRCexplorer
-    CIRCexplorer_files = ','.join([f.path for f in Flatten(CIRCexplorer_nodes)])
-    CIRCexplorer_labels = ','.join(samples)
-    CIRCexplorer_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''CIRCexplorer_compare.R -l ''' + CIRCexplorer_labels +\
-                             ''' -i ''' + CIRCexplorer_files + ''' -o $TARGET''')
-    CIRCexplorer_comapared_target = os.path.join(circRNA_collect_dir, 'CIRCexplorer_compared.csv')
-    CIRCexplorer_compared = env.Command(CIRCexplorer_comapared_target, 
-                                    CIRCexplorer_nodes, 
-                                    CIRCexplorer_comapared_cmd)
-    Depends(CIRCexplorer_compared, CIRCexplorer_nodes)
-    
-
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_star_nodes)]) == '':
     ## collect CIRCexplorer2_star
     CIRCexplorer2_star_files = ','.join([f.path for f in Flatten(CIRCexplorer2_star_nodes)])
@@ -209,8 +192,7 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_nodes)]) == '':
 
 
 ## compose a dict with the results
-sample_results = {'CIRCEXPLORER': CIRCexplorer_compared,
-                'CIRI': ciri_compared,
+sample_results = {'CIRI': ciri_compared,
                 'FINDCIRC': find_circ_compared,
                 'TESTREALIGN': testrealign_compared,
                 'CIRCEXPLORER2_STAR': CIRCexplorer2_star_compared,
