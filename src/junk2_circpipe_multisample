@@ -70,6 +70,7 @@ vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner
 vars.Add('BWA_PARAMS','Extra parameters for BWA','')
 vars.Add('SEGEMEHL_PARAMS', 'SEGEMEHL extra parameters', '')
 vars.Add('TOPHAT_PARAMS', 'Extra parameters to pass to TopHat', '')
+vars.Add('STAR_PARAMS', 'Extra parameters to pass to STAR', '')
 
 ## linear transcriptome extra parameters
 vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
