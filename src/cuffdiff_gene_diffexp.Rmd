@@ -58,8 +58,11 @@ if(meta.file != ""){
 }
 
 gene.de <- fread(gene.de.file)
+## CAVEAT !!! Cuffdiff considers the fold change as sample_2/sample_1, that is like considering the sample_2 vs. sample_1 contrast
+## Because of this, positive log2(fold_change) values are to be considered as "sample_2 is up in sample_2 vs. sample_1", but as 
+## "sample_2 is down in sample_1 vs. sample_2" contrast, which is as we intended the comparisons
 gene.de[, `:=`(contrast = paste(sample_1, "vs", sample_2), 
-               `log2(fold_change)` = as.numeric(`log2(fold_change)`),
+               `log2(fold_change)` = as.numeric(`log2(fold_change)`)*-1,
                avgFPKM = round((value_1 + value_2)/2, 4))]
 gene.de[status != "OK", `:=`(significant = NA)]
 ```
