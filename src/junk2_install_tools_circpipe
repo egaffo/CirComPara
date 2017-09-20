@@ -286,3 +286,17 @@ tophat2 = env.Command(tophat2_target,
                      )
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), tophat2[1], SymLink)
 
+# STRINGTIE
+stringtie_dir =	'stringtie-1.3.3b.Linux_x86_64'
+stringtie_tar = 'stringtie-1.3.3b.Linux_x86_64.tar.gz'
+stringtie_url = 'http://ccb.jhu.edu/software/stringtie/dl/' + stringtie_tar
+stringtie_target = [os.path.join(tools_dir, stringtie_tar),
+		    os.path.join(tools_dir, stringtie_dir, 'stringtie')]
+stringtie = env.Command(stringtie_target, 
+			[], 
+			['wget -O ${TARGETS[0]} ' + stringtie_url,
+			 'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}']
+			)
+
+stringtie_link = env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), stringtie[1], SymLink)
+
