@@ -59,7 +59,7 @@ if not env['ANNOTATION'] == '':
     env.AppendUnique(STRINGTIE_PARAMS = ['-G', env['ANNOTATION']])
 
     stringtie_targets.append(env['SAMPLE'] + '_cov_refs.gtf')
-    env.AppendUnique(STRINGTIE_PARAMS = ['-C', stringtie_targets[2]])
+    env.AppendUnique(STRINGTIE_PARAMS = ['-C', '${TARGETS[2]}'])
  
     stringtie_targets.extend([os.path.join(ballgown_ctabs_dir, tab) for tab in ['e2t.ctab', 
                                                                                 'e_data.ctab',  
@@ -67,7 +67,7 @@ if not env['ANNOTATION'] == '':
                                                                                 'i_data.ctab',  
                                                                                 't_data.ctab']]
                             )
-    env.AppendUnique(STRINGTIE_PARAMS = ['-b', ballgown_ctabs_dir])
+    env.AppendUnique(STRINGTIE_PARAMS = ['-b', '${TARGETS[3].dir}'])
 
    
     if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'False':
