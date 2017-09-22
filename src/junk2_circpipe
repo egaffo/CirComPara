@@ -245,18 +245,19 @@ if env['BYPASS_LINEAR'] == 'False':
                                  duplicate = 0, exports = '''env mapping_file '''
                                  '''sample_name expression_cpus expression_genome_fasta '''
                                  '''expression_annotation expression_cufflinks_params '''
-    			     '''expression_toggle_transcriptome_reconstruction''')
+                                 '''expression_toggle_transcriptome_reconstruction''')
+
+    if 'stringtie' in env['METHODS']:
+        results.append(expression[1]['STRINGTIE']['ALL_TARGETS'])
+        # the ALL_TARGETS is a temporary hack. It will be removed when SConscript
+        # results are passed as dictionaries/custom-objects and handled accordingly
+    if 'htseq' in env['METHODS']:
+        results.append(expression[1]['HTSEQ'])
+    if 'cufflinks' in env['METHODS']:
+        results.append(expression[1]['CUFFLINKS'])
+
 else:
 	expression = env.Command('mock_expression.txt', mappings, 'touch $TARGET')
-
-if 'stringtie' in env['METHODS']:
-    results.append(expression[1]['STRINGTIE']['ALL_TARGETS'])
-    # the ALL_TARGETS is a temporary hack. It will be removed when SConscript
-    # results are passed as dictionaries/custom-objects and handled accordingly
-if 'htseq' in env['METHODS']:
-    results.append(expression[1]['HTSEQ'])
-if 'cufflinks' in env['METHODS']:
-    results.append(expression[1]['CUFFLINKS'])
 
 ## CIRCRNA DETECTION
 unmapped_dir = os.path.join(build_dir, 'unmapped_reads')
