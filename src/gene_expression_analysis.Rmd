@@ -72,7 +72,7 @@ if(method == "cufflinks"){
         gene.raw.frags.dt <- dcast(genes.read_group_tracking[gene_meta[, .(sample_id, condition, 
                                                                            replicate_num)]][, .(gene_id = tracking_id, 
                                                                                                 sample_id, raw_frags)], 
-                                   formula = gene_id ~ sample_id, value.var = "raw_frags")
+                                   formula = gene_id ~ sample_id, value.var = "raw_frags", fill = 0)
         
     }else{
         # tracking_id, class_code, nearest_ref_id, 
@@ -107,18 +107,16 @@ if(method == "stringtie"){
                                 sapply(gene.xpr.file.paths, basename, 
                                        USE.NAMES = F))
     gene.xpr <- rbindlist(gene.xpr.list, use.names = T, idcol = "sample")
-    # gene.xpr.fpkm <- dcast(data = gene.xpr, 
-    #                        formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample, 
-    #                        value.var = "FPKM")
+
     gene.xpr.tpm <- dcast(data = gene.xpr,
                           formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample,
-                          value.var = "TPM")
+                          value.var = "TPM", fill = 0)
     write.csv(x = gene.xpr.tpm, 
               file = file.path(results.dir, "gene_expression_TPM_table.csv"), 
               row.names = F)
     gene.xpr.nreads <- dcast(data = gene.xpr, 
                              formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample, 
-                             value.var = "Coverage")
+                             value.var = "Coverage", fill = 0)
     write.csv(x = gene.xpr.nreads, 
               file = file.path(results.dir, "gene_expression_Nreads_table.csv"), 
               row.names = F)
@@ -127,6 +125,29 @@ if(method == "stringtie"){
     genes.read_group_tracking <- gene.xpr[, .(sample_id = sample, tracking_id = `Gene ID`, FPKM)]
 }
 ```
+
+```{r save gene expression in table format}
+# get gene expressions
+expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+if(meta.file != ""){
+    if(method == "cufflinks"){
+    setkey(gene_meta, condition, replicate_num)
+    setkey(expressed_genes, condition, replicate)
+    expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+    gene.xpr.fpkm <- dcast(expressed_genes[, .(gene = tracking_id, sample_id, FPKM)], 
+                    formula = gene ~ sample_id, value.var = "FPKM", fill = 0)
+    }
+    if(method == "stringtie"){
+        gene.xpr.fpkm <- dcast(data = gene.xpr,
+                           formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample,
+                           value.var = "FPKM", fill = 0)[, gene := `Gene ID`][, c("gene", gene_meta$sample_id), with = F]
+        expressed_genes <- merge(expressed_genes, gene_meta, by = "sample_id")
+    }
+}
+expressed_genes_table.file <- file.path(results.dir, "gene_expression_FPKM_table.csv")
+write.csv(x = gene.xpr.fpkm, file = expressed_genes_table.file, row.names = F)
+```
+Expression of genes was saved in tabular format in file <a href="`r basename(expressed_genes_table.file)`">`r basename(expressed_genes_table.file)`</a>.  
 
 # Principal component analysis (PCA) considering gene expression
 
@@ -210,19 +231,8 @@ if(meta.file != ""){
 ```
 
 # Gene expressed by sample
+
 ```{r show_gene_expressed_by_sample}
-# get gene expressions
-expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
-if(meta.file != ""){
-    if(method == "cufflinks"){
-    setkey(gene_meta, condition, replicate_num)
-    setkey(expressed_genes, condition, replicate)
-    expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
-    }
-    if(method == "stringtie"){
-        expressed_genes <- merge(expressed_genes, gene_meta, by = "sample_id")
-    }
-}
 expressed_genes.by.sample <- expressed_genes[, .N, 
                                              by = .(sample_id, 
                                                     tracking_id)][, .("Tot. gene expressed" = .N), 
@@ -254,14 +264,6 @@ if(meta.file != ""){
     expressed_genes.by.sample.plot
 }
 ```
-
-```{r save gene expression in table format}
-expressed_genes_table.file <- file.path(results.dir, "gene_expression_FPKM_table.csv")
-write.csv(x = dcast(expressed_genes[, .(gene = tracking_id, sample_id, FPKM)], 
-                    formula = gene ~ sample_id, value.var = "FPKM"), 
-          file = expressed_genes_table.file, row.names = F)
-```
-Expression of genes was saved in tabular format in file `r expressed_genes_table.file`.  
 
 # Gene expression distribution by sample
 
