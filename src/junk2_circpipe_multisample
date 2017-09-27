@@ -472,21 +472,20 @@ if env['BYPASS_LINEAR'] == 'False':
 
                 stringtiemerge_targets = [os.path.join(cuffmerge_dir, 'stringtiemerge.gtf')]
                 stringtiemerge_cmd = 'stringtie --merge -p $CPUS -o ${TARGETS[0]} '\
-                                 '-G ${SOURCES[0]} ${SOURCES[1]}'
+                
+                if not env['ANNOTATION'] == '':
+                    stringtiemerge_cmd = stringtiemerge_cmd + ' -G ${SOURCES[1]}' 
+                
+                stringtiemerge_cmd = stringtiemerge_cmd + ' ${SOURCES[0]}'
+                
                 stringtiemerge = env.Command(stringtiemerge_targets,
-                                            [env['ANNOTATION'], stringtiemerge_list],
+                                            [stringtiemerge_list, env['ANNOTATION']],
                                             stringtiemerge_cmd)
                 
                 env.Replace(ANNOTATION = stringtiemerge)
                 
         else:
-            #cuffmerge = transcripts_gtf_files
             env.Replace(ANNOTATION = transcripts_gtf_files)
-#    else:
-#        ## just to recycle 'cuffmerge' variable
-#        #cuffmerge = ANNOTATION
-#        env['MERGED_ANNOTATION'] = env['ANNOTATION']
-    
     
     ## RETRIEVE TRANSCRIPT SEQUENCES
     transcript_sequences_annotation = File(env['ANNOTATION']) #cuffmerge
