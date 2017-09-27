@@ -388,10 +388,10 @@ for sample in sorted(samples.keys()):
     env_circpipe['READS'] = sample_raw_reads
     env_circpipe['CIRCRNA_METHODS'] = CIRCRNA_METHODS
     if len(env_circpipe['READS']) > 1:
-	env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
-							'circexplorer2_tophat_pe', m) for \
-						m in env_circpipe['CIRCRNA_METHODS']])
-
+        env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
+                                                        'circexplorer2_tophat_pe', m) for \
+                                                        m in env_circpipe['CIRCRNA_METHODS']])
+        
     sample_dir = os.path.join(samples_dir, sample)
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'),
                             src_dir = SCONSCRIPT_HOME,
@@ -435,69 +435,131 @@ cuffmerge_dir = 'cuffmerge'
 transcript_sequences_dir = 'transcript_sequences'
 cuffquant_dir = 'cuffquant'
 cuffdiff_dir = 'cuffdiff'
-#stringtie_dir = 'stringtie'
 deseq_dir = 'deseq'
 
 ## the directory where to collect gene expression results
 geneexp_dir = 'geneexp'
 
+env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
+
 if env['BYPASS_LINEAR'] == 'False':
+    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
+        ## MERGE THE TRANSCRIPTS PREDICTED IN THE VARIOUS SAMPLES
+        transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
+        if len(transcripts_gtf_files) > 1:
+        
+            if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
+                cuffmerge_cpus = CPUS
+                cuffmerge_annotation = ANNOTATION
+                cuffmerge_genome_fasta = GENOME_FASTA
+                cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
+                                        src_dir = SCONSCRIPT_HOME,
+                                        variant_dir = cuffmerge_dir, duplicate = 0,
+                                        exports = 'env transcripts_gtf_files cuffmerge_cpus '''
+                                        '''cuffmerge_annotation cuffmerge_genome_fasta''')
+                
+                env.Replace(ANNOTATION = cuffmerge)
 
-    if TOGGLE_TRANSCRIPTOME_RECONSTRUCTION:
-	    transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
-	    if len(transcripts_gtf_files) > 1:
-	       cuffmerge_cpus = CPUS
-	       cuffmerge_annotation = ANNOTATION
-	       cuffmerge_genome_fasta = GENOME_FASTA
-	       cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
-	                               src_dir = SCONSCRIPT_HOME,
-	                               variant_dir = cuffmerge_dir, duplicate = 0,
-	                               exports = 'env transcripts_gtf_files cuffmerge_cpus '''
-	                               '''cuffmerge_annotation cuffmerge_genome_fasta''')
-	    else:
-	        cuffmerge = transcripts_gtf_files
-    else:
-        ## just to recycle 'cuffmerge' variable
-        cuffmerge = ANNOTATION
-	
-	## RETRIEVE TRANSCRIPT SEQUENCES
-	transcript_sequences_annotation = cuffmerge
-	transcript_sequences_genome = GENOME_FASTA
-	transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
-	                                               'junk2_transcript_fastas'), 
-	                                  src_dir = SCONSCRIPT_HOME,
-	                                  variant_dir = transcript_sequences_dir, duplicate = 0,
-	                                  exports = '''env transcript_sequences_annotation '''
-	                                  '''transcript_sequences_genome''')
-	
-	alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
-	alignments = get_matching_nodes(runs, alignment_matching_regexp)
-	
-	gene_exp = ''
-	gene_meta = ''
-	sample = ''
+            if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
 
+                stringtiemerge_list_target = os.path.join(cuffmerge_dir,
+                                                          'transcripts_gtf_files_mergelist.txt')
+                stringtiemerge_list_cmd = '''echo -ne '${"\\\\n".join([str(s.path) '''\
+                                          '''for s in SOURCES])}' > ${TARGETS[0]}''' 
+                stringtiemerge_list = env.Command(stringtiemerge_list_target,
+                                                  transcripts_gtf_files,
+                                                  stringtiemerge_list_cmd)
+
+                stringtiemerge_targets = [os.path.join(cuffmerge_dir, 'stringtiemerge.gtf')]
+                stringtiemerge_cmd = 'stringtie --merge -p $CPUS -o ${TARGETS[0]} '\
+                                 '-G ${SOURCES[0]} ${SOURCES[1]}'
+                stringtiemerge = env.Command(stringtiemerge_targets,
+                                            [env['ANNOTATION'], stringtiemerge_list],
+                                            stringtiemerge_cmd)
+                
+                env.Replace(ANNOTATION = stringtiemerge)
+                
+        else:
+            #cuffmerge = transcripts_gtf_files
+            env.Replace(ANNOTATION = transcripts_gtf_files)
+#    else:
+#        ## just to recycle 'cuffmerge' variable
+#        #cuffmerge = ANNOTATION
+#        env['MERGED_ANNOTATION'] = env['ANNOTATION']
+    
+    
+    ## RETRIEVE TRANSCRIPT SEQUENCES
+    transcript_sequences_annotation = File(env['ANNOTATION']) #cuffmerge
+    transcript_sequences_genome = GENOME_FASTA
+    transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
+                                                   'junk2_transcript_fastas'), 
+                                      src_dir = SCONSCRIPT_HOME,
+                                      variant_dir = transcript_sequences_dir, duplicate = 0,
+                                      exports = '''env transcript_sequences_annotation '''
+                                      '''transcript_sequences_genome''')
+    
+    ## QUANTIFY EXPRESSION
+    alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
+    alignments = get_matching_nodes(runs, alignment_matching_regexp)
+
+    gene_exp = ''
+    gene_meta = ''
+    sample = ''
+    
     if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
-	    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
-	        # 'stringtie --merge'
-	        print "TOGGLE_TRANSCRIPTOME_RECONSTRUCTION yet to be implemented with Stringtie"
-	        pass
-	    
-	    # TODO: use finer way to collect files, by grubbing dictionary results from the runs 
-	    # gene_exp = []
-	    # sample_list = []
-	    # for sample in samples.keys():
-	    #     gene_exp.append(runs[sample]['LINEAR_EXPRESSION']['STRINGTIE']['GENE_ABUND'])
-	    #     sample_list.append(sample)
-	    # sample = ','.join(sample_list)
-	    sample = ','.join(samples.keys())
-	    gene_exp = get_matching_nodes(runs, '.*gene_abund\.tab')
-	    gene_meta = env['META']
+        sample = ','.join(samples.keys())
+        gene_meta = env['META']
+        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
+            ## (RE)COMPUTE GENE ABUNDANCES USING MERGED ANNOTATION
+            gene_exp = []
+            for sample_name in samples.keys():
+                
+                alignment = get_matching_nodes(alignments, '.*' + sample_name + '.*')
 
+                if len(alignment) > 1: 
+                    print 'Warning: multiple alignments matched for sample ' +\
+                          sample_name + '. Will use only the first: ' +\
+                          alignment[0].path
+
+                alignment = alignment[0]
+                
+                gene_ab_targets = [sample_name + '_transcripts.gtf', 
+                                   sample_name + '_gene_abund.tab',
+                                   sample_name + '_cov_refs.gtf']
+                
+                gene_ab_targets = [os.path.join(geneexp_dir, sample_name, t) for t in gene_ab_targets]
+
+                ballgown_dir = os.path.join(geneexp_dir, 'ballgown')
+                gene_ab_targets.extend([os.path.join(ballgown_dir, 
+                                                     sample_name,
+                                                     tab) for tab in ['e2t.ctab', 
+                                                                    'e_data.ctab',  
+                                                                    'i2t.ctab',  
+                                                                    'i_data.ctab',  
+                                                                    't_data.ctab']]
+                                        )
+                
+                gene_ab_cmd = 'stringtie $( -p $CPUS $) -e -G ${SOURCES[1]} -o ${TARGETS[0]} '\
+                              '-A ${TARGETS[1]} -C ${TARGETS[2]} -b ${TARGETS[3].dir} ${SOURCES[0]}' 
+                gene_ab = env.Command(gene_ab_targets, 
+                                      [alignment, env['ANNOTATION']], 
+                                      gene_ab_cmd)
+                gene_exp.append(gene_ab[1].abspath)
+        else:
+            ## JUST COLLECT GENE ABUNDANCES ALREADY COMPUTED WITH GIVEN ANNOTATION
+            # TODO: use finer way to collect files, by grubbing dictionary results from the runs 
+            # gene_exp = []
+            # sample_list = []
+            # for sample_name in samples.keys():
+            #     gene_exp.append(runs[sample_name]['LINEAR_EXPRESSION']['STRINGTIE']['GENE_ABUND'])
+            #     sample_list.append(sample_name)
+            # sample = ','.join(sample_list)
+            gene_exp = get_matching_nodes(runs, '.*gene_abund\.tab')
+        
+        
     if len(samples.keys()) > 1:
         
         if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or ('cuffdiff' in env['DIFF_EXP']):
-            ## QUANTIFY EXPRESSION WITH MERGED ANNOTATION
             cuffquant_annotation = cuffmerge
             cuffquant_alignments = alignments
             cuffquant_genome_fasta = GENOME_FASTA
@@ -592,6 +654,8 @@ if env['BYPASS_LINEAR'] == 'False':
             #link_cufflinks_dir = env.Command(cuffdiff_dir, gene_exp[0].dir, SymLink)
             sample = str(samples.keys()[0])
 
+
+    ## REPORT GENE EXPRESSION
     gene_exp_analysis_template = os.path.join("$SCONSCRIPT_HOME", "gene_expression_analysis.Rmd")
     gene_exp_analysis_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[0].abspath}"); '''\
                             '''meta.file <- "${SOURCES[0].abspath}"; '''\
@@ -609,7 +673,9 @@ if env['BYPASS_LINEAR'] == 'False':
     gene_exp_analysis = env.Command(gene_exp_analysis_targets, 
                                     gene_exp_analysis_sources, 
                                     gene_exp_analysis_cmd)
+
 else:
+    ## DO NOT ANALYZE GENE EXPRESSION: USE MOCK EMPTY FILES
     print "BYPASS_LINEAR = " + env['BYPASS_LINEAR'] +\
           ": skipping linear transcript analysis"
     
@@ -668,7 +734,7 @@ merge_sample_circrnas = SConscript(os.path.join(circRNA_collect_dir,
 
 env_circrna_collect = env.Clone()
 env_circrna_collect['CSVS'] = merge_sample_circrnas
-env_circrna_collect['GTF'] = cuffmerge
+env_circrna_collect['GTF'] = env['ANNOTATION'] #cuffmerge
 circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 
                                           'junk2_circrna_collect'), 
                             src_dir = SCONSCRIPT_HOME, 
