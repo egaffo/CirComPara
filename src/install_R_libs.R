@@ -16,4 +16,4 @@ install.packages(packs, repos="http://cran.r-project.org", dependencies = T)
 #}
 
 source("http://bioconductor.org/biocLite.R")
-biocLite(pkgs = c("DESeq2", "ReportingTools"))
+biocLite(pkgs = c("DESeq2", "ReportingTools", "ballgown"))
