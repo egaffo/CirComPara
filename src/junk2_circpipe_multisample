@@ -104,9 +104,12 @@ vars.Add('LINEAR_EXPRESSION_METHODS', 'The method to be used for the linear expr
 vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
          'reconstruction. Default only quantifies genes and transcripts from the given '\
          'annotation GTF file', 'False')
-vars.Add('DIFF_EXP', 'Set True to enable differential expression computation for linear genes/transcripts. '\
+vars.Add('DIFF_EXP', 'Set the method to and enable differential expression '\
+         'computation for linear genes/transcripts. Current methods '\
+         'supported: cufflinks, ballgown, DESeq2.'\
      	 'Only available if more than one sample and more than one condition are given. '\
-         'N.B: differential expression tests for circRNAs is not yet implemented', 'False')
+         'N.B: differential expression tests for circRNAs is not yet'\
+         'implemented', 'ballgown')
 vars.Add('DESEQ', '(Experimental) Set True to enable differential gene expression computation '\
          'also with DESeq2. Only available if more than one sample and more than one condition are given', 
          'False')
@@ -505,6 +508,9 @@ if env['BYPASS_LINEAR'] == 'False':
     gene_meta = ''
     sample = ''
     
+    ballgown_dir = os.path.join(geneexp_dir, 'ballgown')
+    ballgown_files = []
+    
     if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
         sample = ','.join(samples.keys())
         gene_meta = env['META']
@@ -528,7 +534,6 @@ if env['BYPASS_LINEAR'] == 'False':
                 
                 gene_ab_targets = [os.path.join(geneexp_dir, sample_name, t) for t in gene_ab_targets]
 
-                ballgown_dir = os.path.join(geneexp_dir, 'ballgown')
                 gene_ab_targets.extend([os.path.join(ballgown_dir, 
                                                      sample_name,
                                                      tab) for tab in ['e2t.ctab', 
@@ -544,6 +549,8 @@ if env['BYPASS_LINEAR'] == 'False':
                                       [alignment, env['ANNOTATION']], 
                                       gene_ab_cmd)
                 gene_exp.append(gene_ab[1].abspath)
+                ballgown_files.append(gene_ab[3:])
+
         else:
             ## JUST COLLECT GENE ABUNDANCES ALREADY COMPUTED WITH GIVEN ANNOTATION
             # TODO: use finer way to collect files, by grubbing dictionary results from the runs 
@@ -553,8 +560,27 @@ if env['BYPASS_LINEAR'] == 'False':
             #     gene_exp.append(runs[sample_name]['LINEAR_EXPRESSION']['STRINGTIE']['GENE_ABUND'])
             #     sample_list.append(sample_name)
             # sample = ','.join(sample_list)
+            # TODO: collect ballgown_files
             gene_exp = get_matching_nodes(runs, '.*gene_abund\.tab')
-        
+
+        if 'ballgown' in env['DIFF_EXP']:
+            ## MAKE BALLGOWN R OBJECT
+            ballgown_targets = os.path.join(ballgown_dir, 'ballgown.rda')
+            ballgown_sources = [ballgown_files]
+            ballgown_ctabs = "','".join(list(set([os.path.dirname(f.path) for f in\
+                                    get_matching_nodes(ballgown_files, '.*\.ctab')])))
+            ballgown_ctabs = "c('" + ballgown_ctabs + "')"
+            ballgown_R_cmd = '''library(ballgown);'''\
+                             '''data_directory = system.file('${TARGETS[0].dir}' '''\
+                             ''', package='ballgown'); '''\
+                             '''bg = ballgown(dataDir=data_directory, '''\
+                             '''samples = ''' + ballgown_ctabs + ''', meas='all');'''\
+                             '''save(bg, file='${TARGETS[0]}')'''
+            ballgown_cmd = '''Rscript -e "''' + ballgown_R_cmd + '''"'''
+            ballgown = env.Command(ballgown_targets, 
+                                    ballgown_sources,
+                                    ballgown_cmd)
+
         
     if len(samples.keys()) > 1:
         
