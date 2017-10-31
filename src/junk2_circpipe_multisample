@@ -562,6 +562,7 @@ if env['BYPASS_LINEAR'] == 'False':
             # sample = ','.join(sample_list)
             # TODO: collect ballgown_files
             gene_exp = get_matching_nodes(runs, '.*gene_abund\.tab')
+            ballgown_files = get_matching_nodes(runs, '.*\.ctab')
 
         if 'ballgown' in env['DIFF_EXP']:
             ## MAKE BALLGOWN R OBJECT
