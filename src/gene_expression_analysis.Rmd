@@ -89,6 +89,7 @@ if(meta.file != ""){
 # Principal component analysis (PCA) considering gene expression
 
 ```{r compute pca, echo=FALSE}
+
 if(meta.file != ""){
     non.value.columns <- c("gene_id")
     genes.per.sample.matrix <- as.matrix(round(gene.raw.frags.dt[, -non.value.columns, with = FALSE]))
@@ -100,14 +101,23 @@ if(meta.file != ""){
     # remove not expressed genes
     countData <- genes.per.sample.matrix[rowSums(genes.per.sample.matrix) > 0, ]
     
-    ddsHTSeq <- DESeqDataSetFromMatrix(countData = countData[, row.names(sampleTable)],
-                                       colData = sampleTable,
-                                       design = ~ condition)
-    dds <- DESeq(ddsHTSeq)
-    
-    #rld <- rlog(dds, blind = T)
-    rld <- vst(dds, blind = T)
-    pca <- prcomp(t(assay(rld)), scale. = T)
+    pca <- tryCatch({        
+        ddsHTSeq <- DESeqDataSetFromMatrix(countData = countData[, row.names(sampleTable)],
+                                           colData = sampleTable,
+                                           design = ~ condition)
+        dds <- DESeq(ddsHTSeq)
+        
+        #rld <- rlog(dds, blind = T)
+        #rld <- vst(dds, blind = T)
+        rld <- varianceStabilizingTransformation(dds)
+        pca <- prcomp(t(assay(rld)), scale. = T)
+    },
+    error=function(cond) {
+        message(paste("Some error occurred while computing PCA:\n", cond))
+        message("Will use raw expression values with no further normalization.\n")
+        pca <- prcomp(t(countData), scale. = F)
+        return(pca)
+    })
     
     intgroup <- c("condition")
     percentVar <- pca$sdev^2/sum(pca$sdev^2)
