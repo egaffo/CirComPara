@@ -1,0 +1,13 @@
+META            = "meta.csv"
+GENOME_FASTA    = '$CIRCOMPARA/test_circompara/annotation/CFLAR_HIPK3.fa'
+ANNOTATION      = '$CIRCOMPARA/test_circompara/annotation/CFLAR_HIPK3.gtf' 
+CIRI            = "$CIRCOMPARA/bin/CIRI_v2.0.2.pl" 
+CPUS            = "3"
+PREPROCESSOR    = "trimmomatic"
+CIRCRNA_METHODS = "ciri,circexplorer,findcirc,testrealign"
+TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = 'False'
+DIFF_EXP = 'False'
+DESEQ = 'False'
+PREPROCESSOR_PARAMS = "MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:35 AVGQUAL:30"
+CUFFNORM_EXTRA_PARAMS = "--output-format cuffdiff"
+BWA_PARAMS = "-T 19" ## parameter recomended by CIRI manual
