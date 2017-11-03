@@ -132,7 +132,7 @@ ANNOTATION: Gene annotation file (like Ensembl GTF/GFF)
 GENOME_FASTA: The FASTA file with the reference genome
     default: 
 
-CIRCRNA_METHODS: Comma separated list of circRNA detection methods to use. Repeated values will be collapsed. Currently supported: ciri, find_circ, circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, testrealign (unfiltered segemehl. Use of circexplorer2_segemehl is recommended for a better filtering of segemehl predictions). Set an empty string to use all methods available (including deprecated methods). 
+CIRCRNA_METHODS: Comma separated list of circRNA detection methods to use. Repeated values will be collapsed into unique values. Currently supported: ciri, find_circ, circexplorer2_star, circexplorer2_bwa, circexplorer2_tophat, circexplorer2_segemehl, testrealign (unfiltered segemehl; use of circexplorer2_segemehl is recommended for a better filtering of segemehl predictions). Set an empty string to use all methods available (including deprecated methods). 
     default: ciri,find_circ,circexplorer2_star,circexplorer2_bwa,circexplorer2_segemehl
 
 CPUS: Set number of CPUs
