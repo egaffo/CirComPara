@@ -1,0 +1,396 @@
+---
+title: 'CirComPara: read statistics'
+date: "`r Sys.Date()`"  
+output: 
+  html_document: 
+    keep_md: no
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    theme: "readable"
+---
+
+```{r global_options, include=FALSE}
+## inherited variables
+# read_stats_collect.file 
+# linear.mapper 
+# circrna.reads.stats.file 
+# results.dir
+# meta_file
+
+library(data.table)
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+library(DT)
+
+dir.create(path = results.dir, showWarnings = F, recursive = T)
+knitr::opts_chunk$set(fig.width = 12, 
+                      fig.height = 6, 
+                      dev = c('svglite', 'png'), 
+                      fig.pos = "center",
+                      fig.path = file.path(results.dir, paste0('Figs_rs', .Platform$file.sep)),
+                      echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE)
+```
+
+```{r load data, echo=FALSE, include=FALSE}
+
+read_stats_collect <- as.data.table(data.frame(line = cbind(scan(file = read_stats_collect.file, 
+                                                                 what = "character", 
+                                                                 multi.line = T, sep = "\n")), stringsAsFactors = F))
+## samples
+read_stats_collect$Sample <- gsub(pattern = paste(".*samples", "([^", "]*)", ".*", 
+                                                  sep = .Platform$file.sep), 
+                                  replacement = "\\1", 
+                                  x = read_stats_collect$line)
+
+## preprocessing
+read_stats_collect$is.preprocessor <- grepl(pattern = "preprocess", x = read_stats_collect$line)
+
+read_stats_collect[is.preprocessor == TRUE, preprocessor := gsub(pattern = paste("samples/[^", 
+                                                                                 "]*/processings/preprocess/([^", 
+                                                                                 "]*)",  ".*", 
+                                                                                 sep = .Platform$file.sep), 
+                                                                 replacement = "\\1", 
+                                                                 x = line)]
+
+read_stats_collect[is.preprocessor == TRUE, `:=`(`Raw reads` = as.integer(sub(pattern = ".*Input Read[^:]*: ([0-9]*) .*Surviving.*", 
+                                                             "\\1", line)),
+                                              `Clean reads` = as.integer(sub(pattern = ".*Input Read[^:]*: [0-9]* [^0-9]* ([0-9]*) .*", 
+                                                              "\\1", line)),
+                                              Dropped = as.integer(sub(pattern = ".*Dropped: ([0-9]*) .*", 
+                                                                  "\\1", line)))]
+## linearly unmapped
+read_stats_collect[, is.mapper := grepl(pattern = linear.mapper, x = line)]
+read_stats_collect[is.mapper == TRUE, `:=`(`Linearly unmapped` = ifelse(grepl(pattern = "aligned[^0]* 0 times", x = line), 
+                                                          as.integer(sub(pattern = ".* ([0-9]*) .*aligned[^0]* 0 times", 
+                                                              "\\1", x = line)), as.integer(NA)))]
+
+## merge table
+read.processing.table <- merge(read_stats_collect[is.preprocessor == TRUE, .(Sample, `Raw reads`, `Clean reads`, Dropped)],
+                               read_stats_collect[is.mapper == TRUE, ][!is.na(`Linearly unmapped`), 
+                                                                       .(Sample, `Linearly unmapped`)])
+read.processing.table[, `Linearly mapped` := `Clean reads`-`Linearly unmapped`]
+
+## compute percentages
+read.processing.table.perc.1 <- read.processing.table[, lapply(.SD, function(x){100*x/`Raw reads`}),
+                                                    by = Sample, .SDcols = c("Clean reads", "Dropped")]
+colnames(read.processing.table.perc.1)[2:3] <- sapply(colnames(read.processing.table.perc.1)[2:3], 
+                                                      function(x)paste0(x, " (% raw)"))
+read.processing.table.perc.2 <- read.processing.table[, lapply(.SD, function(x){100*x/`Clean reads`}),
+                                                    by = Sample, .SDcols = c("Linearly unmapped", "Linearly mapped")]
+colnames(read.processing.table.perc.2)[2:3] <- sapply(colnames(read.processing.table.perc.2)[2:3], 
+                                                    function(x)paste0(x, " (% clean)"))
+read.processing.table.perc <- merge(read.processing.table.perc.1, read.processing.table.perc.2, by = "Sample")
+# read.processing.table.perc <- read.processing.table[, lapply(.SD, function(x){paste0(x, " (", round(100*x/`Raw reads`, 1), " %)")}),
+#                                                     by = Sample, .SDcols = c("Clean reads", "Dropped",
+#                                                                              "Linearly unmapped", "Linearly mapped")]
+# colnames(read.processing.table.perc)[2:5] <- sapply(colnames(read.processing.table.perc)[2:5], function(x)paste0(x, " (% tot.)"))
+# merge(read.processing.table[, .(Sample, `Raw reads`)], read.processing.table.perc)
+```
+
+# Read (pre-)processing
+
+| Label             | Description                                                                                            |
+|-------------------|--------------------------------------------------------------------------------------------------------|
+| Raw reads         | Number of raw reads                                                                                    |
+| Clean reads       | Number of reads that passed the quality filtering of pre-processing                                    |
+| Linearly mapped   | Number of reads linearly aligned (concordantly, if paired-end) 1 or more times to the reference genome |
+| Linearly unmapped | Number of reads NOT linearly aligned to the reference genome: the input reads for backsplice search    |
+| Dropped           | Number of reads that did NOT pass the quality filtering of pre-processing                              |
+
+Read counts on read pre-processing and alignment.  
+
+```{r read processing table, echo=FALSE}
+DT::datatable(read.processing.table[, .(Sample, `Raw reads`, `Clean reads`, Dropped, `Linearly mapped`, `Linearly unmapped`)],
+              rownames = F, 
+              style = "bootstrap", class = "compact display", 
+              caption = "Per sample read count in each processing step", 
+              fillContainer = F, autoHideNavigation = T)
+
+DT::datatable(read.processing.table.perc[, lapply(.SD, round, 1), by = Sample, .SDcols = c("Clean reads (% raw)",
+                                                                                        "Dropped (% raw)", 
+                                                                                        "Linearly unmapped (% clean)",
+                                                                                        "Linearly mapped (% clean)")], 
+              rownames = F, 
+              style = "bootstrap", class = "compact display", 
+              caption = "Percentage with respect to raw reads in each processing step", 
+              fillContainer = F, autoHideNavigation = T)
+```
+
+## Per sample comparison of processing steps
+
+```{r Per sample comparison of processing step read counts, echo=FALSE}
+if(meta_file != ""){
+    meta <- fread(meta_file)
+    
+    intgroup.dt <- meta[, .(sample_id = sample, condition)][order(sample_id)]
+    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
+    intgroup.dt <- merge(intgroup.dt, 
+                         intgroup.dt[, .(samples_per_condition = .N), 
+                                     by = condition][, hue := brewer.pal(8, 
+                                                                         "Set2")[1:length(condition)]][], 
+                         by = "condition")[, color := muted(hue, l = color_luminance)][]
+}
+
+read.processing.table.m <- melt(read.processing.table, id.vars = "Sample", 
+                                variable.name = "Processing step", 
+                                value.name = "Read count")
+read.processing.table.m$`Processing step` <- factor(x = read.processing.table.m$`Processing step`, 
+                                                          levels = c("Raw reads", "Dropped", 
+                                                                     "Clean reads", "Linearly mapped", 
+                                                                     "Linearly unmapped"), 
+                                                          ordered = T)
+
+# ggplot(read.processing.table.m, aes(x=Sample, fill=`Processing step`, y=`Read count`)) +
+#     geom_bar(stat = "identity", position = "dodge")
+ggplot(read.processing.table.m, aes(x=`Processing step`, y=`Read count`)) + 
+    geom_bar(stat = "identity") + #, aes(fill = `Processing step`)) + 
+    facet_wrap(facets = ~ Sample, scales = "free_y") + 
+    theme(legend.position="none", axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("Read counts") + 
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+The following plot compares the proportions of the reads resulting from the processing steps in each sample.  
+"Total raw reads" = Linearly mapped + Linearly unmapped + Dropped  
+Black borders show "Clean reads" = Linearly mapped + Linearly unmapped  
+
+```{r Per sample comparison of processing step read fraction, echo=FALSE}
+## by percentages
+read.processing.table.perc.m <- melt(read.processing.table.perc, id.vars = "Sample",
+                                variable.name = "Processing step",
+                                value.name = "Raw reads %")
+read.processing.table.perc.m$`Processing step` <- factor(x = read.processing.table.perc.m$`Processing step`,
+                                                          levels = c("Clean reads (% raw)", "Dropped (% raw)",
+                                                                     "Linearly mapped (% clean)", "Linearly unmapped (% clean)"),
+                                                          ordered = T)
+# ggplot(read.processing.table.perc.m, aes(x=`Processing step`, y=`Raw reads %`)) + 
+#     geom_bar(stat = "identity", aes(fill = `Processing step`)) + 
+#     facet_wrap(facets = ~ Sample) + # + ifelse(grepl("raw", `Processing step`), "Raw", "Clean"), drop = TRUE, scales = "free_x"
+#     theme(legend.position="none", axis.text.x = element_text(angle=45, hjust=1)) + 
+#     ggtitle("Fraction of raw/clean reads") + 
+#     theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(data = read.processing.table.m[`Processing step` %in% c("Linearly mapped", "Linearly unmapped", "Dropped")], 
+       aes(x = Sample, y=`Read count`, fill = `Processing step`)) + 
+    geom_bar(stat = "identity", position = "fill") + 
+    geom_bar(data = read.processing.table.m[`Processing step` %in% c("Dropped", "Clean reads")], 
+             stat = "identity", position = "fill", color = "black", fill = alpha("white", 0)) + 
+    scale_color_manual(name = "Clean reads", values = c("black")) +
+    scale_y_continuous(labels = percent) + ylab("Reads") + 
+    ggtitle("Fraction of raw/clean reads") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Comparison of processing step read counts
+```{r Comparison of processing step read counts, echo=FALSE}
+## by read counts
+read.processing.boxplot <- ggplot(read.processing.table.m, aes(x=`Processing step`, y=`Read count`)) + 
+    geom_line(aes(group = Sample, color = Sample)) + 
+    geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) + 
+    ggtitle("Read counts") + 
+    theme(plot.title = element_text(hjust = 0.5))
+if(meta_file != ""){
+    read.processing.boxplot + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    read.processing.boxplot
+}
+
+## by percentage
+read.processing.perc.boxplot <- ggplot(read.processing.table.perc.m, aes(x=`Processing step`, y=`Raw reads %`)) + 
+    geom_line(aes(group = Sample, color = Sample)) + 
+    geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) + 
+    ggtitle("Fraction of raw/clean reads") + 
+    theme(plot.title = element_text(hjust = 0.5))
+if(meta_file != ""){
+    read.processing.perc.boxplot + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    read.processing.perc.boxplot
+}
+```
+
+## Comparison of samples, for each processing step
+
+```{r Comparison of samples, for each processing step, echo=FALSE}
+## by read counts
+read.processing.bars <- ggplot(read.processing.table.m, aes(x=Sample, y=`Read count`, fill = Sample)) +
+    geom_bar(stat = "identity") + 
+    facet_wrap(facets = ~ `Processing step`, scales = "free_y") +
+    theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("Read counts") + 
+    theme(plot.title = element_text(hjust = 0.5))
+if(meta_file != ""){
+    read.processing.bars + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    read.processing.bars
+}
+
+## by percentages
+read.processing.perc.bars <- ggplot(read.processing.table.perc.m, aes(x=Sample, y=`Raw reads %`, fill = Sample)) +
+    geom_bar(stat = "identity") + 
+    facet_wrap(facets = ~ `Processing step`, scales = "free_y") +
+    theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("Fraction of raw/clean reads") + 
+    theme(plot.title = element_text(hjust = 0.5))
+if(meta_file != ""){
+    read.processing.perc.bars + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    read.processing.perc.bars
+}
+
+```
+
+# Circular RNA methods' alignments
+
+```{r Circular RNA methods alignments, echo=FALSE, include=FALSE}
+circrna.mappings <- as.data.table(data.frame(scan(file = circrna.reads.stats.file, 
+                              what = list("", ""), sep = "\n", blank.lines.skip = T), 
+                              stringsAsFactors = F))
+colnames(circrna.mappings) <- c("file", "Mapped reads")
+
+circrna.mappings[, `:=`(Sample = sub(pattern = paste(".*samples", "([^", "]*)", ".*", 
+                                                     sep = .Platform$file.sep), 
+                                     replacement = "\\1", x = file),
+                        `CircRNA method` = sub("_out", "", sub(pattern = paste(".*circRNAs", "([^", "]*)", ".*", 
+                                                     sep = .Platform$file.sep), 
+                                     replacement = "\\1", x = file)),
+                        `Mapped reads` = as.integer(`Mapped reads`))]
+
+circrna.mappings.table.m <- rbind(circrna.mappings[, .(Sample, `CircRNA method`, `Mapped reads`)], 
+                                  read.processing.table.m[`Processing step` == "Linearly unmapped", 
+                                                          .(Sample, `CircRNA method` = `Processing step`, 
+                                                            `Mapped reads` = `Read count`)], use.names = T, fill = T)
+
+circrna.mappings.table.perc.m <- merge(circrna.mappings[, .(Sample, `CircRNA method`, `Mapped reads`)], 
+                                  read.processing.table.m[`Processing step` == "Linearly unmapped", 
+                                                          .(Sample, `Linearly unmapped` = `Read count`)], 
+                                  by = "Sample")[, .("Linearly unmapped %" = `Mapped reads`*100/`Linearly unmapped`), 
+                                                 by = .(Sample, `CircRNA method`)]
+```
+
+```{r circrna aligned reads table, echo=FALSE}
+circrna.mappings.table <- dcast(data = circrna.mappings.table.m[, .(`Mapped reads`, Sample, `CircRNA method`)], 
+                                formula = Sample ~ `CircRNA method`, value.var = "Mapped reads")
+DT::datatable(circrna.mappings.table, 
+              rownames = F, 
+              style = "bootstrap", class = "compact display", 
+              caption = "CircRNA methods' alignment counts", 
+              fillContainer = F, autoHideNavigation = T)
+#knitr::kable(x = circrna.mappings.table, caption = "")
+
+circrna.mappings.perc.table <- dcast(data = circrna.mappings.table.perc.m[, `Linearly unmapped %` := round(`Linearly unmapped %`, 1)], 
+                                formula = Sample ~ `CircRNA method`, value.var = "Linearly unmapped %")
+DT::datatable(circrna.mappings.perc.table, 
+              rownames = F, 
+              style = "bootstrap", class = "compact display", 
+              caption = "CircRNA methods' alignment fraction of linearly unmapped reads", 
+              fillContainer = F, autoHideNavigation = T)
+```
+
+## Read aligned by each circRNA method, per sample
+
+```{r plot circrna methods, echo=FALSE}
+## by read counts
+ggplot(data = circrna.mappings.table.m, aes(x = `CircRNA method`, y = `Mapped reads`)) + 
+    geom_bar(stat = "identity") + facet_wrap(facets = ~ Sample)  +
+    theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("CircRNA methods' alignment counts") + 
+    theme(plot.title = element_text(hjust = 0.5))
+
+## by percentages
+ggplot(data = circrna.mappings.table.perc.m, aes(x = `CircRNA method`, y = `Linearly unmapped %`)) + 
+    geom_bar(stat = "identity") + facet_wrap(facets = ~ Sample)  +
+    theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("Fraction of linearly unmapped reads") + 
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+## CircRNA method aligned read comparison
+```{r plot circrna methods compared, echo=FALSE}
+## by read count boxplot
+circrna.mappings.boxplot <- ggplot(data = circrna.mappings.table.m,#[`CircRNA method` != "Linearly unmapped"], 
+       aes(x = `CircRNA method`, y = `Mapped reads`)) + 
+    geom_line(aes(group = Sample, color = Sample)) + 
+    geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) +
+    theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("CircRNA methods' alignment counts") + 
+    theme(plot.title = element_text(hjust = 0.5))
+if(meta_file != ""){
+    circrna.mappings.boxplot + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    circrna.mappings.boxplot
+}
+
+## by read count barplot per method
+circrna.mappings.barplot <- ggplot(data = circrna.mappings.table.m[`CircRNA method` != "Linearly unmapped"],
+       aes(x = Sample, y = `Mapped reads`, fill = Sample)) + 
+    geom_bar(stat = "identity") + facet_wrap(facets = ~ `CircRNA method`, scales = "free_y") +
+    theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("CircRNA methods' alignment counts") + 
+    theme(plot.title = element_text(hjust = 0.5))
+if(meta_file != ""){
+    circrna.mappings.barplot + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    circrna.mappings.barplot
+}
+
+```
+
+```{r plot circrna methods percentage compared, echo=FALSE}
+## by percentage
+circrna.mappings.perc.boxplot <- ggplot(data = circrna.mappings.table.perc.m,
+       aes(x = `CircRNA method`, y = `Linearly unmapped %`)) + 
+    geom_line(aes(group = Sample, color = Sample)) + 
+    geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) +
+    theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("Fraction of linearly unmapped reads") + 
+    theme(plot.title = element_text(hjust = 0.5))
+if(meta_file != ""){
+    circrna.mappings.perc.boxplot + 
+        scale_color_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    circrna.mappings.perc.boxplot
+}
+
+## by percentage barplot per method
+circrna.mappings.perc.barplot <- ggplot(data = circrna.mappings.table.perc.m,
+       aes(x = Sample, y = `Linearly unmapped %`, fill = Sample)) + 
+    geom_bar(stat = "identity") + facet_wrap(facets = ~ `CircRNA method`) +
+    theme(axis.text.x = element_text(angle=45, hjust=1)) + 
+    ggtitle("Fraction of linearly unmapped reads aligned by each circRNA method\nSamples compared by method") + 
+    theme(plot.title = element_text(hjust = 0.5))
+if(meta_file != ""){
+    circrna.mappings.perc.barplot + 
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+}else{
+    circrna.mappings.perc.barplot
+}
+
+```
+
+```{r save read counts, echo=FALSE}
+write.csv(x = merge(read.processing.table, 
+      dcast(circrna.mappings[, .(Sample, `CircRNA method`, `Mapped reads`)], 
+            formula = Sample ~ `CircRNA method`, value.var = "Mapped reads")),
+      file = file.path(results.dir, "processing_and_mapped_read_counts.csv"), row.names = F)
+```
+
+# Session info
+
+This page was generated with the following packages version
+
+```{r session, echo=FALSE}
+sessionInfo()
+```

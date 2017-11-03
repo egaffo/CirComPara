@@ -1,0 +1,103 @@
+'''
+This SConscript detects and annotates circular RNAs from RNA-seq data according to the
+CIRCExplorer2 [1] protocol.
+
+Software dependencies are inherited from the CIRCOMPARA-SConscripts used:
+* 
+
+When called from a SConscript it imports the following variables:
+* circexplorer2_env
+
+References:
+1. Zhang, X.-O.; Dong, R.; Zhang, Y.; Zhang, J.-L.; Luo, Z.; Zhang, J.;
+Chen, L.-L.; Yang, L. Diverse alternative back-splicing and alternative
+splicing landscape of circular RNAs. Genome Res. 2016, 26, 1277-1287,
+doi:10.1101/gr.202895.115.
+'''
+
+import os 
+
+Import('*')
+
+try:
+    env = circexplorer2_env.Clone()
+
+except NameError:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('ALIGNER', 'The aligner used to map backsplices. Supported'\
+                        'aligners: STAR,BWA,segemehl,TopHat-Fusion,TopHat-Fusion-PE,'\
+                        'Mapsplice. Use TopHat-Fusion-PE if paired-end reads.',
+             'STAR')
+    vars.Add('FUSION_FILE', 'The file to be parsed, depending on the aligner: '\
+                            'Chimeric.out.junction for STAR, RNA_seq_bwa.sam '\
+                            'for BWA, splicesites.bed for segemehl/testrealign, '\
+                            'tophat_fusion/accepted_hits.bam for TopHat-Fusion, '\
+                            'mapsplice_out/fusions_raw.txt for Mapsplice', 
+            'Chimeric.out.junction')
+    vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
+    vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
+
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+out_dir = 'CIRCexplorer2_' + env['ALIGNER'].lower()
+results = []
+
+env['OPTIONS'] = ''
+
+#TopHat-Fusion, STAR, MapSplice, BWA, segemel
+if env['ALIGNER'].lower() == 'star':
+    ALIGNER = 'STAR'
+
+if env['ALIGNER'].lower() == 'bwa':
+    ALIGNER = 'BWA'
+
+if env['ALIGNER'].lower() == 'segemehl':
+    ALIGNER = 'segemehl'
+
+if env['ALIGNER'].lower() == 'tophat':
+    ALIGNER = 'TopHat-Fusion'
+
+if env['ALIGNER'].lower() == 'tophat_pe':
+    ALIGNER = 'TopHat-Fusion'
+    env.Replace(OPTIONS = '--pe')
+
+if env['ALIGNER'].lower() == 'mapsplice':
+    ALIGNER = 'MapSplice'
+ 
+CIRCexplorer2_cmd = 'CIRCexplorer2 parse $OPTIONS -o $TARGET.dir -t ' + \
+                    ALIGNER + ' $SOURCE'
+CIRCexplorer2_targets = os.path.join(out_dir, 'fusion_junction.bed')
+CIRCexplorer2_sources = [File(env['FUSION_FILE'])]
+CIRCexplorer2 = env.Command(CIRCexplorer2_targets, 
+                            CIRCexplorer2_sources, 
+                            CIRCexplorer2_cmd)
+
+results.append(CIRCexplorer2)
+
+if not env['GENEPRED'] == '':
+    CIRCexplorer2_annotate_targets = [os.path.join(out_dir, 'annotate', f) 
+                                    for f in ['annotated_fusion.txt', 
+                                    'circ_fusion.txt']]
+    CIRCexplorer2_annotate_sources = [File(env['GENEPRED']),
+                                      File(env['GENOME_FASTA']),
+                                      CIRCexplorer2[0]]
+    CIRCexplorer2_annotate_cmd = 'CIRCexplorer2 annotate -r ${SOURCES[0]} '\
+                                '-g ${SOURCES[1]} ${SOURCES[2].dir}'
+    CIRCexplorer2_annotate = env.Command(CIRCexplorer2_annotate_targets,
+                                        CIRCexplorer2_annotate_sources,
+                                        CIRCexplorer2_annotate_cmd)
+
+    results.append(CIRCexplorer2_annotate)
+
+
+Return('results')
+
+Clean('.', out_dir)
+

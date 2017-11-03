@@ -1,0 +1,253 @@
+---
+title: 'CirComPara: differential gene expression with Cuffdiff'
+date: "`r Sys.Date()`"  
+output: 
+  html_document: 
+    keep_md: no
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    theme: "readable"
+---
+
+```{r global_options, include=FALSE}
+## variables to be defined in parent frame
+# results.dir <- "analysis/cuffdiff"
+# meta.file <- "analysis/cuffdiff/read_groups.info"
+# gene.de.file <- "analysis/cuffdiff/gene_exp.diff"
+
+dir.create(path = results.dir, showWarnings = F, recursive = T)
+knitr::opts_chunk$set(fig.width = 12, 
+                      fig.height = 6, 
+                      dev = c('svglite', 'png'), 
+                      fig.pos = "center",
+                      fig.path = file.path(results.dir, paste0('Figs_deg_cuffdiff', .Platform$file.sep)),
+                      echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir = results.dir)
+
+library(data.table)
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+library(knitr)
+library(VennDiagram) ## to plot Venn diagram
+library(DT)
+```
+
+```{r load data, include=FALSE}
+if(meta.file != ""){
+    gene_meta <- fread(meta.file, colClasses = c("character", "factor", "character", 
+                                                  "numeric", "numeric", "numeric", 
+                                                  "numeric"))
+    gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
+    
+    intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
+    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
+    intgroup.dt <- merge(intgroup.dt, 
+                         intgroup.dt[, .(samples_per_condition = .N), 
+                                     by = condition][, hue := brewer.pal(8, 
+                                                                         "Set2")[1:length(condition)]][], 
+                         by = "condition")[, color := muted(hue, l = color_luminance)][]
+}
+
+gene.de <- fread(gene.de.file)
+## CAVEAT !!! Cuffdiff considers the fold change as sample_2/sample_1, that is like considering the sample_2 vs. sample_1 contrast
+## Because of this, positive log2(fold_change) values are to be considered as "sample_2 is up in sample_2 vs. sample_1", but as 
+## "sample_2 is down in sample_1 vs. sample_2" contrast, which is as we intended the comparisons
+gene.de[, `:=`(contrast = paste(sample_1, "vs", sample_2), 
+               `log2(fold_change)` = as.numeric(`log2(fold_change)`)*-1,
+               avgFPKM = round((value_1 + value_2)/2, 4))]
+gene.de[status != "OK", `:=`(significant = NA)]
+```
+
+# Summary
+
+```{r summary samples conditions}
+#kable(x = gene_meta[, .(sample_id, condition)], row.names = T, caption = "Samples' condition groups")
+datatable(data = gene_meta[, .(sample_id, condition)],
+          rownames = F, 
+          style = "bootstrap", class = "compact display", 
+          caption = "Samples and their condition", 
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+```
+
+The analysis considered `r gene_meta[, .N, by = sample_id][, .N]` samples grouped in `r gene_meta[, .N, by = condition][, .N]` conditions.  
+
+```{r summary samples per condition}
+# kable(x = gene_meta[, .(samples = .N), by = condition], row.names = F, 
+#       caption = "Number of replicates for each condition group")
+datatable(data = gene_meta[, .(samples = .N), by = condition],
+          rownames = F, 
+          style = "bootstrap", class = "compact display", 
+          caption = "Number of replicates for each condition group", 
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+```
+
+The contrasts considered were `r paste0(unique(gene.de[, contrast]), collapse = ", ")`.  
+
+# Differential expression test counts 
+
+The number of significantly differential expressed genes (DEG) is reported in the table below.  
+
+```{r summary de genes per condition}
+kable(x = gene.de[significant == "yes", .(`Tot. DEGs` = .N), by = contrast], 
+      row.names = F, 
+      caption = "Number of differentially expressed genes for each contrast")
+```
+
+```{r MA plot, fig.height=12, fig.cap="N.B: failed differential expression tests are not shown in the plot", dev='jpeg'}
+ma.plot <- ggplot(data = gene.de[!is.infinite(`log2(fold_change)`) & status == "OK",], 
+                  mapping = aes(x = avgFPKM, y = `log2(fold_change)`, 
+                                color = significant)) + 
+    geom_point(size = 1, alpha = 0.5) + scale_x_log10()
+if(gene.de[, .N, by =contrast][, .N] > 1){
+    ma.plot <- ma.plot + facet_grid(facets = contrast ~ . , scales = "free")
+}
+ma.plot + xlab("Average FPKM") + ylab(expression(Log[2](FC))) +
+    scale_color_manual(name = "Differentially expressed", 
+                       values = c("black", "red"), na.value = "gray") + 
+    theme(legend.position="bottom")
+```
+
+
+The number of DEGs shared among the contrasts is reported below.  
+
+```{r DEG shared}
+## de tab
+shared.counts.table <- dcast(gene.de[significant == "yes", ], 
+                             formula = test_id ~ contrast, 
+                             value.var = "significant")[, -c("test_id"), 
+                                                        with = F]
+kable(x = crossprod(!is.na(shared.counts.table)), row.names = T, 
+      caption = "Number of differentially expressed genes shared among contrasts")
+
+## de venn
+n.contrasts <- length(unique(gene.de[, contrast]))
+if(n.contrasts > 1){
+    fill.colors <- 1:n.contrasts
+    if(n.contrasts < 5){fill.colors <- fill.colors +1}
+    if(n.contrasts < 6){
+    dec.lists.by.contrast <- split(gene.de[significant == "yes", test_id],
+                                   f = gene.de[significant == "yes", contrast])
+    #venn(deg.lists.by.contrast) ## venn using gplots
+    vp <- venn.diagram(dec.lists.by.contrast,
+                       fill = fill.colors,
+                       alpha = 0.3, filename = NULL,
+                       main = "Differentially expressed genes shared by the contrasts",
+                       cex = 3, main.cex = 2, cat.cex = 1.5)
+    grid.draw(vp)
+    }else{
+        print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+    }
+}
+```
+
+## Over-expressed genes
+
+```{r up DEG venn}
+## up tab 
+up.shared.counts.table <- dcast(gene.de[significant == "yes" & `log2(fold_change)` >= 0, ], 
+                             formula = test_id ~ contrast, 
+                             value.var = "significant")[, -c("test_id"), 
+                                                        with = F]
+
+datatable(data = crossprod(!is.na(up.shared.counts.table)), 
+          rownames = T,
+          style = "bootstrap", class = "compact display", 
+          caption = "Number of over expressed genes shared among contrasts",
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+
+## up venn
+n.contrasts <- length(unique(gene.de[, contrast]))
+if(n.contrasts > 1){
+    fill.colors <- 1:n.contrasts
+    if(n.contrasts < 5){fill.colors <- fill.colors +1}
+    if(n.contrasts < 6){
+    deg.lists.by.contrast <- split(gene.de[significant == "yes" & `log2(fold_change)` >= 0, test_id], 
+                                   f = gene.de[significant == "yes" & `log2(fold_change)` >= 0, contrast])
+    #venn(deg.lists.by.contrast) ## venn using gplots
+    vp <- venn.diagram(deg.lists.by.contrast, 
+                       fill = fill.colors, 
+                       alpha = 0.3, filename = NULL,
+                       main = "Over-expressed genes shared by the contrasts", 
+                       cex = 3, main.cex = 2, cat.cex = 1.5)
+    grid.draw(vp)
+    }else{
+        print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+    }
+}
+```
+
+## Lower-expressed genes
+
+```{r down DEG venn}
+## down tab 
+down.shared.counts.table <- dcast(gene.de[significant == "yes" & `log2(fold_change)` < 0, ], 
+                             formula = test_id ~ contrast, 
+                             value.var = "significant")[, -c("test_id"), 
+                                                        with = F]
+
+datatable(data = crossprod(!is.na(down.shared.counts.table)), 
+          rownames = T,
+          style = "bootstrap", class = "compact display", 
+          caption = "Number of lower expressed genes shared among contrasts",
+          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+
+## down venn
+n.contrasts <- length(unique(gene.de[, contrast]))
+if(n.contrasts > 1){
+    fill.colors <- 1:n.contrasts
+    if(n.contrasts < 5){fill.colors <- fill.colors +1}
+    if(n.contrasts < 6){
+    deg.lists.by.contrast <- split(gene.de[significant == "yes" & `log2(fold_change)` < 0, test_id], 
+                                   f = gene.de[significant == "yes" & `log2(fold_change)` < 0, contrast])
+    #venn(deg.lists.by.contrast) ## venn using gplots
+    vp <- venn.diagram(deg.lists.by.contrast, 
+                       fill = fill.colors, 
+                       alpha = 0.3, filename = NULL,
+                       main = "Lower-expressed genes shared by the contrasts", 
+                       cex = 3, main.cex = 2, cat.cex = 1.5)
+    grid.draw(vp)
+    }else{
+        print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+    }
+}
+```
+
+## Differentially expressed gene table
+
+```{r DEG table}
+gene.de.tab <- dcast(gene.de[, 
+        .(gene_id = test_id, gene, contrast, `log2(fold_change)`, p_value, 
+          q_value, avgFPKM = (value_1 + value_2)/2)], 
+      formula = gene_id + gene ~ contrast, 
+      value.var = c("log2(fold_change)", "avgFPKM", "q_value", "p_value"))
+
+## save table
+gene.de.tab.filename <- file.path(results.dir, "DEG_tests_by_contrast.csv")
+write.csv(gene.de.tab, file = gene.de.tab.filename, row.names = F)
+```
+
+DEG list (by contrast) was saved in file `r gene.de.tab.filename`
+
+```{r show DEG table}
+## display only DEGs
+setkey(gene.de.tab, gene_id)
+datatable(data = gene.de.tab[unique(gene.de[significant == "yes", .(test_id)]),], 
+          rownames = F, 
+              style = "bootstrap", class = "compact display", 
+              caption = "Differential tests of gene expression. Only DEGs in at least one contrast are reported", 
+              fillContainer = F, autoHideNavigation = T, filter = "top")
+```
+
+# Session info
+```{r sessionInfo}
+sessionInfo()
+```

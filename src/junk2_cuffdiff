@@ -58,7 +58,7 @@ def get_matching_nodes(nodelist, rexpression):
 def format_cuffdiff_sample_arguments(conditions, cuffdiff_quantities):
     labels = []
     node_lists = ''
-    for condition in conditions.keys():
+    for condition in sorted(conditions.keys()):
         labels.append(condition)
         nodes = []
         for sample in conditions[condition]:

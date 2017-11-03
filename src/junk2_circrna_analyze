@@ -21,6 +21,8 @@ except NameError, ne:
     vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
                             ' define the circRNA as reliable', 2)
     vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
+    vars.Add('DIFF_EXP', 'Enable circRNA differential expression reporting', 'False')
+    vars.Add('META', 'Table specifying sample condition', 'meta.csv')
 
 
     env = Environment(ENV=os.environ, SHELL = '/bin/bash',
@@ -43,17 +45,31 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''gene_fpkm_file <- "${SOURCES[2].abspath}"; '''\
                         '''min_methods <- ${MIN_METHODS}; '''\
                         '''min_reads <- ${MIN_READS}; '''\
+                        '''meta_file <- "$META"; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", '''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
-#                        '''knitr::knit2html("$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd", '''\
-#                        '''output = "$TARGET", force_v1 = F)' '''
 
-circrnas_analysis_targets = "circRNAs_analysis.html"
+circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
 circrnas_analysis_sources = [env['CIRCRNAS'], env['CIRCGENES'], env['GENEEXP']]
 circrnas_analysis = env.Command(circrnas_analysis_targets, 
                                 circrnas_analysis_sources, 
                                 circrnas_analysis_cmd)
+
+if env['DIFF_EXP'] == 'True':
+    circrnas_diffexp_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
+                           '''meta.file <- "${SOURCES[0].abspath}"; '''\
+                           '''circrnas.per.sample.file <- "${SOURCES[1].abspath}"; '''\
+                           '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circrnas_diffexp.Rmd",'''\
+                           '''output_file = "$TARGET.abspath", '''\
+                           '''intermediates_dir = dirname("$TARGET.abspath") )' '''
+    
+    circrnas_diffexp_targets = "circrnas_diffexp.html"
+    circrnas_diffexp_sources = [File(env['META']).abspath, circrnas_analysis[1]]
+    circrnas_diffexp = env.Command(circrnas_diffexp_targets, 
+                                   circrnas_diffexp_sources, 
+                                   circrnas_diffexp_cmd)
+      
 
 
 Return('circrnas_analysis')

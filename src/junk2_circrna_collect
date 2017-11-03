@@ -35,10 +35,14 @@ except NameError:
     circrna_analyze_testrealign     = csvs[3]
     GTF = env['GTF']
 
-methods = {'CIRCEXPLORER': 'circexplorer',
-	   'CIRI': 'ciri',
+methods = {'CIRI': 'ciri',
 	   'FINDCIRC': 'findcirc',
-	   'TESTREALIGN': 'testrealign'}
+	   'TESTREALIGN': 'testrealign',
+       'CIRCEXPLORER2_STAR': 'circexplorer2_star',
+       'CIRCEXPLORER2_BWA': 'circexplorer2_bwa',
+       'CIRCEXPLORER2_SEGEMEHL': 'circexplorer2_segemehl',
+       'CIRCEXPLORER2_TOPHAT': 'circexplorer2_tophat'
+       }
 
 ## collect circRNAs in a single GTF annotation file
 circ_gtf_sources = []
