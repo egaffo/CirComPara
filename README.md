@@ -34,7 +34,6 @@ Download and extract [the latest release of CirComPara][circompara_pack_link], o
 
 NB: in the `sed` string change the `/full/circompara/dir/path` path with your installation directory 
 
-    tar xf test_circompara.tar.gz
     cd test_circompara
     sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" vars.py > analysis/vars.py
     sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" meta.csv > analysis/meta.csv
@@ -55,7 +54,17 @@ Another way is to link CirComPara's main script in your local `bin` directory
 
     cd /home/user/bin
     ln -s /path/to/circompara/install/dir/circompara_CirComPara
+
+## CirComPara Docker image
+
+A [Docker image of CirComPara](http://hub.docker.com/r/egaffo/circompara-docker/) is available from DockerHub.
+
+To pull the image:
+
+    docker pull egaffo/circompara-docker
     
+You'll find the instructions on how to use the docker image at https://hub.docker.com/r/egaffo/circompara-docker.
+
 # How to use
 
 ## Set your analysis project
@@ -114,37 +123,22 @@ Although parameters can be set from command line (sorrounded by quotes), you can
 Below there is the full list of the parameters:
 
 ```
-META: (required) The metadata table file where you specify the project samples, etc.
+META: The metadata table file where you specify the project samples, etc.
     default: meta.csv
 
-GENOME_FASTA: (required) The FASTA file with the reference genome
+ANNOTATION: Gene annotation file (like Ensembl GTF/GFF)
     default: 
 
-ANNOTATION: Gene annotation (Ensembl GFF)
+GENOME_FASTA: The FASTA file with the reference genome
     default: 
 
-CIRCRNA_METHODS: Comma separated list of circRNA detection methods to use. Use all methods available (default)
-    default: 
+CIRCRNA_METHODS: Comma separated list of circRNA detection methods to use. Repeated values will be collapsed into unique values. Currently supported: ciri, find_circ, circexplorer2_star, circexplorer2_bwa, circexplorer2_tophat, circexplorer2_segemehl, testrealign (unfiltered segemehl; use of circexplorer2_segemehl is recommended for a better filtering of segemehl predictions). Set an empty string to use all methods available (including deprecated methods). 
+    default: ciri,find_circ,circexplorer2_star,circexplorer2_bwa,circexplorer2_segemehl
 
-CPUS: Set number of CPUs to be used by each method
+CPUS: Set number of CPUs
     default: 4
 
-TOGGLE_TRANSCRIPTOME_RECONSTRUCTION: Set 'True' to enable transcriptome reconstruction. 'False' only quantifies genes and transcripts from the given annotation GTF file
-    default: False
-    
-PREPROCESSOR: The preprocessing method. Set "" for no preprocessing
-    default: trimmomatic
-
-PREPROCESSOR_PARAMS: Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string defaults to MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 
-    default: 
-    
-CIRI: (DEPRECATED) The full path to the CIRI_vx.x.pl perl script. By default the symlink in CirComPara bin/ directory will be used
-    default: 
-
-CIRI_EXTRA_PARAMS: CIRI additional parameters
-    default: 
-
-BWA_PARAMS: Extra parameters for BWA
+GENEPRED: The genome annotation in GenePred format
     default: 
 
 GENOME_INDEX: The index of the reference genome for HISAT2
@@ -162,10 +156,22 @@ BOWTIE2_INDEX: The index of the reference genome for BOWTIE2
 STAR_INDEX: The directory path where to find Star genome index
     default: 
 
-GENEPRED: The genome annotation in GenePred format
+BOWTIE_INDEX: The index of the reference genome for BOWTIE when using CIRCexplorer2_tophat
     default: 
 
 HISAT2_EXTRA_PARAMS: Extra parameters to add to the HISAT2 aligner fixed parameters '--dta --dta-cufflinks --rg-id <SAMPLE> --no-discordant --no-mixed --no-overlap'. For instance, '--rna-strandness FR' if stranded reads are used.
+    default: 
+
+BWA_PARAMS: Extra parameters for BWA
+    default: 
+
+SEGEMEHL_PARAMS: SEGEMEHL extra parameters
+    default: 
+
+TOPHAT_PARAMS: Extra parameters to pass to TopHat
+    default: 
+
+STAR_PARAMS: Extra parameters to pass to STAR
     default: 
 
 CUFFLINKS_PARAMS: Cufflinks extra parameters. F.i. '--library-type fr-firststrand' if dUTPs stranded library were used for the sequencing
@@ -174,28 +180,31 @@ CUFFLINKS_PARAMS: Cufflinks extra parameters. F.i. '--library-type fr-firststran
 CUFFQUANT_EXTRA_PARAMS: Cuffquant parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA  --multi-read-correct --max-bundle-frags 9999999
     default: 
 
-CUFFNORM_EXTRA_PARAMS: Extra parameters to use if using Cuffnorm
-    default: --output-format cuffdiff
-    
-READSTAT_METHODS: Comma separated list of methods to use for read statistics. Currently supported: fastqc,fastx
-    default: fastqc
-    
 CUFFDIFF_EXTRA_PARAMS: Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA  --multi-read-correct
     default: 
 
-DIFF_EXP: Set True to enable differential expression computation. Only available if more than one sample and more than one condition are given
+CUFFNORM_EXTRA_PARAMS: Extra parameters to use if using Cuffnorm
+    default: --output-format cuffdiff
+
+CIRI_EXTRA_PARAMS: CIRI additional parameters
+    default: 
+
+PREPROCESSOR: The preprocessing method
+    default: trimmomatic
+
+PREPROCESSOR_PARAMS: Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string defaults to MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 
+    default: 
+
+TOGGLE_TRANSCRIPTOME_RECONSTRUCTION: Set True to enable transcriptome reconstruction. Default only quantifies genes and transcripts from the given annotation GTF file
     default: False
 
-DESEQ: Set True to enable differential expression computation also with DESeq2. Only available if more than one sample and more than one condition are given
+DIFF_EXP: Set True to enable differential expression computation for linear genes/transcripts. Only available if more than one sample and more than one condition are given. N.B: differential expression tests for circRNAs is not yet implemented
     default: False
 
-QRE_FIND: Set True to toggle analysis of QKI response elements sequences
-    default: False
-
-READSTAT_METHODS: Comma separated list of methods to use for read statistics. Currently supported: fastqc, fastx
+READSTAT_METHODS: Comma separated list of methods to use for read statistics. Currently supported: fastqc,fastx
     default: fastqc
 
-MIN_METHODS: Number of methods that commmonly detect a circRNA to define the circRNA as reliable. If this value exceeds the number of methods specified, it will be set to the number of methods
+MIN_METHODS: Number of methods that commmonly detect a circRNA to define the circRNA as reliable. If this value exceeds the number of methods specified, it will be set to the number of methods.
     default: 2
 
 MIN_READS: Number of reads to consider a circRNA as expressed

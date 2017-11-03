@@ -163,6 +163,7 @@ if(meta.file != ""){
     
     # remove not expressed genes
     countData <- genes.per.sample.matrix[rowSums(genes.per.sample.matrix) > 0, ]
+
     pca <- tryCatch({        
         ddsHTSeq <- DESeqDataSetFromMatrix(countData = countData[, row.names(sampleTable)],
                                            colData = sampleTable,
