@@ -26,19 +26,24 @@ If something goes wrong with the installation process try to manually install th
 
 Download and extract [the latest release of CirComPara][circompara_pack_link], or clone the GIT repository, enter CirComPara directory and run the automatic installer script:  
 
-    git clone http://github.com/egaffo/CirComPara
-    cd CirComPara
-    ./install_circompara
+```bash
+git clone http://github.com/egaffo/CirComPara
+cd CirComPara
+./install_circompara
+```
 
 ### Test your installation
 
 NB: in the `sed` string change the `/full/circompara/dir/path` path with your installation directory 
 
-    cd test_circompara
-    sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" vars.py > analysis/vars.py
-    sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" meta.csv > analysis/meta.csv
-    cd analysis
-    ../../circompara
+```bash
+cd test_circompara
+mkdir analysis
+sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" vars.py > analysis/vars.py
+sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" meta.csv > analysis/meta.csv
+cd analysis
+../../circompara
+```
 
 If you plan to use single-end reads, test with `meta_se.csv` file instead of `meta.csv`.  
 
@@ -48,12 +53,16 @@ If you receive some error messages try to follow instructions in **Installation 
 
 Once completed the installation, if you do not want to type the whole path to the CirComPara executable each time, you can update your `PATH` environment variable. From the terminal type the following command (replace the `/path/to/circompara/install/dir` string with CirComPara's actual path)   
 
-    export PATH=/path/to/circompara/install/dir:$PATH
+```bash
+export PATH=/path/to/circompara/install/dir:$PATH
+```
 
 Another way is to link CirComPara's main script in your local `bin` directory  
 
-    cd /home/user/bin
-    ln -s /path/to/circompara/install/dir/circompara_CirComPara
+```bash
+cd /home/user/bin
+ln -s /path/to/circompara/install/dir/circompara_CirComPara
+```
 
 ## CirComPara Docker image
 
@@ -61,7 +70,9 @@ A [Docker image of CirComPara](http://hub.docker.com/r/egaffo/circompara-docker/
 
 To pull the image:
 
-    docker pull egaffo/circompara-docker
+```bash
+docker pull egaffo/circompara-docker
+```
     
 You'll find the instructions on how to use the docker image at https://hub.docker.com/r/egaffo/circompara-docker.
 
@@ -110,11 +121,15 @@ file|sample|condition|adapter
 
 A required parameter is the reference genome. You can either pass the reference genome from the command line
 
-    ./circompara "GENOME_FASTA='/home/user/genomes/Homo_sapiens.GRCh38.dna.primary_assembly.fa'"
+```bash
+./circompara "GENOME_FASTA='/home/user/genomes/Homo_sapiens.GRCh38.dna.primary_assembly.fa'"
+```
 
 or by setting the `GENOME_FASTA` parameter in the `vars.py` file; e.g.:
 
-    GENOME_FASTA = '/home/user/genomes/Homo_sapiens.GRCh38.dna.primary_assembly.fa'
+```bash
+GENOME_FASTA = '/home/user/genomes/Homo_sapiens.GRCh38.dna.primary_assembly.fa'
+```
 
 
 ### Specify options in vars.py
@@ -215,53 +230,82 @@ BYPASS_LINEAR: Skip analysis of linear transcripts. This will also skip the anal
 ```
 
 ## Run the analysis
-To trigger the analyses you simply have to call the `./circompara` script in the analysis directory. Remember that if you use the `vars.py` option file, this has to be in the analysis directory. 
+To trigger the analyses you simply have to call the `./circompara` script in the analysis directory. Remember that if you used the `vars.py` option file, this has to be in the analysis directory. 
 
-    cd /home/user/circrna_analysis
-    /home/user/circompara/circompara
+```bash
+cd /home/user/circrna_analysis
+/home/user/circompara/circompara
+```
 
 ### Additional options from the Scons engine:
 
+* *Basic execution*: run the analysis as a linear pipeline, i.e. no parallel task execution, and stop on errors
+```bash
+/path/to/circompara/dir/circompara
+```
+
+* *Show parameters*: to show the parameters set before actually run the analysis, use `-h`:
+```bash
+/path/to/circompara/dir/circompara -h
+```
+
 * *Dryrun*: to see which commands will be executed without actually execute them, use the `-n` option. NB: many commands will be listed, so you should redirect to a file or pipe to a reader like `less`
+```bash
+/path/to/circompara/dir/circompara -n | less -SR
+```
 
-        /path/to/circompara/dir/circompara -n | less -SR
-
-* *Basic execution*:
-
-        /path/to/circompara/dir/circompara
-
-* *Multitasks*: the `-j` option specifies how many tasks can be run in parallel. Caveat: the '-j * CPUS' value should not be greater than the number of CPU cores available. 
-    
-        /path/to/circompara/dir/circompara_CirComPara -j4
+* *Multitasks*: the `-j` option specifies how many **tasks** can be run in parallel. N.B: "j x CPUS <= available cores", i.e: the j option value times the CPUS parameter value should not be greater than the number of CPU cores available, unless you want to overload your machine. 
+```bash
+/path/to/circompara/dir/circompara_CirComPara -j4
+```
 
 * *Ignore errors*: keep executing the tasks even when some of them fails. Caveat: this can break downstream analyses
-
-        /path/to/circompara/dir/circompara -i
+```bash
+/path/to/circompara/dir/circompara -i
+```
 
 * *Combine options*: to set multiple options you must sorround them with quotes
-    
-        /path/to/circompara/dir/circompara_CirComPara "-j4 -i"
-
+```bash
+/path/to/circompara/dir/circompara_CirComPara "-j4 -i"
+```
 
 ## Output files
 
-Results regarding circRNAs are reported in `circrna_analyze` directory with a summary reported in `circrna_analyze/circRNAs_analysis.html` file. Gene expression tables are saved in `cuffdiff` directory.
-
-<!-- Gene/transcript expression estimation and differential expression testsare reported in `cuffdiff` directory. See [Cuffdiff manual][cuffdiff_output] for file format reference. 
-
-CircRNAs' expression levels and gene annotation overlaps are reported in `circRNA_collect_results` directory
-
-**TODO**: explain files
- 
-Transcript sequences are reported in FASTA format in `transcript_sequences/transcripts.fa` file.
-
-**TODO**
-
-Statistics on alignments are reported in `read_stats_collect/read_stats_collect.txt` file.
-
--->
+* Statistics on the read quality, read filtering steps and alignments can be found into `read_stats_collect` directory. A report is saved in `read_statistics.html` file into the same directory.  
+* Results regarding circRNAs are reported in `circrna_analyze` directory with a summary reported in `circRNAs_analysis.html` file.  
+* Gene expression tables (as output by [Cufflinks/Cuffdiff](http://cole-trapnell-lab.github.io/cufflinks/cuffdiff/)), plus an gene expression table with FPKM values for each gene and sample (`gene_expression_FPKM_table.csv`), and the `gene_expression_analysis.html` report file are saved in `cuffdiff` directory.
+* Linear transcript sequences are saved as a multi-FASTA file into the `transcript_sequences` directory.
 
 # Advanced features
+
+## Make genome indexes for multiple instances of CirComPara: the `make_indexes` utility
+
+Building the genome indexes for each mapper can take lot of computing time. However, the same indexes can be used in different CirComPara runs, saving time and disk space. In CirComPara's package the `./make_indexes` script can be used to automatically build the genome index (and gene annotation formats) for each of the supported read aligner, and save them into a directory. In addition, it gives the parameter values to be set to use the index files to be shared.  
+Example commands using the test data follows:  
+```bash
+cd test_circompara
+mkdir genome_indexes
+cd genome_indexes
+../../make_indexes "-j2 GENOME=../annotation/CFLAR_HIPK3.fa ANNOTATION=../annotation/CFLAR_HIPK3.gtf" 
+```
+
+The above commands will eventually generate a `annotation_vars.py` file that can be appended to the `vars.py` file of your project so that CirComPara will skip the building of genome indexes. Note that `make_indexes` can use the same options provided by Scons showed above: `-j 2` option will allow the script to build two indexes in parallel.  
+
+```bash
+cd test_circompara
+## clear CirComPara files in the test directory
+cd analysis
+../../circompara -c
+cd ..
+## overwrite the vars.py file omitting the genome and annotation parameters
+grep -v "GENOME\|ANNOTATION" vars.py > analysis/vars.py
+## append the parameters for the genome, the annotation and the genome indexes
+## generated by the make_indexes utility
+cat genome_indexes/annotation_vars.py >> analysis/vars.py
+## run the test analysis
+cd analysis
+../../circompara
+```
 
 ## Stranded libraries
 
@@ -333,21 +377,23 @@ Here there is the list of the tools used in CirComPara with the version that we 
 
 Software|Website|Version
 --------|-------|-------:
-Ubuntu Linux|http://www.ubuntu.com|Precise (12.04.5 LTS) Server
+Ubuntu Linux|http://www.ubuntu.com|Precise (14.04 LTS) Server
 R|http://cran.r-project.org/|3.2.5 (2016-04-14)
 Python|http://www.python.org/|2.7.3
-Scons|http://www.scons.org|2.5.0
+Scons|http://www.scons.org|2.5.1
 Trimmomatic|http://www.usadellab.org/cms/?page=trimmomatic|0.36
 FASTQC|http://www.bioinformatics.babraham.ac.uk/projects/fastqc/|0.11.5
 HISAT2|http://ccb.jhu.edu/software/hisat2/index.shtml|2.0.4
-CIRCexplorer|http://github.com/YangLab/CIRCexplorer|1.1.10
 STAR|http://github.com/alexdobin/STAR|2.5.2a
-CIRI|http://ciri.sourceforge.io/|2.0.2
 BWA|http://bio-bwa.sourceforge.net/|0.7.15-r1140
-find_circ|http://github.com/marvin-jens/find_circ|1.2
 Bowtie2|http://bowtie-bio.sourceforge.net/bowtie2/index.shtml|2.2.9
-testrealign|http://www.bioinf.uni-leipzig.de/Software/segemehl/|0.1
+Bowtie|http://bowtie-bio.sourceforge.net/index.shtml|1.1.2
+TopHat|http://ccb.jhu.edu/software/tophat/index.shtml|2.1.0
 Segemehl|http://www.bioinf.uni-leipzig.de/Software/segemehl/|0.2.0-418
+CIRI|http://ciri.sourceforge.io/|2.0.2
+CIRCexplorer2|http://github.com/YangLab/CIRCexplorer|2.2.7
+find_circ|http://github.com/marvin-jens/find_circ|1.2
+testrealign|http://www.bioinf.uni-leipzig.de/Software/segemehl/|0.1
 Cufflinks|http://cole-trapnell-lab.github.io/cufflinks/|2.2.1
 BEDtools|http://bedtools.readthedocs.io|2.26.0
 Samtools|http://www.htslib.org/|1.3.1
@@ -369,8 +415,9 @@ The core engine is the Scons build tool, which manage the various steps of the a
 
 # How to cite
 If you used CirComPara for your analysis, please add the following citation to your references:  
-  
+
 Gaffo, E., Bonizzato, A., Kronnie, G. te & Bortoluzzi, S. CirComPara: A Multi‐Method Comparative Bioinformatics Pipeline to Detect and Study circRNAs from RNA‐seq Data. Non-Coding RNA 3, 8 (2017). [http://www.mdpi.com/2311-553X/3/1/8][circompara_article]
+
 
 [scons_link]: http://scons.org/
 [circompara_git_link]: http://github.com/egaffo/CirComPara "circompara Git repository"
