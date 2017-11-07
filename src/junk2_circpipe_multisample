@@ -289,7 +289,7 @@ if genome_indexes_to_build:
                                 exports = '''env_build_indexes ''')
 
     if GENOME_INDEX == '':
-	#remove the .1.ht2 suffix
+        #remove the .1.ht2 suffix
         GENOME_INDEX = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6]
         env.Replace(GENOME_INDEX = GENOME_INDEX)
     else:
@@ -307,7 +307,7 @@ if genome_indexes_to_build:
     if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['ciri', 
 							     'circexplorer2_bwa']]):
         if BWA_INDEX == '':
-		#remove the .amb suffix
+            #remove the .amb suffix
         	BWA_INDEX = os.path.abspath(str(indexes['BWA'][0]))[0:-4]
         	env.Replace(BWA_INDEX = BWA_INDEX)
         else:
@@ -315,17 +315,17 @@ if genome_indexes_to_build:
 
     if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
         if BOWTIE2_INDEX == '':
-		#remove .1.bt2 suffix
-        	BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
-		env.Replace(BOWTIE2_INDEX = BOWTIE2_INDEX)
+            #remove .1.bt2 suffix
+            BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
+            env.Replace(BOWTIE2_INDEX = BOWTIE2_INDEX)
         else:
             indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix \
 							 in bowtie2_index_suffixes]
     if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_star']]):
-        if STAR_INDEX == '': 
-		#index dir
-        	STAR_INDEX =os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))) 
-		env.Replace(STAR_INDEX = STAR_INDEX)
+        if STAR_INDEX == '':
+            #index dir
+            STAR_INDEX =os.path.dirname(os.path.abspath(str(indexes['STAR'][0])))
+            env.Replace(STAR_INDEX = STAR_INDEX)
         else:
             indexes['STAR'] = [os.path.join(STAR_INDEX, 'SA')]
 
@@ -333,11 +333,11 @@ if genome_indexes_to_build:
 	'circexplorer2_tophat' in CIRCRNA_METHODS or \
 	'--bowtie1' in env['TOPHAT_PARAMS']:
         if env['BOWTIE_INDEX'] == '':
-		#remove .1.ebwt suffix
-        	BOWTIE_INDEX = os.path.abspath(str(indexes['BOWTIE'][0]))[0:-7]
-		env.Replace(BOWTIE_INDEX = BOWTIE_INDEX)
+            #remove .1.ebwt suffix
+            BOWTIE_INDEX = os.path.abspath(str(indexes['BOWTIE'][0]))[0:-7]
+            env.Replace(BOWTIE_INDEX = BOWTIE_INDEX)
         else:
-            indexes['BOWTIE'] = [BOWTIE_INDEX + suffix for suffix in bowtie_index_suffixes]
+            indexes['BOWTIE'] = [env['BOWTIE_INDEX'] + suffix for suffix in bowtie_index_suffixes]
 
 ## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
 if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 'circexplorer2_star', 
