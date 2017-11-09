@@ -214,149 +214,31 @@ with open(META) as csvfile:
             #print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
             pass
 
-annotation_dir = 'junk2_dbs'
-
 ## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
-hisat2_index_suffixes  = ['.1.ht2', '.2.ht2', '.3.ht2', '.4.ht2',
-                          '.5.ht2', '.6.ht2', '.7.ht2', '.8.ht2']
-bowtie2_index_suffixes = ['.1.bt2', '.2.bt2', '.3.bt2', '.4.bt2', '.rev.1.bt2', '.rev.2.bt2']
-bwa_index_suffixes     = ['.amb', '.ann', '.bwt', '.pac', '.sa']
+indexes_dir = 'ccp_dbs'
+env_check_indexes = env.Clone()
+indexes = SConscript(os.path.join(indexes_dir, 'ccp_check_indexes.scons'),
+                        src_dir = env['SCONSCRIPT_HOME'],
+                        variant_dir = indexes_dir, duplicate = 0,
+                        exports = '''env_check_indexes''')
 
-indexes ={}
-genome_indexes_to_build = []
+env.Replace(GENOME_INDEX   = indexes['ENV']['GENOME_INDEX'])
+env.Replace(SEGEMEHL_INDEX = indexes['ENV']['SEGEMEHL_INDEX'])
+env.Replace(BWA_INDEX      = indexes['ENV']['BWA_INDEX'])
+env.Replace(BOWTIE2_INDEX  = indexes['ENV']['BOWTIE2_INDEX'])
+env.Replace(BOWTIE_INDEX   = indexes['ENV']['BOWTIE_INDEX'])
+env.Replace(STAR_INDEX     = indexes['ENV']['STAR_INDEX'])
+env.Replace(GENEPRED       = indexes['ENV']['GENEPRED'])
 
-if GENOME_INDEX == '':
-    genome_indexes_to_build.append('HISAT2')
-else:
-    indexes['HISAT2'] = [GENOME_INDEX + suffix for suffix in hisat2_index_suffixes]
+GENOME_INDEX = env['GENOME_INDEX']
+SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
+BWA_INDEX      = env['BWA_INDEX']
+BOWTIE2_INDEX  = env['BOWTIE2_INDEX']
+BOWTIE_INDEX  = env['BOWTIE_INDEX']
+STAR_INDEX = env['STAR_INDEX']
+GENEPRED   = env['GENEPRED']
 
-if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['testrealign', 'circexplorer2_segemehl']]):
-    if SEGEMEHL_INDEX == '':
-        genome_indexes_to_build.append('SEGEMEHL')
-    else:
-        indexes['SEGEMEHL'] = [SEGEMEHL_INDEX]
-
-if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['ciri', 
-							'circexplorer2_bwa']]):
-    if BWA_INDEX == '':
-        genome_indexes_to_build.append('BWA')
-    else:
-        indexes['BWA'] = [BWA_INDEX + suffix for suffix in bwa_index_suffixes]
-
-if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
-    if BOWTIE2_INDEX == '':
-        genome_indexes_to_build.append('BOWTIE2')
-    else:
-        indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix in bowtie2_index_suffixes] 
-
-if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_star']]):
-    if STAR_INDEX == '':
-	    genome_indexes_to_build.append('STAR')
-    else:
-        indexes['STAR'] = [os.path.join(STAR_INDEX, 'SA')]
-
-
-bowtie_index_suffixes = ['.1.ebwt', '.2.ebwt', 
-			 '.3.ebwt', '.4.ebwt',	
-			 '.rev.1.ebwt', '.rev.2.ebwt']
-if CIRCRNA_METHODS == [''] or \
-	'circexplorer2_tophat' in CIRCRNA_METHODS or \
-	'--bowtie1' in env['TOPHAT_PARAMS']:
-
-    if env['BOWTIE_INDEX'] == '':
-	    genome_indexes_to_build.append('BOWTIE')
-    else:
-        indexes['BOWTIE'] = [env['BOWTIE_INDEX'] + suffix for suffix in \
-				bowtie_index_suffixes] 
-
-if genome_indexes_to_build:
-
-    env_build_indexes = env.Clone()
-    env_build_indexes['INDEXES'] = ','.join(genome_indexes_to_build)
-    env_build_indexes['CPUS']    = CPUS
-    env_build_indexes['GENOME']  = GENOME_FASTA
-    env_build_indexes['HISAT2_EXTRA_PARAMS']    = ''
-    env_build_indexes['BWA_EXTRA_PARAMS']       = ''
-    env_build_indexes['BOWTIE2_EXTRA_PARAMS']   = ''
-    env_build_indexes['SEGEMEHL_EXTRA_PARAMS']  = ''
-    env_build_indexes['STAR_EXTRA_PARAMS']      = ''
-    env_build_indexes['BOWTIE_EXTRA_PARAMS']   = '' #'$( --threads $CPUS $)'
-
-    indexes = SConscript(os.path.join(annotation_dir, 'junk2_build_indexes'),
-                                src_dir = SCONSCRIPT_HOME,
-                                variant_dir = annotation_dir, duplicate = 0,
-                                exports = '''env_build_indexes ''')
-
-    if GENOME_INDEX == '':
-        #remove the .1.ht2 suffix
-        GENOME_INDEX = os.path.abspath(str(indexes['HISAT2'][0]))[0:-6]
-        env.Replace(GENOME_INDEX = GENOME_INDEX)
-    else:
-        indexes['HISAT2'] = [GENOME_INDEX + suffix for suffix in \
-							hisat2_index_suffixes]
-
-    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['testrealign', 
-							'circexplorer2_segemehl']]):
-        if SEGEMEHL_INDEX == '':
-	        SEGEMEHL_INDEX	= os.path.abspath(str(indexes['SEGEMEHL'][0]))
-        	env.Replace(SEGEMEHL_INDEX = SEGEMEHL_INDEX)
-        else:
-            indexes['SEGEMEHL'] = [SEGEMEHL_INDEX]
-
-    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['ciri', 
-							     'circexplorer2_bwa']]):
-        if BWA_INDEX == '':
-            #remove the .amb suffix
-        	BWA_INDEX = os.path.abspath(str(indexes['BWA'][0]))[0:-4]
-        	env.Replace(BWA_INDEX = BWA_INDEX)
-        else:
-            indexes['BWA'] = [BWA_INDEX + suffix for suffix in bwa_index_suffixes]
-
-    if CIRCRNA_METHODS == [''] or 'findcirc' in CIRCRNA_METHODS:
-        if BOWTIE2_INDEX == '':
-            #remove .1.bt2 suffix
-            BOWTIE2_INDEX	= os.path.abspath(str(indexes['BOWTIE2'][0]))[0:-6]
-            env.Replace(BOWTIE2_INDEX = BOWTIE2_INDEX)
-        else:
-            indexes['BOWTIE2'] = [BOWTIE2_INDEX + suffix for suffix \
-							 in bowtie2_index_suffixes]
-    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_star']]):
-        if STAR_INDEX == '':
-            #index dir
-            STAR_INDEX =os.path.dirname(os.path.abspath(str(indexes['STAR'][0])))
-            env.Replace(STAR_INDEX = STAR_INDEX)
-        else:
-            indexes['STAR'] = [os.path.join(STAR_INDEX, 'SA')]
-
-    if CIRCRNA_METHODS == [''] or \
-	'circexplorer2_tophat' in CIRCRNA_METHODS or \
-	'--bowtie1' in env['TOPHAT_PARAMS']:
-        if env['BOWTIE_INDEX'] == '':
-            #remove .1.ebwt suffix
-            BOWTIE_INDEX = os.path.abspath(str(indexes['BOWTIE'][0]))[0:-7]
-            env.Replace(BOWTIE_INDEX = BOWTIE_INDEX)
-        else:
-            indexes['BOWTIE'] = [env['BOWTIE_INDEX'] + suffix for suffix in bowtie_index_suffixes]
-
-## CREATE genePred FILE FOR CIRCexplorer IF ONLY GTF ANNOTATION WERE PROVIDED
-if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 'circexplorer2_star', 
-				                            'circexplorer2_segemehl', 'circexplorer2_tophat']]):
-    if GENEPRED == '': 
-        genePred_targets = [os.path.join(annotation_dir, t) for t in ['genePred.transcripts.info',
-                                                               '${SOURCES[0].filebase}.genePred',
-                                                               '${SOURCES[0].filebase}.genePred.wgn']]
-        genePred = env.Command(genePred_targets, File(ANNOTATION),
-                               ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
-                                'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
-                                'paste - ${TARGETS[1]} | sed "s_^\t\([^\t]*\)\t\(.*\)_\1\t\1\t\2_" '\
-    			    '> ${TARGETS[2]}']
-                              )
-        ## slow command
-        #'cut -f1 ${TARGETS[1]} | grep -f - ${TARGETS[0]} | cut -f 9 | '\
-        #'paste - ${TARGETS[1]} > ${TARGETS[2]}'
-        GENEPRED = genePred[2]
-        env.Replace(GENEPRED = GENEPRED)
 
 ## PROCESS SAMPLES
 runs = []
@@ -409,9 +291,9 @@ for sample in sorted(samples.keys()):
 							'''toggle_transcriptome_reconstruction''')
     runs.append(run_sample)
 
-    for k in indexes.keys():
-        if indexes[k]: 
-            Depends(run_sample, indexes[k])
+    for k in indexes['INDEXES'].keys():
+        if indexes['INDEXES'][k]: 
+            Depends(run_sample, indexes['INDEXES'][k])
 
     if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 
 							'circexplorer2_star', 
@@ -840,4 +722,4 @@ Clean('.', circRNA_collect_dir)
 Clean('.', circrna_analyze_dir)
 Clean('.', read_stats_collect_dir)
 Clean('.', qre_dir)
-Clean('.', annotation_dir)
+Clean('.', indexes_dir)
