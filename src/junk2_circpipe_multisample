@@ -145,54 +145,34 @@ if unknown:
     print "Run sample: unknown variables", unknown.keys()
     Exit(1)
 
-META         = env['META']
-CPUS         = env['CPUS']
-GENOME_INDEX = env['GENOME_INDEX']
-GENOME_FASTA = env['GENOME_FASTA']
-PREPROCESSOR = env['PREPROCESSOR']
-PREPROCESSOR_PARAMS = env['PREPROCESSOR_PARAMS']
-ANNOTATION   = env['ANNOTATION']
-
-SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
-BWA_INDEX      = env['BWA_INDEX']
-BWA_PARAMS     = env['BWA_PARAMS']
+env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
-CIRI           = env['CIRI']
-CIRI_EXTRA_PARAMS = env['CIRI_EXTRA_PARAMS']
-BOWTIE2_INDEX  = env['BOWTIE2_INDEX']
-
-STAR_INDEX = env['STAR_INDEX']
-GENEPRED   = env['GENEPRED']
-
-HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
-CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
-CUFFQUANT_EXTRA_PARAMS = env['CUFFQUANT_EXTRA_PARAMS']
-CUFFDIFF_EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS']
-CUFFNORM_EXTRA_PARAMS = env['CUFFNORM_EXTRA_PARAMS']
 
 env.SetDefault(TOPHAT_PARAMS = '')
 
-TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False
-if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
-	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
+env.SetDefault(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
+if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].lower() == 'true':
+	env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True)
 
-CIRCRNA_METHODS = sorted(set([m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]))
+if env['CIRCRNA_METHODS'] == ['']:
+    env.Replace(CIRCRNA_METHODS = ['ciri', 'circexplorer2_bwa', 
+                                   'circexplorer2_segemehl',
+                                   'circexplorer2_star', 'circexplorer2_tophat', 
+                                   'findcirc', 'testrealign'])
+env.Replace(CIRCRNA_METHODS = sorted(set([m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')])))
 
 env.Replace(LINEAR_EXPRESSION_METHODS = env['LINEAR_EXPRESSION_METHODS'].strip().split(','))
 
 #if 'circexplorer2_tophat' in CIRCRNA_METHODS:
 #	env.AppendUnique(TOPHAT_PARAMS = ['--bowtie1'])
 
-DIFF_EXP = False
-if env['DIFF_EXP'] == 'True':
-    DIFF_EXP = True
+env.SetDefault(DIFF_EXP = False)
+if env['DIFF_EXP'].lower() == 'true':
+    env.Replace(DIFF_EXP = True)
 
-DESEQ = False
-if env['DESEQ'] == 'True':
-    DESEQ = True
-
-SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
-env['SCONSCRIPT_HOME'] = SCONSCRIPT_HOME
+env.SetDefault(DESEQ = False)
+if env['DESEQ'].lower() == 'true':
+    env.Replace(DESEQ = True)
 
 samples_dir = 'samples'
 
@@ -202,7 +182,7 @@ adapters    = defaultdict(str)
 conditions  = defaultdict(set)
 translocations  = set()
 
-with open(META) as csvfile:
+with open(env['META']) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         samples[row['sample']].append(os.path.abspath(row['file']))
@@ -222,6 +202,8 @@ with open(META) as csvfile:
             pass
 
 ## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
+#TODO in F-CirComPara
+
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
 indexes_dir = 'ccp_dbs'
 env_check_indexes = env.Clone()
@@ -238,15 +220,6 @@ env.Replace(BOWTIE_INDEX   = indexes['ENV']['BOWTIE_INDEX'])
 env.Replace(STAR_INDEX     = indexes['ENV']['STAR_INDEX'])
 env.Replace(GENEPRED       = indexes['ENV']['GENEPRED'])
 
-GENOME_INDEX = env['GENOME_INDEX']
-SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
-BWA_INDEX      = env['BWA_INDEX']
-BOWTIE2_INDEX  = env['BOWTIE2_INDEX']
-BOWTIE_INDEX  = env['BOWTIE_INDEX']
-STAR_INDEX = env['STAR_INDEX']
-GENEPRED   = env['GENEPRED']
-
-
 ## PROCESS SAMPLES
 runs = []
 for sample in sorted(samples.keys()):
@@ -254,7 +227,6 @@ for sample in sorted(samples.keys()):
     env_circpipe = env.Clone()
     env_circpipe['SAMPLE'] = sample
     env_circpipe['READS'] = samples[sample]
-    env_circpipe['CIRCRNA_METHODS'] = CIRCRNA_METHODS
     env_circpipe['ADAPTER_FILE'] = adapters[sample]
     if len(env_circpipe['READS']) > 1:
         env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
@@ -263,7 +235,7 @@ for sample in sorted(samples.keys()):
         
     sample_dir = os.path.join(samples_dir, sample)
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'),
-                            src_dir = SCONSCRIPT_HOME,
+                            src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = sample_dir, duplicate = 0,
                             exports = '''env_circpipe''')
     runs.append(run_sample)
@@ -272,9 +244,10 @@ for sample in sorted(samples.keys()):
         if indexes['INDEXES'][k]: 
             Depends(run_sample, indexes['INDEXES'][k])
 
-    if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 
-							'circexplorer2_star', 
-				                        'circexplorer2_segemehl', 'circexplorer2_tophat']]):
+    if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_bwa', 
+                                                  'circexplorer2_star', 
+                                                  'circexplorer2_segemehl', 
+                                                  'circexplorer2_tophat']]):
 	Depends(run_sample, env['GENEPRED']) 
 
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
@@ -290,17 +263,17 @@ geneexp_dir = 'geneexp'
 env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
 
 if env['BYPASS_LINEAR'] == 'False':
-    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
+    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
         ## MERGE THE TRANSCRIPTS PREDICTED IN THE VARIOUS SAMPLES
         transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
         if len(transcripts_gtf_files) > 1:
         
             if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
-                cuffmerge_cpus = CPUS
-                cuffmerge_annotation = ANNOTATION
-                cuffmerge_genome_fasta = GENOME_FASTA
+                cuffmerge_cpus = env['CPUS']
+                cuffmerge_annotation = env['ANNOTATION']
+                cuffmerge_genome_fasta = env['GENOME_FASTA']
                 cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
-                                        src_dir = SCONSCRIPT_HOME,
+                                        src_dir = env['SCONSCRIPT_HOME'],
                                         variant_dir = cuffmerge_dir, duplicate = 0,
                                         exports = 'env transcripts_gtf_files cuffmerge_cpus '''
                                         '''cuffmerge_annotation cuffmerge_genome_fasta''')
@@ -336,10 +309,10 @@ if env['BYPASS_LINEAR'] == 'False':
     
     ## RETRIEVE TRANSCRIPT SEQUENCES
     transcript_sequences_annotation = File(env['ANNOTATION']) #cuffmerge
-    transcript_sequences_genome = GENOME_FASTA
+    transcript_sequences_genome = env['GENOME_FASTA']
     transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
                                                    'junk2_transcript_fastas'), 
-                                      src_dir = SCONSCRIPT_HOME,
+                                      src_dir = env['SCONSCRIPT_HOME'],
                                       variant_dir = transcript_sequences_dir, duplicate = 0,
                                       exports = '''env transcript_sequences_annotation '''
                                       '''transcript_sequences_genome''')
@@ -432,13 +405,13 @@ if env['BYPASS_LINEAR'] == 'False':
         if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or ('cuffdiff' in env['DIFF_EXP']):
             cuffquant_annotation = cuffmerge
             cuffquant_alignments = alignments
-            cuffquant_genome_fasta = GENOME_FASTA
-            cuffquant_extra_params = CUFFQUANT_EXTRA_PARAMS
+            cuffquant_genome_fasta = env['GENOME_FASTA']
+            cuffquant_extra_params = env['CUFFQUANT_EXTRA_PARAMS']
             
-            cuffquant_cpus = CPUS
+            cuffquant_cpus = env['CPUS']
             
             cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
-                                   src_dir = SCONSCRIPT_HOME,
+                                   src_dir = env['SCONSCRIPT_HOME'],
                                    variant_dir = cuffquant_dir, duplicate = 0,
                                    exports = '''env cuffquant_alignments cuffquant_annotation '''
                                    '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
@@ -448,13 +421,13 @@ if env['BYPASS_LINEAR'] == 'False':
             if 'cuffdiff' in env['DIFF_EXP']:
                 if len(conditions.keys()) > 1:
                     ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
-                    cuffdiff_cpus = CPUS
+                    cuffdiff_cpus = env['CPUS']
                     cuffdiff_conditions = conditions
                     cuffdiff_annotation = cuffmerge
                     cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
-                    cuffdiff_extra_params = CUFFDIFF_EXTRA_PARAMS
+                    cuffdiff_extra_params = env['CUFFDIFF_EXTRA_PARAMS']
                     cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
-                                          src_dir = SCONSCRIPT_HOME,
+                                          src_dir = env['SCONSCRIPT_HOME'],
                                           variant_dir = cuffdiff_dir, duplicate = 0,
                                           exports = '''env cuffdiff_cpus cuffdiff_conditions '''
                                           '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
@@ -482,14 +455,14 @@ if env['BYPASS_LINEAR'] == 'False':
             else:
                 ## Normalize expression values: CUFFNORM
                 env_cuffnorm = env.Clone()
-                env_cuffnorm['CPUS'] = CPUS
-                env_cuffnorm['ANNOTATION'] = cuffmerge
+                #env_cuffnorm['CPUS'] = CPUS
+                #env_cuffnorm['ANNOTATION'] = cuffmerge
                 env_cuffnorm['QUANT_FILES']= get_matching_nodes(cuffquant, '.*\.cxb')
-                env_cuffnorm['EXTRA_PARAMS']= CUFFNORM_EXTRA_PARAMS #TODO: set strandness when required
+                env_cuffnorm['EXTRA_PARAMS']= env['CUFFNORM_EXTRA_PARAMS'] #TODO: set strandness when required
                 env_cuffnorm['LABELS'] = conditions
                 
                 cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffnorm'),
-                                      src_dir = SCONSCRIPT_HOME,
+                                      src_dir = env['SCONSCRIPT_HOME'],
                                       variant_dir = cuffdiff_dir, duplicate = 0,
                                       exports = '''env_cuffnorm''')
                 
@@ -502,15 +475,15 @@ if env['BYPASS_LINEAR'] == 'False':
             ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
             deseq_annotation = cuffmerge
             deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
-            metafile = File(META).abspath
-            deseq_cpus = CPUS
+            metafile = File(env['META']).abspath
+            deseq_cpus = env['CPUS']
             deseq_stranded = 'no'
-            if 'fr-firststrand' in CUFFLINKS_PARAMS:
+            if 'fr-firststrand' in env['CUFFLINKS_PARAMS']:
             	deseq_stranded = 'yes'
             else:
             	deseq_stranded = 'no'
             deseq = SConscript(os.path.join(deseq_dir, 'junk2_DESeq'),
-            					src_dir = SCONSCRIPT_HOME,
+            					src_dir = env['SCONSCRIPT_HOME'],
             					variant_dir = deseq_dir, duplicate = 0,
                                 exports = '''env deseq_annotation deseq_alignments '''
                                         '''metafile deseq_cpus deseq_stranded ''')
@@ -549,7 +522,7 @@ else:
     print "BYPASS_LINEAR = " + env['BYPASS_LINEAR'] +\
           ": skipping linear transcript analysis"
     
-    cuffmerge = ANNOTATION
+    cuffmerge = env['ANNOTATION']
     gene_exp = env.Command(os.path.join(geneexp_dir, 'empty_geneexp.csv'), 
     			'', 'touch $TARGET')
     gene_meta = ''
@@ -597,7 +570,7 @@ env_merge_sample_circrnas['SAMPLES'] = samples
 env_merge_sample_circrnas['RUNS'] = runs
 merge_sample_circrnas = SConscript(os.path.join(circRNA_collect_dir, 
 					'ccp_merge_sample_circrnas.scons'),
-                            src_dir = SCONSCRIPT_HOME, 
+                            src_dir = env['SCONSCRIPT_HOME'], 
                             variant_dir = circRNA_collect_dir, duplicate = 0,
                             exports = '''env_merge_sample_circrnas get_matching_nodes''')
 
@@ -607,24 +580,24 @@ env_circrna_collect['CSVS'] = merge_sample_circrnas
 env_circrna_collect['GTF'] = env['ANNOTATION'] #cuffmerge
 circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 
                                           'junk2_circrna_collect'), 
-                            src_dir = SCONSCRIPT_HOME, 
+                            src_dir = env['SCONSCRIPT_HOME'], 
                             variant_dir = circRNA_collect_dir, duplicate = 0,
                             exports = '''env_circrna_collect''')
 
 ## ANALYZE AND REPORT CIRCRNAS                  
 circrna_analyze_dir = 'circrna_analyze'
 env_circrna_analyze = env.Clone()
-env_circrna_analyze['META'] = File(META).abspath
+env_circrna_analyze['META'] = File(env['META']).abspath
 env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
 env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
 env_circrna_analyze['GENEEXP'] = gene_exp_analysis[1] #gene_exp
 env_circrna_analyze['GENEMETA'] = env_circrna_analyze['META'] #File(gene_meta).abspath
-if int(env_circrna_analyze['MIN_METHODS']) > len(CIRCRNA_METHODS):
-    env_circrna_analyze['MIN_METHODS'] = len(CIRCRNA_METHODS)
+if int(env_circrna_analyze['MIN_METHODS']) > len(env['CIRCRNA_METHODS']):
+    env_circrna_analyze['MIN_METHODS'] = len(env['CIRCRNA_METHODS'])
 
 circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 
                                           'junk2_circrna_analyze'),
-                            src_dir = SCONSCRIPT_HOME,
+                            src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = circrna_analyze_dir, duplicate = 0,
                             exports = '''env_circrna_analyze''')
 Depends(circrna_analyze, gene_exp)
@@ -655,7 +628,7 @@ read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
 
 read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_statistics.html'),
                                 [reads_stats_collect, collect_circrna_maps_counts, 
-                                File(META).abspath, 
+                                File(env['META']).abspath, 
 				collect_circrna_maps_counts_sources],
                                 read_stats_report_cmd)
 
@@ -663,9 +636,9 @@ qre_dir = 'qre'
 if env['QRE_FIND'] == 'True':
     ## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
     qre_GTF = cuffmerge
-    qre_GENOME = GENOME_FASTA
+    qre_GENOME = env['GENOME_FASTA']
     qre = SConscript(os.path.join(qre_dir, 'junk2_QRE_finder'),
-                     src_dir = SCONSCRIPT_HOME,
+                     src_dir = env['SCONSCRIPT_HOME'],
                      variant_dir = qre_dir, duplicate = 0,
                      exports = '''env qre_GTF qre_GENOME''')
     
