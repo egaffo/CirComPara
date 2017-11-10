@@ -32,12 +32,14 @@ BOWTIE2_zip = 'bowtie2-2.2.9-linux-x86_64.zip'
 BOWTIE2_link = 'http://downloads.sourceforge.net/project/bowtie-bio/bowtie2/2.2.9/' + BOWTIE2_zip
 BOWTIE2_target = [os.path.join(tools_dir, BOWTIE2_zip), 
                   os.path.join(tools_dir, 'bowtie2-2.2.9', 'bowtie2'),
+                  os.path.join(tools_dir, 'bowtie2-2.2.9', 'bowtie2-inspect'),
                   os.path.join(tools_dir, 'bowtie2-2.2.9', 'bowtie2-build')]
 #BOWTIE2_source = 
 BOWTIE2 = env.Command(BOWTIE2_target, [], ['wget -O ${TARGETS[0]} ' + BOWTIE2_link,
                                            'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE2[1], SymLink)
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE2[2], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE2[3], SymLink)
 
 ## BWA-MEM
 BWAMEM_tar = 'bwakit-0.7.15_x64-linux.tar.bz2'
@@ -262,6 +264,7 @@ BOWTIE1_dir = 'bowtie-1.1.2'
 
 BOWTIE1_target = [os.path.join(tools_dir, BOWTIE1_zip), 
                   os.path.join(tools_dir, BOWTIE1_dir, 'bowtie'),
+                  os.path.join(tools_dir, BOWTIE1_dir, 'bowtie-inspect'),
                   os.path.join(tools_dir, BOWTIE1_dir, 'bowtie-build')]
 BOWTIE1 = env.Command(BOWTIE1_target, 
                       [], 
@@ -270,6 +273,7 @@ BOWTIE1 = env.Command(BOWTIE1_target,
                      )
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE1[1], SymLink)
 env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE1[2], SymLink)
+env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE1[3], SymLink)
 
 # TOPHAT2
 tophat2_dir = 'tophat-2.1.0.Linux_x86_64' #'tophat-2.1.1.Linux_x86_64'
