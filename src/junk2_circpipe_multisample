@@ -34,6 +34,13 @@ def SymLink(target, source, env):
             os.rmdir(os.path.abspath(str(target[0])))
             os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
 
+def get_matching_nodes(nodelist, rexpression):
+    files = []
+    for node in Flatten(nodelist):
+        if re.match(rexpression, node.path):
+            files.append(node)
+    return files
+
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
 
@@ -271,21 +278,6 @@ for sample in sorted(samples.keys()):
 	Depends(run_sample, env['GENEPRED']) 
 
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
-def flatten(l):
-    for el in l:
-        if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
-            for sub in flatten(el):
-                yield sub
-        else:
-            yield el
-
-def get_matching_nodes(nodelist, rexpression):
-    files = []
-    for node in flatten(nodelist):
-        if re.match(rexpression, node.path):
-            files.append(node)
-    return files
-
 cuffmerge_dir = 'cuffmerge'
 transcript_sequences_dir = 'transcript_sequences'
 cuffquant_dir = 'cuffquant'
