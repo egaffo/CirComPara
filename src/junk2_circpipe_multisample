@@ -243,35 +243,12 @@ GENEPRED   = env['GENEPRED']
 ## PROCESS SAMPLES
 runs = []
 for sample in sorted(samples.keys()):
-    sample_cpus         = CPUS
-    sample_genome_index = GENOME_INDEX
-    sample_genome_fasta = GENOME_FASTA
-    sample_preprocessor = PREPROCESSOR
-    sample_preprocessor_params = PREPROCESSOR_PARAMS
-    sample_adapter_file = adapters[sample]
-    sample_annotation   = ANNOTATION
-    sample_raw_reads    = samples[sample]
-
-    segemehl_index      = SEGEMEHL_INDEX
-    bwa_index           = BWA_INDEX
-    bwa_params          = BWA_PARAMS
-    ciri                = CIRI
-    ciri_extra_parameters = CIRI_EXTRA_PARAMS
-    bowtie2_index       = BOWTIE2_INDEX
-
-    star_index  = STAR_INDEX
-    gene_pred   = GENEPRED
-
-    hisat2_extra_params = HISAT2_EXTRA_PARAMS
-    cufflinks_params    = CUFFLINKS_PARAMS
-    toggle_transcriptome_reconstruction = TOGGLE_TRANSCRIPTOME_RECONSTRUCTION
-
-    circrna_methods = CIRCRNA_METHODS
-
+    
     env_circpipe = env.Clone()
     env_circpipe['SAMPLE'] = sample
-    env_circpipe['READS'] = sample_raw_reads
+    env_circpipe['READS'] = samples[sample]
     env_circpipe['CIRCRNA_METHODS'] = CIRCRNA_METHODS
+    env_circpipe['ADAPTER_FILE'] = adapters[sample]
     if len(env_circpipe['READS']) > 1:
         env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
                                                         'circexplorer2_tophat_pe', m) for \
@@ -281,14 +258,7 @@ for sample in sorted(samples.keys()):
     run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'),
                             src_dir = SCONSCRIPT_HOME,
                             variant_dir = sample_dir, duplicate = 0,
-                            exports = '''env_circpipe sample_cpus sample_genome_index '''
-                            '''sample_genome_fasta sample_preprocessor '''
-                            '''sample_preprocessor_params '''
-                            '''sample_adapter_file sample_annotation '''
-                            '''sample_raw_reads segemehl_index bwa_index bwa_params '''
-                            '''ciri bowtie2_index star_index gene_pred circrna_methods '''
-                            '''hisat2_extra_params cufflinks_params ciri_extra_parameters '''
-							'''toggle_transcriptome_reconstruction''')
+                            exports = '''env_circpipe''')
     runs.append(run_sample)
 
     for k in indexes['INDEXES'].keys():
@@ -298,7 +268,7 @@ for sample in sorted(samples.keys()):
     if CIRCRNA_METHODS == [''] or any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 
 							'circexplorer2_star', 
 				                        'circexplorer2_segemehl', 'circexplorer2_tophat']]):
-	Depends(run_sample, GENEPRED) #genePred[2])
+	Depends(run_sample, env['GENEPRED']) 
 
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
 def flatten(l):

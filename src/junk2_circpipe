@@ -46,37 +46,11 @@ junk2_preprocess      = 'junk2_preprocess'
 junk2_mapping         = 'junk2_hisat2'
 junk2_expression      = 'junk2_expression'
 junk2_circrnas        = 'junk2_sample_circrna_methods'
-#junk2_bamtofastq      = 'junk2_bamtofastq'
 
 Import('*')
 
 try:
     env = env_circpipe.Clone()
-    CPUS         = sample_cpus
-    GENOME_INDEX = sample_genome_index
-    GENOME_FASTA = sample_genome_fasta
-    PREPROCESSOR = sample_preprocessor
-    PREPROCESSOR_PARAMS = sample_preprocessor_params
-    ADAPTER_FILE = sample_adapter_file
-    ANNOTATION   = sample_annotation
-    READS        = sample_raw_reads
-
-    SEGEMEHL_INDEX = segemehl_index
-    BWA_INDEX      = bwa_index
-    BWA_PARAMS     = bwa_params
-    CIRI           = ciri
-    CIRI_EXTRA_PARAMS = ciri_extra_parameters
-    BOWTIE2_INDEX  = bowtie2_index
-    env['BOWTIE2_INDEX']  = bowtie2_index
-
-    STAR_INDEX = star_index
-    GENEPRED   = gene_pred
-    HISAT2_EXTRA_PARAMS = hisat2_extra_params
-    CUFFLINKS_PARAMS    = cufflinks_params
-    TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = toggle_transcriptome_reconstruction
-    ## a list of circrna detection methods to use
-    CIRCRNA_METHODS = circrna_methods
-
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
@@ -96,7 +70,7 @@ except NameError:
     vars.Add('SEGEMEHL_INDEX', '''The .idx index for segemehl''', 'genome.idx')
     vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','/path/to/index')
     vars.Add('BWA_PARAMS','Extra parameters for BWA','')
-    vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
+    #vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script', '')
     vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','/path/to/index')
 
     vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', 
@@ -127,39 +101,20 @@ except NameError:
         print "Run sample: unknown variables", unknown.keys()
         Exit(1)
 
-    CPUS = env['CPUS']
-    GENOME_INDEX = env['GENOME_INDEX']
-    GENOME_FASTA = env['GENOME_FASTA']
-    PREPROCESSOR = env['PREPROCESSOR']
-    PREPROCESSOR_PARAMS = env['PREPROCESSOR_PARAMS']
-    ADAPTER_FILE = env['ADAPTER_FILE']
-    ANNOTATION = env['ANNOTATION']
-    READS = env['READS'].split(',')
+    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].tolower() == 'true':
+    	env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True)
+    else:
+    	env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
 
-    SEGEMEHL_INDEX = env['SEGEMEHL_INDEX']
-    BWA_INDEX      = env['BWA_INDEX']
-    BWA_PARAMS     = env['BWA_PARAMS']
-    CIRI           = env['CIRI']
-    CIRI_EXTRA_PARAMS = env['CIRI_EXTRA_PARAMS']
-    BOWTIE2_INDEX = env['BOWTIE2_INDEX']
-
-    STAR_INDEX = env['STAR_INDEX']
-    GENEPRED   = env['GENEPRED']
-
-    HISAT2_EXTRA_PARAMS = env['HISAT2_EXTRA_PARAMS']
-    CUFFLINKS_PARAMS    = env['CUFFLINKS_PARAMS']
-    TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False
-    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
-    	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
-
-    CIRCRNA_METHODS = env['CIRCRNA_METHODS'].strip().split(',')
+    env.Replace(READS = env['READS'].split(','))
+    env.Replace(CIRCRNA_METHODS = env['CIRCRNA_METHODS'].strip().split(','))
 
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 results = []
 
 ## GET INPUT READ FILE FULL PATH
-raw_reads = [File(f).abspath for f in READS]
+raw_reads = [File(f).abspath for f in env['READS']]
 
 ## COMPUTE STATISTICS ON RAW READS
 read_statistics_dir = 'read_statistics'
@@ -177,10 +132,10 @@ build_dir = 'processings'
 ## EXECUTE SCRIPTS: 
 ## READ PREPROCESSING
 preprocess_raw_reads    = raw_reads
-preprocess_adapter_file = ADAPTER_FILE
-preprocess_preprocessor = PREPROCESSOR 
-preprocess_cpus         = CPUS
-preprocess_params = PREPROCESSOR_PARAMS
+preprocess_adapter_file = env['ADAPTER_FILE']
+preprocess_preprocessor = env['PREPROCESSOR'] 
+preprocess_cpus         = env['CPUS']
+preprocess_params = env['PREPROCESSOR_PARAMS']
 preprocess  = env.SConscript(os.path.join(build_dir, junk2_preprocess), 
                              variant_dir = build_dir, src_dir = SRC_DIR, 
                              duplicate = 0, exports='env preprocess_raw_reads '''
@@ -205,21 +160,14 @@ if len(preprocess[0]) > 2:
     else:
         clean_reads.append(preprocess[0][1])
 
-##env['SAMPLE'] = os.path.basename(Dir('.').path)
-#sample_name = os.path.basename(Dir('.').path)
-#if sample_name=='.':
-#    sample_name = os.path.basename(Dir('.').abspath)
-
 sample_name = env['SAMPLE']
 
 ## ALIGN TO GENOME
-#mapper = MAPPER
-hisat2_index = GENOME_INDEX
-#genome_fasta = GENOME_FASTA
+hisat2_index = env['GENOME_INDEX']
 sample_id = sample_name
-hisat2_extra_params = HISAT2_EXTRA_PARAMS + ' --dta --dta-cufflinks --rg-id ' + sample_name +\
+hisat2_extra_params = env['HISAT2_EXTRA_PARAMS'] + ' --dta --dta-cufflinks --rg-id ' + sample_name +\
                       ' --no-discordant --no-mixed --no-overlap '
-hisat2_cpus = CPUS
+hisat2_cpus = env['CPUS']
 reads_to_map = clean_reads
 mappings    = env.SConscript(os.path.join(build_dir, junk2_mapping), 
                              variant_dir = build_dir, src_dir = SRC_DIR, 
@@ -233,11 +181,11 @@ env['ALIGNMENTS'] = mappings[0]
 
 if env['BYPASS_LINEAR'] == 'False':
     ## EXPRESSION ANALYSIS
-    expression_cpus = CPUS
-    expression_genome_fasta = GENOME_FASTA 
-    expression_annotation = ANNOTATION
-    expression_cufflinks_params = CUFFLINKS_PARAMS
-    expression_toggle_transcriptome_reconstruction = TOGGLE_TRANSCRIPTOME_RECONSTRUCTION
+    expression_cpus = env['CPUS']
+    expression_genome_fasta = env['GENOME_FASTA'] 
+    expression_annotation = env['ANNOTATION']
+    expression_cufflinks_params = env['CUFFLINKS_PARAMS']
+    expression_toggle_transcriptome_reconstruction = env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']
     env['METHODS'] = env['LINEAR_EXPRESSION_METHODS']
     
     expression  = env.SConscript(os.path.join(build_dir, junk2_expression), 
@@ -274,7 +222,7 @@ unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s ${str(TARGETS[0].absp
 # samtools fastq:
 # -s FILE   write singleton reads to FILE [assume single-end]
 # -n        don't append /1 and /2 to the read name
-if len(READS) > 1:
+if len(env['READS']) > 1:
     paired_end_read_files = ['unmapped_1.fastq.gz', 'unmapped_2.fastq.gz']
     unmapped_reads_target.extend(paired_end_read_files)
     unmapped_reads_cmd = unmapped_reads_cmd +\
@@ -299,24 +247,24 @@ else:
 results.append(unmapped_reads)
                     
 # run circRNA detection pipeline 
-sample_cpus         = CPUS
-sample_genome_fasta = GENOME_FASTA
-sample_annotation   = ANNOTATION
+sample_cpus         = env['CPUS']
+sample_genome_fasta = env['GENOME_FASTA']
+sample_annotation   = env['ANNOTATION']
 
-if len(READS) > 1:
+if len(env['READS']) > 1:
     sample_raw_reads    = [f.abspath for f in unmapped_reads[1:3]]
 else:
     sample_raw_reads    = [unmapped_reads.abspath]
 
-sample_segemehl_index     = SEGEMEHL_INDEX
-ciri_bwa_index            = BWA_INDEX
-ciri_bwa_extra_parameters = BWA_PARAMS
-ciri_script               = CIRI
+sample_segemehl_index     = env['SEGEMEHL_INDEX']
+ciri_bwa_index            = env['BWA_INDEX']
+ciri_bwa_extra_parameters = env['BWA_PARAMS']
+ciri_script               = env['CIRI']
 
-bowtie2_index = BOWTIE2_INDEX
+bowtie2_index = env['BOWTIE2_INDEX']
 
-star_index  = STAR_INDEX
-gene_pred   = GENEPRED
+star_index  = env['STAR_INDEX']
+gene_pred   = env['GENEPRED']
 
 ## set strandness parameter for circRNA detection methods
 ## check by HISAT parameters
@@ -326,9 +274,10 @@ if strandness_pattern.search(hisat2_extra_params):
     env['FINDCIRC_EXTRA_PARAMS'] = ' --strandpref --stranded '
 
 ## select which circRNA methods have to be performed
-circrna_methods = CIRCRNA_METHODS
+circrna_methods = env['CIRCRNA_METHODS']
 env_sample_circrna_methods = env.Clone()
 env_sample_circrna_methods.Replace(READS = sample_raw_reads)
+ciri_extra_parameters = env['CIRI_EXTRA_PARAMS']
 circrnas = env.SConscript(os.path.join(build_dir, junk2_circrnas), 
                         src_dir = SRC_DIR, 
                         variant_dir = build_dir, duplicate = 0,
