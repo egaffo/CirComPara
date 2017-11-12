@@ -514,8 +514,13 @@ datatable(reliable.circ.tab,
 
 reliable.circ.tab.long <- melt(data = reliable.circ.tab, id.vars = "sample_id", 
                                variable.name = "Filter", value.name = "count")
+reliable.circ.tab.long.d <- merge(reliable.circ.tab.long, intgroup.dt, 
+                                  by = "sample_id")[order(condition, sample_id)]
+reliable.circ.tab.long.d$sample_id <- factor(reliable.circ.tab.long.d$sample_id, 
+                                             levels =  unique(reliable.circ.tab.long.d$sample_id),
+                                             ordered = T)
 
-reliable.circ.barplot <- ggplot(data = reliable.circ.tab.long, 
+reliable.circ.barplot <- ggplot(data = reliable.circ.tab.long.d, 
                                 mapping = aes(x = sample_id, y = count,
                                               fill = sample_id)) + 
   geom_bar(stat = "identity", width = .7, colour="black", position = "dodge") + 
@@ -772,6 +777,11 @@ circRNAs.per.gene.per.sample <- n.circ.per.gene.per.sample[, .(gene_id, gene_nam
 kable(sapply(X = split(circRNAs.per.gene.per.sample, circRNAs.per.gene.per.sample$sample_id), 
              FUN = function(x){summary(x$circRNAs_per_gene)}), caption = "CircRNAs per gene distribution")
 
+
+circRNAs.per.gene.per.sample$sample_id <- factor(circRNAs.per.gene.per.sample$sample_id, 
+                                                 levels = meta[order(condition, sample_id), sample_id], 
+                                                 ordered = T)
+
 ## barplot
 circRNAs.per.gene.per.sample.plot <- ggplot(data = circRNAs.per.gene.per.sample, 
                                             mapping = aes(x = factor(circRNAs_per_gene),
@@ -1019,6 +1029,9 @@ There were `r circRNAs.per.gene[, .N]` - `r tot.expressed.circrna.genes` = `r ci
 ```{r plot_gene_expressed_by_sample, fig.width=12}
 ## plot circRNA-overlapping gene (COG) count in each sample
 if(file.info(gene_fpkm_file)$size > 0){
+    number.of.circRNA.overlapping.genes.per.sample$sample_id <- factor(number.of.circRNA.overlapping.genes.per.sample$sample_id,
+                                                                       levels = meta[order(condition, sample_id), sample_id],
+                                                                       ordered = T)
     cog.by.sample.barplot <- ggplot(data = number.of.circRNA.overlapping.genes.per.sample, 
                                     mapping = aes(x = sample_id, y = `Number of circRNA-overlapping genes`,
                                                   fill = sample_id)) + 
@@ -1039,6 +1052,9 @@ if(file.info(gene_fpkm_file)$size > 0){
             scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
     }
 
+    expressed_genes.by.sample$sample_id <- factor(expressed_genes.by.sample$sample_id,
+                                                  levels = meta[order(condition, sample_id), sample_id],
+                                                  ordered = T)
     expressed_genes.by.sample.plot <- ggplot(data = expressed_genes.by.sample, 
                                              mapping = aes(x = sample_id, y = `Number of expressed circRNA-overlapping genes`,
                                                            fill = sample_id)) + 
@@ -1093,6 +1109,9 @@ kable(sapply(X = split(circrnas.morethan2methods.medrpm, circrnas.morethan2metho
 # varwidth: boxes are drawn with widths proportional to the square-roots of the number 
 # of observations in the groups (possibly weighted, using the weight aesthetic).
 
+circrnas.morethan2methods.medrpm$sample_id <- factor(circrnas.morethan2methods.medrpm$sample_id, 
+                                                     levels = meta[order(condition, sample_id), sample_id], 
+                                                     ordered = T)
 circrna.xpr.per.sample.boxplot <- ggplot(data = circrnas.morethan2methods.medrpm, 
                                          mapping = aes(x = sample_id, y = medRPM, fill = sample_id)) + 
   geom_boxplot(notch = T, varwidth = T) + scale_y_log10() + xlab(NULL) + ylab("RPM") + #labels = scales::comma
@@ -1117,6 +1136,8 @@ Notes on boxplot decorations:
 ```{r plot_gene_expression}
 if(file.info(gene_fpkm_file)$size > 0){
     ## boxplot expression per sample: genes
+    expressed_genes$sample_id <- factor(expressed_genes$sample_id, 
+                                                     levels = meta[order(condition, sample_id), sample_id], ordered = T)
     gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes[FPKM > 0], 
                                           mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
         geom_boxplot(notch = T, varwidth = T) + scale_y_log10() + xlab(NULL) + ylab("FPKM") + #labels = scales::comma
