@@ -197,7 +197,7 @@ if(meta.file != ""){
     
     ## compute and plot PCs
     # intgroup.df <- as.data.frame(colData(rld)[, intgroup, drop = FALSE])
-    intgroup.df <- as.data.frame(intgroup.dt[, intgroup, with = F])
+    intgroup.df <- data.frame(intgroup.dt[, c("sample_id", intgroup), with = F], row.names = "sample_id")
     group <- if (length(intgroup) > 1) {
         factor(apply(intgroup.df, 1, paste, collapse = " : "))
     } else {
@@ -205,8 +205,9 @@ if(meta.file != ""){
         intgroup
     }
 
-    #d <- data.frame(pca$x, group = group, intgroup.df, name = colnames(rld))
-    d <- data.frame(pca$x, group = group, intgroup.df, name = colnames(countData))
+    d <- data.frame(pca$x, group = group, 
+                    condition = intgroup.df[colnames(countData), ], 
+                    name = colnames(countData))
     pca.plot <- ggplot(data = d, aes(PC1, PC2, color=condition, shape=condition, label=name)) + 
         geom_point(size = 4, color = "black") + geom_point(size = 3, alpha = 1) + coord_fixed() + 
         geom_text(position="jitter", hjust=0.2, vjust=-0.2, size=6, show.legend = F) +
