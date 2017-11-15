@@ -311,7 +311,7 @@ if env['BYPASS_LINEAR'] == 'False':
     transcript_sequences_annotation = File(env['ANNOTATION']) #cuffmerge
     transcript_sequences_genome = env['GENOME_FASTA']
     transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
-                                                   'junk2_transcript_fastas'), 
+                                                   'ccp_transcript_fastas.scons'), 
                                       src_dir = env['SCONSCRIPT_HOME'],
                                       variant_dir = transcript_sequences_dir, duplicate = 0,
                                       exports = '''env transcript_sequences_annotation '''
