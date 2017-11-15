@@ -637,7 +637,7 @@ if env['QRE_FIND'] == 'True':
     ## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
     qre_GTF = cuffmerge
     qre_GENOME = env['GENOME_FASTA']
-    qre = SConscript(os.path.join(qre_dir, 'junk2_QRE_finder'),
+    qre = SConscript(os.path.join(qre_dir, 'ccp_QRE_finder.scons'),
                      src_dir = env['SCONSCRIPT_HOME'],
                      variant_dir = qre_dir, duplicate = 0,
                      exports = '''env qre_GTF qre_GENOME''')
