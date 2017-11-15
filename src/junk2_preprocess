@@ -78,7 +78,7 @@ if env['PREPROCESSOR'].lower() == 'trimmomatic':
         if not os.path.isabs(read_statistics_readset):
             read_statistics_readset = '#'+read_statistics_readset
         preprocessing_stats.append(SConscript(os.path.join(preprocess_dir, 
-                                                           'junk2_read_statistics'), 
+                                                           'ccp_read_statistics.scons'), 
                                               src_dir = SRC_DIR, 
                                               variant_dir = preprocess_dir, duplicate = 0, 
                                               exports = 'env read_statistics_readset')

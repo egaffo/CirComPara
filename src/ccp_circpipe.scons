@@ -41,7 +41,7 @@ import os, itertools, re
 
 ## SET (DISPATCHER) SCRIPT NAMES. THESE ARE THE MAIN PIPELINE STEPS, EACH OF THEM MIGHT FIRE
 ## DIFFERENT ACTIONS/SCONSCRIPTS
-junk2_read_statistics = 'junk2_read_statistics'
+junk2_read_statistics = 'ccp_read_statistics.scons'
 junk2_preprocess      = 'junk2_preprocess'
 junk2_mapping         = 'junk2_hisat2'
 junk2_expression      = 'junk2_expression'
