@@ -14,7 +14,7 @@ Import('*')
 try:
     env = env_build_indexes.Clone()
 except NameError as ne:
-    print 'junk2_build_indexes: command line execution.'
+    print 'ccp_build_indexes.scons: command line execution.'
 
     vars = Variables('vars.py')
     vars.Add('INDEXES', 'A comma separated list of read aligner programs for which'\
