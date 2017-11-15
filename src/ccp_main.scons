@@ -234,7 +234,7 @@ for sample in sorted(samples.keys()):
                                                         m in env_circpipe['CIRCRNA_METHODS']])
         
     sample_dir = os.path.join(samples_dir, sample)
-    run_sample = SConscript(os.path.join(sample_dir, 'junk2_circpipe'),
+    run_sample = SConscript(os.path.join(sample_dir, 'ccp_circpipe.scons'),
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = sample_dir, duplicate = 0,
                             exports = '''env_circpipe''')
