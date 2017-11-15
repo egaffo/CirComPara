@@ -5,7 +5,7 @@ def SymLink(target, source, env):
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash')
 tools_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'tools')
-junk2_bin_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin')
+ccp_bin_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin')
 
 # BIOPYTHON
 BIOPYTHON_dir = os.path.join(tools_dir, 'biopython')
@@ -24,8 +24,8 @@ HISAT2_target = [os.path.join(tools_dir, HISAT2_zip),
 #HISAT2_source = HISAT2_link
 HISAT2 = env.Command(HISAT2_target, [], ['wget -O ${TARGETS[0]} ' + HISAT2_link,
                                          'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), HISAT2[1], SymLink)
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), HISAT2[2], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HISAT2[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HISAT2[2], SymLink)
 
 # BOWTIE2
 BOWTIE2_zip = 'bowtie2-2.2.9-linux-x86_64.zip'
@@ -37,9 +37,9 @@ BOWTIE2_target = [os.path.join(tools_dir, BOWTIE2_zip),
 #BOWTIE2_source = 
 BOWTIE2 = env.Command(BOWTIE2_target, [], ['wget -O ${TARGETS[0]} ' + BOWTIE2_link,
                                            'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE2[1], SymLink)
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE2[2], SymLink)
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE2[3], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BOWTIE2[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BOWTIE2[2], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BOWTIE2[3], SymLink)
 
 ## BWA-MEM
 BWAMEM_tar = 'bwakit-0.7.15_x64-linux.tar.bz2'
@@ -49,7 +49,7 @@ BWAMEM_target = [os.path.join(tools_dir, BWAMEM_tar),
 #BWAMEM_source = 
 BWAMEM = env.Command(BWAMEM_target, [], ['wget -O ${TARGETS[0]}  ' + BWAMEM_link,
                                          'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BWAMEM[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BWAMEM[1], SymLink)
 
 # STAR
 STAR_tar = '2.5.2a.tar.gz'
@@ -59,7 +59,7 @@ STAR_target = [os.path.join(tools_dir, 'STAR_' + STAR_tar),
 #STAR_source = 
 STAR = env.Command(STAR_target, [], ['wget -O ${TARGETS[0]} ' + STAR_link,
                                      'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), STAR[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), STAR[1], SymLink)
 
 # SEGEMEHL
 SEGEMEHL_tar = 'segemehl_0_2_0.tar.gz'
@@ -73,8 +73,8 @@ SEGEMEHL = env.Command(SEGEMEHL_target, [], ['wget -O $TARGET  ' + SEGEMEHL_link
                                              'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
                                              'cd ${TARGETS[1].dir} && make',
                                              'cd ' + Dir('.').abspath])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), SEGEMEHL[1], SymLink)
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), SEGEMEHL[2], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), SEGEMEHL[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), SEGEMEHL[2], SymLink)
 
 # TRIMMOMATIC
 TRIMMOMATIC_zip = 'Trimmomatic-0.36.zip'
@@ -84,7 +84,7 @@ TRIMMOMATIC_target = [os.path.join(tools_dir, TRIMMOMATIC_zip),
 #TRIMMOMATIC_source = 
 TRIMMOMATIC = env.Command(TRIMMOMATIC_target, [], ['wget -O $TARGET  ' + TRIMMOMATIC_link,
                                                    'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), TRIMMOMATIC[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), TRIMMOMATIC[1], SymLink)
 
 
 # FASTQC
@@ -96,7 +96,7 @@ FASTQC_target = [os.path.join(tools_dir, FASTQC_zip),
 FASTQC = env.Command(FASTQC_target, [], ['wget -O $TARGET  ' + FASTQC_link,
                                          'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]} '\
                                          '&& chmod +x ${TARGETS[1]}'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FASTQC[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FASTQC[1], SymLink)
 
 
 # BEDTOOLS
@@ -111,7 +111,7 @@ BEDTOOLS = env.Command(BEDTOOLS_target, [],
                         'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}', 
                         'cd ' + BEDTOOLS_dir + ' && make', 
                         'cd ' + Dir('.').abspath])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BEDTOOLS[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BEDTOOLS[1], SymLink)
 
 # SAMTOOLS
 SAMTOOLS_tar = 'samtools-1.3.1.tar.bz2'
@@ -125,7 +125,7 @@ SAMTOOLS = env.Command(SAMTOOLS_target, [], ['wget -O $TARGET  ' + SAMTOOLS_link
                                              'cd ' + SAMTOOLS_dir + ' && '\
                                              'make prefix=' + SAMTOOLS_dir + ' install',
                                              'cd ' + Dir('.').abspath])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), SAMTOOLS[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), SAMTOOLS[1], SymLink)
 
 # CUFFLINKS
 CUFFLINKS_tar = 'cufflinks-2.2.1.Linux_x86_64.tar.gz'
@@ -143,7 +143,7 @@ CUFFLINKS_target = [os.path.join(tools_dir, CUFFLINKS_tar),
 CUFFLINKS = env.Command(CUFFLINKS_target, [], ['wget -O $TARGET  ' + CUFFLINKS_link,
                                                'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
 for t2link in CUFFLINKS[1:]:
-    env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), t2link, SymLink)
+    env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), t2link, SymLink)
 
 
 # CIRI
@@ -154,7 +154,7 @@ CIRI_target = [os.path.join(tools_dir, CIRI_zip),
 #CIRI_source = 
 CIRI = env.Command(CIRI_target, [], ['wget -O ${TARGETS[0]} ' + CIRI_link,
                                      'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
-env.Command(os.path.join(junk2_bin_dir, "CIRI.pl"), CIRI[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "CIRI.pl"), CIRI[1], SymLink)
 
 
 # FIND-CIRC
@@ -167,8 +167,8 @@ FINDCIRC_target = [os.path.join(tools_dir, FINDCIRC_tar),
 #FINDCIRC_source = 
 FINDCIRC = env.Command(FINDCIRC_target, [], ['wget -O $TARGET  ' + FINDCIRC_link,
                                              'unzip -u -d ' + tools_dir + ' ${TARGETS[0]}'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FINDCIRC[1], SymLink)
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FINDCIRC[2], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FINDCIRC[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FINDCIRC[2], SymLink)
 
 # FASTX-TOOLKIT
 libgtextutils_tar   = 'libgtextutils-0.7.tar.gz'
@@ -201,7 +201,7 @@ FASTXTOOLKIT = env.Command(FASTXTOOLKIT_target, [Value(libgtextutils_config_path
                             ':$$PKG_CONFIG_PATH '\
                             ' && make && make install', 
                             'cd ' + Dir('#').abspath])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), FASTXTOOLKIT[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FASTXTOOLKIT[1], SymLink)
 
 # HTSeq
 HTSeq_tar = 'HTSeq-0.6.1p1.tar.gz'
@@ -220,7 +220,7 @@ HTSeq = env.Command(HTSeq_target, [],
                     'cd ' + HTSeq_dir +\
                     ' && python setup.py install --prefix ' + HTSeq_dir,
                     'cd ' + Dir('#').abspath])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), HTSeq[2], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[2], SymLink)
 
 # gtfToGenePred
 gtfToGenePred_link = 'http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred'
@@ -228,7 +228,7 @@ gtfToGenePred_target = [os.path.join(tools_dir, 'gtfToGenePred')]
 gtfToGenePred = env.Command(gtfToGenePred_target, [], 
                             ['wget -O $TARGET ' + gtfToGenePred_link, 
                             Chmod('$TARGET', 0775)])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), gtfToGenePred, SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), gtfToGenePred, SymLink)
 
 # optparse, ggplot2, DATA.TABLE, plyr, scales, reshape2, ggthemes, RSvgDevice
 # Bioconductor: ReportingTools, DESeq2
@@ -244,8 +244,8 @@ CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [],
                            ['pip install --install-option="--prefix=' +\
                            os.path.abspath(CIRCEXPLORER2_dir) +\
                            '" -Iv circexplorer2==2.2.7'])
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLink)
-#env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLink)
+#env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
 
 # BOWTIE v1
 # v1.2.1.1, v1.2.1, and v1.2 do not work!
@@ -271,9 +271,9 @@ BOWTIE1 = env.Command(BOWTIE1_target,
                       ['wget -O ${TARGETS[0]} ' + BOWTIE1_link,
                        'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}']
                      )
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE1[1], SymLink)
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE1[2], SymLink)
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), BOWTIE1[3], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BOWTIE1[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BOWTIE1[2], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BOWTIE1[3], SymLink)
 
 # TOPHAT2
 tophat2_dir = 'tophat-2.1.0.Linux_x86_64' #'tophat-2.1.1.Linux_x86_64'
@@ -288,7 +288,7 @@ tophat2 = env.Command(tophat2_target,
                       ['wget -O ${TARGETS[0]} ' + tophat2_url, 
                        'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}']
                      )
-env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), tophat2[1], SymLink)
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), tophat2[1], SymLink)
 
 # STRINGTIE
 stringtie_dir =	'stringtie-1.3.3b.Linux_x86_64'
@@ -302,5 +302,5 @@ stringtie = env.Command(stringtie_target,
 			 'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}']
 			)
 
-stringtie_link = env.Command(os.path.join(junk2_bin_dir, "${SOURCE.file}"), stringtie[1], SymLink)
+stringtie_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), stringtie[1], SymLink)
 

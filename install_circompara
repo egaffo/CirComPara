@@ -25,4 +25,4 @@ export PATH=$CIRCOMPARA_HOME/bin/:$PATH
 export R_LIBS="$CIRCOMPARA_HOME/tools/R_libs"
 
 ## install other tools
-scons -i -f $CIRCOMPARA_HOME/src/junk2_install_tools_circpipe $1 
+scons -i -f $CIRCOMPARA_HOME/src/ccp_install_tools.scons $1 
