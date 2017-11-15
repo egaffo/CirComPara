@@ -461,7 +461,7 @@ if env['BYPASS_LINEAR'] == 'False':
                 env_cuffnorm['EXTRA_PARAMS']= env['CUFFNORM_EXTRA_PARAMS'] #TODO: set strandness when required
                 env_cuffnorm['LABELS'] = conditions
                 
-                cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffnorm'),
+                cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffnorm.scons'),
                                       src_dir = env['SCONSCRIPT_HOME'],
                                       variant_dir = cuffdiff_dir, duplicate = 0,
                                       exports = '''env_cuffnorm''')
