@@ -43,7 +43,7 @@ import os, itertools, re
 ## DIFFERENT ACTIONS/SCONSCRIPTS
 junk2_read_statistics = 'ccp_read_statistics.scons'
 junk2_preprocess      = 'ccp_preprocess.scons'
-junk2_mapping         = 'junk2_hisat2'
+junk2_mapping         = 'ccp_hisat2.scons'
 junk2_expression      = 'junk2_expression'
 junk2_circrnas        = 'junk2_sample_circrna_methods'
 
