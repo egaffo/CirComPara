@@ -1253,7 +1253,8 @@ circ_xpr_all_sample$medRPM[is.na(circ_xpr_all_sample$medRPM)] <- 0.0
 # select only circRNAs that are overlapping a gene
 # attach circRNA expression
 genic_circrnas <- merge(circrna_genes, circ_xpr_all_sample, 
-                        all.x = T, all.y = F, by = "circ_id")[!is.na(medRPM)]
+                        all.x = T, all.y = F, by = "circ_id",
+                        allow.cartesian = T)[!is.na(medRPM)]
 
 if(file.info(gene_fpkm_file)$size > 0){    
     
