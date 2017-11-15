@@ -18,7 +18,7 @@ Import('*')
 try:
     env = env_index_bowtie2
 except NameError as ne:
-    print 'junk2_index_bowtie2: command line execution'
+    print 'ccp_index_bowtie2.scons: command line execution'
     vars = Variables('vars.py')
     vars.Add('CPUS', 'Number of cpus to use for multi thread run', '1')
     vars.Add('GENOME', 'The list of input FASTA files composing the genome sequence. '\
