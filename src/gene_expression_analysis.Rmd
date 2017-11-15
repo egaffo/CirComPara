@@ -131,16 +131,16 @@ if(method == "stringtie"){
 expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
 if(meta.file != ""){
     if(method == "cufflinks"){
-    setkey(gene_meta, condition, replicate_num)
-    setkey(expressed_genes, condition, replicate)
-    expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
-    gene.xpr.fpkm <- dcast(expressed_genes[, .(gene = tracking_id, sample_id, FPKM)], 
-                    formula = gene ~ sample_id, value.var = "FPKM", fill = 0)
+        setkey(gene_meta, condition, replicate_num)
+        setkey(expressed_genes, condition, replicate)
+        expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+        gene.xpr.fpkm <- dcast(expressed_genes[, .(gene = tracking_id, sample_id, FPKM)], 
+                               formula = gene ~ sample_id, value.var = "FPKM", fill = 0)
     }
     if(method == "stringtie"){
         gene.xpr.fpkm <- dcast(data = gene.xpr,
-                           formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample,
-                           value.var = "FPKM", fill = 0)[, gene := `Gene ID`][, c("gene", gene_meta$sample_id), with = F]
+                               formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample,
+                               value.var = "FPKM", fill = 0)[, gene := `Gene ID`][, c("gene", gene_meta$sample_id), with = F]
         expressed_genes <- merge(expressed_genes, gene_meta, by = "sample_id")
     }
 }
@@ -154,9 +154,10 @@ Expression of genes was saved in tabular format in file <a href="`r basename(exp
 ```{r compute pca, echo=FALSE}
 
 if(meta.file != ""){
-    non.value.columns <- c("gene_id")
-    genes.per.sample.matrix <- as.matrix(round(gene.raw.frags.dt[, -non.value.columns, with = FALSE]))
-    rownames(genes.per.sample.matrix) <- gene.raw.frags.dt$gene_id
+    non.value.columns <- c("gene")
+    
+    genes.per.sample.matrix <- as.matrix(gene.xpr.fpkm[, -non.value.columns, with = FALSE])
+    rownames(genes.per.sample.matrix) <- gene.xpr.fpkm$gene
     
     sampleTable <- as.data.frame(gene_meta[, .(sample = sample_id, condition)])
     rownames(sampleTable) <- as.character(sampleTable[, "sample"])
@@ -164,23 +165,7 @@ if(meta.file != ""){
     # remove not expressed genes
     countData <- genes.per.sample.matrix[rowSums(genes.per.sample.matrix) > 0, ]
 
-    pca <- tryCatch({        
-        ddsHTSeq <- DESeqDataSetFromMatrix(countData = countData[, row.names(sampleTable)],
-                                           colData = sampleTable,
-                                           design = ~ condition)
-        dds <- DESeq(ddsHTSeq)
-        
-        #rld <- rlog(dds, blind = T)
-        #rld <- vst(dds, blind = T)
-        rld <- varianceStabilizingTransformation(dds)
-        pca <- prcomp(t(assay(rld)), scale. = T)
-    },
-    error=function(cond) {
-        message(paste("Some error occurred while computing PCA:\n", cond))
-        message("Will use raw expression values with no further normalization.\n")
-        pca <- prcomp(t(countData), scale. = F)
-        return(pca)
-    })
+    pca <- prcomp(t(countData), scale. = T)
     
     intgroup <- c("condition")
     percentVar <- pca$sdev^2/sum(pca$sdev^2)
@@ -245,6 +230,9 @@ knitr::kable(rbind(expressed_genes.by.sample[order(sample_id),], list("Non-redun
 
 ```{r plot_gene_expressed_by_sample}
 default.font.size <- 12
+expressed_genes.by.sample$sample_id <- factor(expressed_genes.by.sample$sample_id, 
+                                                 levels = gene_meta[order(condition, sample_id), sample_id], 
+                                                 ordered = T)
 expressed_genes.by.sample.plot <- ggplot(data = expressed_genes.by.sample, 
                                          mapping = aes(x = sample_id, y = `Tot. gene expressed`,
                                                        fill = sample_id)) + 
@@ -276,6 +264,10 @@ knitr::kable(sapply(X = split(expressed_genes, expressed_genes$sample_id),
 
 ```{r plot_gene_expression}
 ## boxplot expression per sample: genes
+expressed_genes$sample_id <- factor(expressed_genes$sample_id, 
+                                                 levels = gene_meta[order(condition, sample_id), sample_id], 
+                                                 ordered = T)
+
 gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes, 
                                       mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
   geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
