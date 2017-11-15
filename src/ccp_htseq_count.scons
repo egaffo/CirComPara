@@ -34,7 +34,7 @@ try:
     CPUS             = htseq_count_cpus
     STRANDED         = htseq_count_stranded
 except NameError as ne:
-    print 'junk2_htseq_count: cannot import', ne, '. Assume command line script call.'
+    print 'ccp_htseq_count.scons: cannot import', ne, '. Assume command line script call.'
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
     vars.Add('CPUS', 'Set number of CPUs', '4')

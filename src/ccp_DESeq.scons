@@ -105,7 +105,7 @@ for algn in QUANTITIES:
     htseq_count_cpus = CPUS
     htseq_count_stranded = STRANDED
     ## GET READ COUNTS
-    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'junk2_htseq_count'), 
+    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.scons'), 
                              src_dir = SCONSCRIPT_HOME, 
                              variant_dir = htseq_counts_dir, duplicate = 0, 
                              exports = '''env mapping_file sample_name '''
