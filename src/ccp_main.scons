@@ -426,7 +426,7 @@ if env['BYPASS_LINEAR'] == 'False':
                     cuffdiff_annotation = cuffmerge
                     cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
                     cuffdiff_extra_params = env['CUFFDIFF_EXTRA_PARAMS']
-                    cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'junk2_cuffdiff'),
+                    cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffdiff.scons'),
                                           src_dir = env['SCONSCRIPT_HOME'],
                                           variant_dir = cuffdiff_dir, duplicate = 0,
                                           exports = '''env cuffdiff_cpus cuffdiff_conditions '''
