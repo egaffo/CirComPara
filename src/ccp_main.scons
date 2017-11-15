@@ -596,7 +596,7 @@ if int(env_circrna_analyze['MIN_METHODS']) > len(env['CIRCRNA_METHODS']):
     env_circrna_analyze['MIN_METHODS'] = len(env['CIRCRNA_METHODS'])
 
 circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 
-                                          'junk2_circrna_analyze'),
+                                          'ccp_analyze_circrnas.scons'),
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = circrna_analyze_dir, duplicate = 0,
                             exports = '''env_circrna_analyze''')
