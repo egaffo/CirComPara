@@ -16,7 +16,7 @@ Import('*')
 try:
     env = env_index_bwa
 except NameError as ne:
-    print 'junk2_index_bwa: command line execution'
+    print 'ccp_index_bwa.scons: command line execution'
     vars = Variables('vars.py')
     vars.Add('GENOME', 'The list of input FASTA files composing the genome sequence. '\
             'Comma separated', '')

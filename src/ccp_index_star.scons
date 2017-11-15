@@ -19,7 +19,7 @@ Import('*')
 try:
     env = env_index_star
 except NameError as ne:
-    print 'junk2_index_star: command line execution'
+    print 'ccp_index_star.scons: command line execution'
     vars = Variables('vars.py')
     vars.Add('CPUS', 'Number of cpus to use for multi thread run', '1')
     vars.Add('GENOME', 'The list of input FASTA files composing the genome sequence. '\

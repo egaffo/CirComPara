@@ -61,7 +61,7 @@ if 'HISAT2' in env['INDEXES'].split(','):
     env_index_hisat2['EXTRA_PARAMS'] = env['HISAT2_EXTRA_PARAMS']
 
     index_dir = os.path.join(indexes_dir, 'hisat2')
-    index = SConscript(os.path.join(index_dir, 'junk2_index_hisat2'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_hisat2.scons'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_hisat2 ''')
@@ -76,7 +76,7 @@ if 'SEGEMEHL' in env['INDEXES'].split(','):
     env_index_segemehl['EXTRA_PARAMS'] = env['SEGEMEHL_EXTRA_PARAMS']
 
     index_dir = os.path.join(indexes_dir, 'segemehl')
-    index = SConscript(os.path.join(index_dir, 'junk2_index_segemehl'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_segemehl.scons'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_segemehl ''')
@@ -92,7 +92,7 @@ if 'BWA' in env['INDEXES'].split(','):
     #env_index_hisat2['INDEXING_ALGORITHM'] = env['INDEXING_ALGORITHM']
 
     index_dir = os.path.join(indexes_dir, 'bwa')
-    index = SConscript(os.path.join(index_dir, 'junk2_index_bwa'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_bwa.scons'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_bwa ''')
@@ -140,7 +140,7 @@ if 'STAR' in env['INDEXES'].split(','):
     env_index_star['EXTRA_PARAMS'] = env['STAR_EXTRA_PARAMS']
 
     index_dir = os.path.join(indexes_dir, 'star')
-    index = SConscript(os.path.join(index_dir, 'junk2_index_star'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_star.scons'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_star ''')
