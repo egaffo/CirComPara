@@ -64,7 +64,7 @@ try:
     STRANDED    = deseq_stranded
 
 except NameError as ne:
-    print 'junk2_DESeq: cannot import', ne, '. Assume command line script call.'
+    print 'ccp_DESeq.scons: cannot import', ne, '. Assume command line script call.'
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
     vars.Add('CPUS', 'Set number of CPUs', '4')

@@ -482,7 +482,7 @@ if env['BYPASS_LINEAR'] == 'False':
             	deseq_stranded = 'yes'
             else:
             	deseq_stranded = 'no'
-            deseq = SConscript(os.path.join(deseq_dir, 'junk2_DESeq'),
+            deseq = SConscript(os.path.join(deseq_dir, 'ccp_DESeq.scons'),
             					src_dir = env['SCONSCRIPT_HOME'],
             					variant_dir = deseq_dir, duplicate = 0,
                                 exports = '''env deseq_annotation deseq_alignments '''
