@@ -272,7 +272,7 @@ if env['BYPASS_LINEAR'] == 'False':
                 cuffmerge_cpus = env['CPUS']
                 cuffmerge_annotation = env['ANNOTATION']
                 cuffmerge_genome_fasta = env['GENOME_FASTA']
-                cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'junk2_cuffmerge'),
+                cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'ccp_cuffmerge.scons'),
                                         src_dir = env['SCONSCRIPT_HOME'],
                                         variant_dir = cuffmerge_dir, duplicate = 0,
                                         exports = 'env transcripts_gtf_files cuffmerge_cpus '''
