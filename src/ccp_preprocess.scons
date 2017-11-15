@@ -61,7 +61,7 @@ if env['PREPROCESSOR'].lower() == 'trimmomatic':
     trimmomatic_adapter_file = ADAPTER_FILE
     trimmomatic_extra_params = PREPROCESSOR_PARAMS
 
-    preps = SConscript(os.path.join(preprocess_dir, 'junk2_trimmomatic'),
+    preps = SConscript(os.path.join(preprocess_dir, 'ccp_trimmomatic.scons'),
                        src_dir = SRC_DIR, 
                        variant_dir = preprocess_dir, duplicate = 0, 
                        exports = '''env trimmomatic_reads trimmomatic_adapter_file '''
