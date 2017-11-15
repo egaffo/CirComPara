@@ -410,7 +410,7 @@ if env['BYPASS_LINEAR'] == 'False':
             
             cuffquant_cpus = env['CPUS']
             
-            cuffquant = SConscript(os.path.join(cuffquant_dir, 'junk2_cuffquant'),
+            cuffquant = SConscript(os.path.join(cuffquant_dir, 'ccp_cuffquant.scons'),
                                    src_dir = env['SCONSCRIPT_HOME'],
                                    variant_dir = cuffquant_dir, duplicate = 0,
                                    exports = '''env cuffquant_alignments cuffquant_annotation '''
