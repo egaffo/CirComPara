@@ -45,7 +45,7 @@ junk2_read_statistics = 'ccp_read_statistics.scons'
 junk2_preprocess      = 'ccp_preprocess.scons'
 junk2_mapping         = 'ccp_hisat2.scons'
 junk2_expression      = 'ccp_expression.scons'
-junk2_circrnas        = 'junk2_sample_circrna_methods'
+junk2_circrnas        = 'ccp_circrna_methods.scons'
 
 Import('*')
 
