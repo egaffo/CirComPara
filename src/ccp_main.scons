@@ -579,7 +579,7 @@ env_circrna_collect = env.Clone()
 env_circrna_collect['CSVS'] = merge_sample_circrnas
 env_circrna_collect['GTF'] = env['ANNOTATION'] #cuffmerge
 circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 
-                                          'junk2_circrna_collect'), 
+                                          'ccp_collect_circrnas.scons'), 
                             src_dir = env['SCONSCRIPT_HOME'], 
                             variant_dir = circRNA_collect_dir, duplicate = 0,
                             exports = '''env_circrna_collect''')
