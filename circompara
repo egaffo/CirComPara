@@ -11,5 +11,5 @@ export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/CIRCexplorer2/lib/python2.7/site-packa
 
 export R_LIBS="$CIRCOMPARA_HOME/tools/R_libs"
 
-scons -f $CIRCOMPARA_HOME/src/junk2_circpipe_multisample $1 
+scons -f $CIRCOMPARA_HOME/src/ccp_main.scons $1 
 
