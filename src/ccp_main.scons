@@ -518,7 +518,6 @@ if env['BYPASS_LINEAR'] == 'False':
     gene_exp_analysis_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[0].abspath}"); '''\
                             '''meta.file <- "${SOURCES[0].abspath}"; '''\
                             '''gene.xpr.file <- "${','.join([str(s.abspath) for s in SOURCES][1:])}"; '''\
-                            '''sample <- "''' + sample + '''"; '''\
                             '''linear.method <- "${ ','.join( LINEAR_EXPRESSION_METHODS ) }"; '''\
                             '''rmarkdown::render(input = "''' + \
                             str(gene_exp_analysis_template) + '''", '''\
