@@ -382,18 +382,28 @@ if env['BYPASS_LINEAR'] == 'False':
             ballgown_files = get_matching_nodes(runs, '.*\.ctab')
 
         if 'ballgown' in env['DIFF_EXP']:
+
             ## MAKE BALLGOWN R OBJECT
+            bg_dirs = {}
+            for sample in samples.keys():
+                sample_ctabs = get_matching_nodes(ballgown_files, 
+                                                'samples' + os.path.sep + \
+                                                sample + '.*\.ctab')
+                bg_dirs[sample] = env.Command(os.path.join(ballgown_dir, sample),
+                            sample_ctabs[0].dir,
+                            SymLink)
+
             ballgown_targets = os.path.join(ballgown_dir, 'ballgown.rda')
-            ballgown_sources = [ballgown_files]
-            ballgown_ctabs = "','".join(list(set([os.path.dirname(f.path) for f in\
-                                    get_matching_nodes(ballgown_files, '.*\.ctab')])))
-            ballgown_ctabs = "c('" + ballgown_ctabs + "')"
+            ballgown_sources = [bg_dirs.values(), 
+                                ballgown_files]
+            ballgown_ctabs =  "c('" + \
+                              "','".join([d.path for d in Flatten(bg_dirs.values())]) + \
+                              "')"
             ballgown_R_cmd = '''library(ballgown);'''\
-                             '''data_directory = system.file('${TARGETS[0].dir}' '''\
-                             ''', package='ballgown'); '''\
-                             '''bg = ballgown(dataDir=data_directory, '''\
-                             '''samples = ''' + ballgown_ctabs + ''', meas='all');'''\
+                             '''bg = ballgown(samples = ''' + ballgown_ctabs + \
+                             ''', meas='all');'''\
                              '''save(bg, file='${TARGETS[0]}')'''
+
             ballgown_cmd = '''Rscript -e "''' + ballgown_R_cmd + '''"'''
             ballgown = env.Command(ballgown_targets, 
                                     ballgown_sources,
