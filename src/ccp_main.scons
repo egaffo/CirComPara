@@ -387,21 +387,26 @@ if env['BYPASS_LINEAR'] == 'False':
             bg_dirs = {}
             for sample in samples.keys():
                 sample_ctabs = get_matching_nodes(ballgown_files, 
-                                                'samples' + os.path.sep + \
-                                                sample + '.*\.ctab')
-                bg_dirs[sample] = env.Command(os.path.join(ballgown_dir, sample),
-                            sample_ctabs[0].dir,
-                            SymLink)
-
+                                                  samples_dir + os.path.sep + \
+                                                  sample + '.*\.ctab')
+                sample_link = os.path.join(ballgown_dir, sample)
+                bg_dirs[sample] = env.Command(sample_link,
+                                              sample_ctabs[0].dir,
+                                              SymLink)
+            
             ballgown_targets = os.path.join(ballgown_dir, 'ballgown.rda')
-            ballgown_sources = [bg_dirs.values(), 
+            ballgown_sources = [env['META'], bg_dirs.values(), 
                                 ballgown_files]
-            ballgown_ctabs =  "c('" + \
-                              "','".join([d.path for d in Flatten(bg_dirs.values())]) + \
-                              "')"
-            ballgown_R_cmd = '''library(ballgown);'''\
-                             '''bg = ballgown(samples = ''' + ballgown_ctabs + \
-                             ''', meas='all');'''\
+            ballgown_ctabs =  ",".join([sample + "='" + sample_link[0].path + "'" \
+                                        for sample,sample_link in bg_dirs.items()])
+            ballgown_R_cmd = '''library(data.table);'''\
+                             '''meta.file <- '${SOURCES[0].path}';'''\
+                             '''meta <- data.frame(unique(fread(meta.file)[,'''\
+                             '''.(id = sample, sample, condition)]), row.names = 'sample');'''\
+                             '''library(ballgown);'''\
+                             '''samps <- c(''' + ballgown_ctabs + '''); '''\
+                             '''bg = ballgown(samples = samps, meas='all', '''\
+                             '''              pData = meta[names(samps), , drop = F]);'''\
                              '''save(bg, file='${TARGETS[0]}')'''
 
             ballgown_cmd = '''Rscript -e "''' + ballgown_R_cmd + '''"'''
