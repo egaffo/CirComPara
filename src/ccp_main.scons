@@ -131,6 +131,10 @@ vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
 vars.Add('BYPASS_LINEAR', 'Skip analysis of linear transcripts. This will also skip '\
 			  'the analysis of linear-to-circular expression correlation',
 	 'False')
+vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
+        'collapsed into single-end reads to search for circRNA backsplices. Set'\
+        'this option to "True" to force circRNA method aligners to'\
+        'maintain paired-end read alignment', 'False')
 
 ## deprecated parameters (legacy)
 vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
@@ -149,6 +153,12 @@ env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
 
 env.SetDefault(TOPHAT_PARAMS = '')
+
+env.SetDefault(CIRC_PE_MAPPING = False)
+if env['CIRC_PE_MAPPING'].lower() == 'true':
+    env.Replace(CIRC_PE_MAPPING = True)
+else:
+    env.Replace(CIRC_PE_MAPPING = False)
 
 env.SetDefault(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].lower() == 'true':

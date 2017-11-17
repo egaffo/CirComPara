@@ -85,6 +85,10 @@ except NameError:
 
     vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods to use. '\
 	     'Use all methods available as default', '')
+    vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
+            'collapsed into single-end reads to search for circRNA backsplices. Set'\
+            'this option to "True" to force circRNA method aligners to'\
+            'maintain paired-end read alignment', 'False')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -117,23 +121,38 @@ except NameError:
 
     CIRCRNA_METHODS = [m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]
 
+    env.SetDefault(CIRC_PE_MAPPING = False)
+    if env['CIRC_PE_MAPPING'].lower() == 'true':
+        env.Replace(CIRC_PE_MAPPING = True)
+    else:
+        env.Replace(CIRC_PE_MAPPING = False)
 
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
-results = []
+env.SetDefault(CIRC_PE_MAPPING = False)
 
-## GET INPUT READ FILE FULL PATH
-raw_reads = [File(f).abspath for f in READS]
+results = []
 
 #sample_name = os.path.basename(Dir('.').path)
 #if sample_name=='.':
 #    sample_name = os.path.basename(Dir('.').abspath)
 sample_name = env['SAMPLE']
 
-### RETIRIEVE CANONICALLY UNMAPPED READS
-unmapped_reads_dir = 'unmapped_reads'
-
 build_dir = 'circRNAs'
+
+## GET INPUT READ FILE FULL PATH
+raw_reads = [File(f).abspath for f in READS]
+if not env['CIRC_PE_MAPPING'] and len(env['READS']) > 1:
+    cat_reads_target = os.path.join(build_dir, 
+                                    env['SAMPLE'] + '.unmappedSE.fq')
+    if env['READS'][0].endswith('.gz'): 
+        cat_reads_target = cat_reads_target + '.gz'
+    
+    env['READS'] = env.Command(cat_reads_target, 
+                               env['READS'], 
+                               'cat ${SOURCES} > $TARGET')
+    raw_reads = env['READS']
+
 
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
    any([f in CIRCRNA_METHODS for f in ['testrealign', 'circexplorer2_segemehl']]):
@@ -305,7 +324,7 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
     circexplorer2_env = env.Clone()
     circexplorer2_env['FUSION_FILE'] = tophat['ALIGNMENTS']
     circexplorer2_env['ALIGNER'] = 'tophat'
-    if len(env['READS']) > 1:
+    if env['CIRC_PE_MAPPING'] and len(env['READS']) > 1:
        circexplorer2_env.Replace(ALIGNER = 'tophat_pe')
     circexplorer2_tophat = env.SConscript(os.path.join(build_dir, 
     						'ccp_circexplorer2.scons'),
@@ -316,8 +335,6 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
     results.append(circexplorer2_tophat)
     Depends(circexplorer2_tophat, tophat['ALIGNMENTS'])
 
-
 Clean('.', build_dir)
-Clean('.', unmapped_reads_dir)
 
 Return('results')
