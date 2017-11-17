@@ -69,9 +69,12 @@ read_stats_collect[is.preprocessor == TRUE, `:=`(`Raw reads` = as.integer(sub(pa
                                                                   "\\1", line)))]
 ## linearly unmapped
 read_stats_collect[, is.mapper := grepl(pattern = linear.mapper, x = line)]
-read_stats_collect[is.mapper == TRUE, `:=`(`Linearly unmapped` = ifelse(grepl(pattern = "aligned[^0]* 0 times", x = line), 
-                                                          as.integer(sub(pattern = ".* ([0-9]*) .*aligned[^0]* 0 times", 
-                                                              "\\1", x = line)), as.integer(NA)))]
+read_stats_collect[is.mapper == TRUE, `:=`(`Linearly unmapped` = ifelse(grepl(pattern = "aligned[^0]* 0 times", 
+                                                                              x = line), 
+                                                                        sub(pattern = ".* ([0-9]*) .*aligned[^0]* 0 times", 
+                                                                                       "\\1", x = line), 
+                                                                        NA))]
+read_stats_collect[, `Linearly unmapped` := as.integer(`Linearly unmapped`)]
 
 ## merge table
 read.processing.table <- merge(read_stats_collect[is.preprocessor == TRUE, .(Sample, `Raw reads`, `Clean reads`, Dropped)],
@@ -94,6 +97,7 @@ read.processing.table.perc <- merge(read.processing.table.perc.1, read.processin
 #                                                                              "Linearly unmapped", "Linearly mapped")]
 # colnames(read.processing.table.perc)[2:5] <- sapply(colnames(read.processing.table.perc)[2:5], function(x)paste0(x, " (% tot.)"))
 # merge(read.processing.table[, .(Sample, `Raw reads`)], read.processing.table.perc)
+
 ```
 
 # Read (pre-)processing
