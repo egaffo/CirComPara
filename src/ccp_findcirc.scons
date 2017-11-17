@@ -17,16 +17,16 @@ Download the scripts from http://www.circbase.org/download/find_circ.tar.gz
 
 Software dependencies: 
  * Bowtie2-2.2.4
- * Samtools-1.1
  * Pysam
  * find_circ.py v1.2
 
 When called from a SConscript it imports the following variables:
- * find_circ_cpus
- * find_circ_bt2_idx
- * find_circ_reads
- * find_circ_genome
- * find_circ_sample
+ * CPUS
+ * BOWTIE2_INDEX
+ * GENOME_FASTA
+ * READS
+ * SAMPLE
+ * FINDCIRC_EXTRA_PARAMS
 
 '''
 import os
@@ -37,11 +37,6 @@ try:
     # these variables can be passed with 'exports' when calling this SConscript
     # from another SConscript
     env = env.Clone()
-    CPUS = find_circ_cpus
-    BOWTIE2_INDEX = find_circ_bt2_idx
-    READS = find_circ_reads
-    GENOME_FASTA = find_circ_genome
-    SAMPLE = find_circ_sample
 except NameError:
     vars = Variables('vars.py')
     vars.Add('CPUS', 'Max parallel jobs to execute', '4')
@@ -60,51 +55,19 @@ except NameError:
         print "Unknown variables:", unknown.keys()
         Exit(1)
 
-    CPUS = env['CPUS']
-    BOWTIE2_INDEX = env['BOWTIE2_INDEX'] # Assume you have already your genome Bowtie2 index
-    READS = env['READS'].split(',')
-    GENOME_FASTA = env['GENOME_FASTA']
-    SAMPLE = env['SAMPLE']
-
 out_dir = 'find_circ_out'
 
-try:
-    EXTRA_OPTIONS = env['FINDCIRC_EXTRA_PARAMS']
-except KeyError:
-    EXTRA_OPTIONS = ''
+env.SetDefault(FINDCIRC_EXTRA_PARAMS = '')
 
-read_bowtie2_par = '-U ${SOURCE}'
-if len(READS)==2:
-    read_bowtie2_par = '-1 ${SOURCES[0]} -2 ${SOURCES[1]}'
+cat_cmd = 'cat'
+if env['READS'][0].path.endswith('.gz'):
+    cat_cmd = 'zcat'
 
-#bt2_firstpass   = os.path.join(Dir('.').abspath, out_dir, 'bt2_firstpass.log')
-#bt2_secondpass  = os.path.join(Dir('.').abspath, out_dir, 'bt2_secondpass.log')
-#find_circ_log   = os.path.join(Dir('.').abspath, out_dir, 'find_circ.log')
-
-#map_reads_cmd   = 'bowtie2 $(-p'+ CPUS +\
-#                '$) --very-sensitive --score-min=C,-15,0 -x ' +\
-#                BOWTIE2_INDEX + ' -q ' + read_bowtie2_par + ' 2> '+ bt2_firstpass +\
-#                ' | samtools view -hu - | samtools sort -O "bam" -T $( findcirc_'+ SAMPLE +\
-#                ' -@ ' + CPUS + '$) - > $TARGET'
-#map_reads = env.Command([os.path.join(out_dir, SAMPLE+'_bt2.bam')],
-#                        READS,
-#                        map_reads_cmd)
-
-#find_circ_cmd = 'samtools view $(-@ ' + CPUS + '$) -hbf 4 $SOURCE | unmapped2anchors.py - |'+\
-#                ' bowtie2 --reorder --score-min=C,-15,0 -q -x ' +\
-#                BOWTIE2_INDEX + ' -U - 2> ' + bt2_secondpass + ' | find_circ.py '+\
-#                ' -G ' + GENOME_FASTA + ' -p ' + SAMPLE + '_ -s '+\
-#                find_circ_log + ' -R ${TARGETS[1]} ' + EXTRA_OPTIONS + '> ${TARGETS[0]}'
-#find_circ = env.Command([os.path.join(out_dir, 'sites.bed'), 
-#                         os.path.join(out_dir, 'sites.reads')], 
-#                        map_reads, 
-#                        find_circ_cmd)
-
-find_circ_cmd = 'unmapped2anchors.py -Q <( zcat ${SOURCES} ) |' + \
+find_circ_cmd = 'unmapped2anchors.py -Q <( ' + cat_cmd + ' ${SOURCES} ) |' + \
                 ' bowtie2 --reorder --score-min=C,-15,0 -q -x ' + \
-                BOWTIE2_INDEX + ' -U - 2> ${TARGETS[2]} | find_circ.py ' + \
-                ' -G ' + GENOME_FASTA + ' -p ' + SAMPLE + '_ -s ' + \
-                '${TARGETS[3]} -R ${TARGETS[1]} ' + EXTRA_OPTIONS + '> ${TARGETS[0]}'
+                ' $BOWTIE2_INDEX -U - 2> ${TARGETS[2]} | find_circ.py ' + \
+                ' -G $GENOME_FASTA -p ${SAMPLE}_ -s ' + \
+                '${TARGETS[3]} -R ${TARGETS[1]} $FINDCIRC_EXTRA_PARAMS > ${TARGETS[0]}'
 
 
 find_circ = env.Command([os.path.join(out_dir, 'sites.bed'), 
@@ -125,15 +88,10 @@ filter_circ = env.Command([os.path.join(out_dir, 'circ_candidates.bed')],
                           [find_circ[0]], 
                           filter_circ_cmd)
 
-#Clean(find_circ, [find_circ_log, bt2_firstpass, bt2_secondpass])
 Clean('.', out_dir)
 
 ## Collect mapped reads count
-#mappings_file = map_reads[0]
 mapped_reads_target = os.path.join(out_dir, 'find_circ_mapped_reads_count.txt')
-#mapped_reads_cmd    = '''samtools view -F 4 ${SOURCE} '''\
-#                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
-#mapped_reads        = env.Command(mapped_reads_target, mappings_file, mapped_reads_cmd)
 mapped_reads_cmd    = '''sed "s@.*circ_reads': \([0-9]*\).*@\\1@g" $SOURCE > $TARGET'''
 mapped_reads        = env.Command(mapped_reads_target, find_circ[3], mapped_reads_cmd)
 
