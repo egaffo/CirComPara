@@ -81,12 +81,12 @@ if len(READS) > 1:
                        ''' -i ''' + SEGEMEHL_INDEX + ''' -d ''' + GENOME_FASTA +\
                        ''' -q ${SOURCES[0]} -p ${SOURCES[1]} -S''' +\
                        ''' $(-t {}$) '''.format(CPUS) +\
-                       '''-u ${TARGETS[1].base} -C -T | ''' + sam_sort_cmd
+                       '''-u ${TARGETS[1].base} | ''' + sam_sort_cmd
 else:
     segemehl_map_cmd = '''segemehl.x -s $SEGEMEHL_PARAMS '''\
                        ''' -i ''' + SEGEMEHL_INDEX + ''' -d ''' + GENOME_FASTA +\
                        ''' -q $SOURCE -S'''+ ''' $(-t {}$) '''.format(CPUS) +\
-                       '''-u ${TARGETS[1].base} -C -T | ''' + sam_sort_cmd
+                       '''-u ${TARGETS[1].base} | ''' + sam_sort_cmd
 
 segemehl_unmatched_target = "{}_unmatched.fastq.gz".format(SAMPLE)
 segemehl_map_cmd = segemehl_map_cmd + ''' && gzip ${TARGETS[1].base}'''
