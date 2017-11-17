@@ -127,6 +127,10 @@ DT::datatable(read.processing.table.perc[, lapply(.SD, round, 1), by = Sample, .
               style = "bootstrap", class = "compact display", 
               caption = "Percentage with respect to raw reads in each processing step", 
               fillContainer = F, autoHideNavigation = T)
+
+rm(.Random.seed)
+set.seed(1)
+
 ```
 
 ## Per sample comparison of processing steps
