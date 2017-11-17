@@ -11,6 +11,8 @@ output:
       collapsed: false
       smooth_scroll: true
     theme: "readable"
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r global_options, include=FALSE}
@@ -220,6 +222,9 @@ if(meta_file != ""){
 ## Comparison of samples, for each processing step
 
 ```{r Comparison of samples, for each processing step, echo=FALSE}
+read.processing.table.m$Sample <- factor(read.processing.table.m$Sample, 
+                                                 levels = unique(meta[order(condition, sample), sample]), 
+                                                 ordered = T)
 ## by read counts
 read.processing.bars <- ggplot(read.processing.table.m, aes(x=Sample, y=`Read count`, fill = Sample)) +
     geom_bar(stat = "identity") + 
@@ -235,7 +240,11 @@ if(meta_file != ""){
 }
 
 ## by percentages
-read.processing.perc.bars <- ggplot(read.processing.table.perc.m, aes(x=Sample, y=`Raw reads %`, fill = Sample)) +
+read.processing.table.perc.m$Sample <- factor(read.processing.table.perc.m$Sample, 
+                                                 levels = unique(meta[order(condition, sample), sample]), 
+                                                 ordered = T)
+read.processing.perc.bars <- ggplot(read.processing.table.perc.m, 
+                                    aes(x=Sample, y=`Raw reads %`, fill = Sample)) +
     geom_bar(stat = "identity") + 
     facet_wrap(facets = ~ `Processing step`, scales = "free_y") +
     theme(axis.text.x = element_text(angle=45, hjust=1)) + 
@@ -365,6 +374,9 @@ if(meta_file != ""){
 }
 
 ## by percentage barplot per method
+circrna.mappings.table.perc.m$Sample <- factor(circrna.mappings.table.perc.m$Sample,
+                                               levels = unique(meta[order(condition, sample), sample]), 
+                                               ordered = T)
 circrna.mappings.perc.barplot <- ggplot(data = circrna.mappings.table.perc.m,
        aes(x = Sample, y = `Linearly unmapped %`, fill = Sample)) + 
     geom_bar(stat = "identity") + facet_wrap(facets = ~ `CircRNA method`) +
