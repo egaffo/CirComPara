@@ -34,10 +34,13 @@ def SymLink(target, source, env):
             os.rmdir(os.path.abspath(str(target[0])))
             os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
 
-def get_matching_nodes(nodelist, rexpression):
-    files = []
+def get_matching_nodes(nodelist, rexpression, abspath = False):
+    files = []        
     for node in Flatten(nodelist):
-        if re.match(rexpression, node.path):
+        path = node.path
+        if abspath:
+            path = node.abspath
+        if re.match(rexpression, path):
             files.append(node)
     return files
 
@@ -187,6 +190,7 @@ if env['DESEQ'].lower() == 'true':
 samples_dir = 'samples'
 
 ## GRUB METADATA
+env.Replace(META = File(env['META']).abspath)
 samples     = defaultdict(list)
 adapters    = defaultdict(str)
 conditions  = defaultdict(set)
@@ -391,42 +395,10 @@ if env['BYPASS_LINEAR'] == 'False':
             gene_exp = get_matching_nodes(runs, '.*gene_abund\.tab')
             ballgown_files = get_matching_nodes(runs, '.*\.ctab')
 
-        if 'ballgown' in env['DIFF_EXP']:
+        env.Replace(EXPRESSION_FILES = ballgown_files)
 
-            ## MAKE BALLGOWN R OBJECT
-            bg_dirs = {}
-            for sample in samples.keys():
-                sample_ctabs = get_matching_nodes(ballgown_files, 
-                                                  samples_dir + os.path.sep + \
-                                                  sample + '.*\.ctab')
-                sample_link = os.path.join(ballgown_dir, sample)
-                bg_dirs[sample] = env.Command(sample_link,
-                                              sample_ctabs[0].dir,
-                                              SymLink)
-            
-            ballgown_targets = os.path.join(ballgown_dir, 'ballgown.rda')
-            ballgown_sources = [env['META'], bg_dirs.values(), 
-                                ballgown_files]
-            ballgown_ctabs =  ",".join([sample + "='" + sample_link[0].path + "'" \
-                                        for sample,sample_link in bg_dirs.items()])
-            ballgown_R_cmd = '''library(data.table);'''\
-                             '''meta.file <- '${SOURCES[0].path}';'''\
-                             '''meta <- data.frame(unique(fread(meta.file)[,'''\
-                             '''.(id = sample, sample, condition)]), row.names = 'sample');'''\
-                             '''library(ballgown);'''\
-                             '''samps <- c(''' + ballgown_ctabs + '''); '''\
-                             '''bg = ballgown(samples = samps, meas='all', '''\
-                             '''              pData = meta[names(samps), , drop = F]);'''\
-                             '''save(bg, file='${TARGETS[0]}')'''
-
-            ballgown_cmd = '''Rscript -e "''' + ballgown_R_cmd + '''"'''
-            ballgown = env.Command(ballgown_targets, 
-                                    ballgown_sources,
-                                    ballgown_cmd)
-
-        
-    if len(samples.keys()) > 1:
-        
+       
+    if len(samples.keys()) > 1:        
         if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or ('cuffdiff' in env['DIFF_EXP']):
             cuffquant_annotation = cuffmerge
             cuffquant_alignments = alignments
@@ -444,39 +416,46 @@ if env['BYPASS_LINEAR'] == 'False':
             Depends(cuffquant, [cuffmerge, alignments])
             
             if 'cuffdiff' in env['DIFF_EXP']:
-                if len(conditions.keys()) > 1:
-                    ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
-                    cuffdiff_cpus = env['CPUS']
-                    cuffdiff_conditions = conditions
-                    cuffdiff_annotation = cuffmerge
-                    cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
-                    cuffdiff_extra_params = env['CUFFDIFF_EXTRA_PARAMS']
-                    cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffdiff.scons'),
-                                          src_dir = env['SCONSCRIPT_HOME'],
-                                          variant_dir = cuffdiff_dir, duplicate = 0,
-                                          exports = '''env cuffdiff_cpus cuffdiff_conditions '''
-                                          '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
-                    
-                    Depends(cuffdiff, cuffquant)
-                    
-                    gene_exp = get_matching_nodes(cuffdiff, ".*genes.read_group_tracking")
-                    gene_meta = File(get_matching_nodes(cuffdiff, ".*read_groups.info")[0]).abspath
-                    
-                    gene_diffexp = get_matching_nodes(cuffdiff, ".*gene_exp.diff") 
-                    cuffdiff_gene_diffexp_analysis_template = os.path.join("$SCONSCRIPT_HOME", 
-                    							"cuffdiff_gene_diffexp.Rmd")
-                    report_cuffdiff_target = [os.path.join(os.path.dirname(gene_diffexp[0].path), 
-                    		     	  	       "cuffdiff_gene_diffexp.html")]
-                    report_cuffdiff_cmd = '''Rscript -e 'results.dir <- dirname("${SOURCES[0].abspath}"); '''\
-                    	                '''meta.file <- "''' + str(gene_meta) + '''"; '''\
-                                        '''gene.de.file <- "${SOURCES[0].abspath}"; '''\
-                                        '''rmarkdown::render(input = "''' + \
-                                        str(cuffdiff_gene_diffexp_analysis_template) + '''", '''\
-                    	                '''output_file = "$TARGET.abspath", '''\
-                    	                '''intermediates_dir = dirname("${SOURCES[0].abspath}") )' '''
-                    report_cuffdiff = env.Command(report_cuffdiff_target, 
-                                                [gene_diffexp],
-                                                report_cuffdiff_cmd)
+                print "cuffdiff to be implemented"
+                #lindiffexp = SConscript(os.path.join(lindiffexp_dir,
+                #                                     'ccp_linear_diffexp.scons'),
+                #                       src_dir = env['SCONSCRIPT_HOME'],
+                #                       variant_dir = lindiffexp_dir, duplicate = 0,
+                #                       exports = '''env_linear_diffexp''')
+ 
+                #if len(conditions.keys()) > 1:
+                #    ## COMPUTE DIFFERENTIAL EXPRESSION: CUFFDIFF
+                #    cuffdiff_cpus = env['CPUS']
+                #    cuffdiff_conditions = conditions
+                #    cuffdiff_annotation = cuffmerge
+                #    cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
+                #    cuffdiff_extra_params = env['CUFFDIFF_EXTRA_PARAMS']
+                #    cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffdiff.scons'),
+                #                          src_dir = env['SCONSCRIPT_HOME'],
+                #                          variant_dir = cuffdiff_dir, duplicate = 0,
+                #                          exports = '''env cuffdiff_cpus cuffdiff_conditions '''
+                #                          '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
+                #    
+                #    Depends(cuffdiff, cuffquant)
+                #    
+                #    gene_exp = get_matching_nodes(cuffdiff, ".*genes.read_group_tracking")
+                #    gene_meta = File(get_matching_nodes(cuffdiff, ".*read_groups.info")[0]).abspath
+                #    
+                #    gene_diffexp = get_matching_nodes(cuffdiff, ".*gene_exp.diff") 
+                #    cuffdiff_gene_diffexp_analysis_template = os.path.join("$SCONSCRIPT_HOME", 
+                #    							"cuffdiff_gene_diffexp.Rmd")
+                #    report_cuffdiff_target = [os.path.join(os.path.dirname(gene_diffexp[0].path), 
+                #    		     	  	       "cuffdiff_gene_diffexp.html")]
+                #    report_cuffdiff_cmd = '''Rscript -e 'results.dir <- dirname("${SOURCES[0].abspath}"); '''\
+                #    	                '''meta.file <- "''' + str(gene_meta) + '''"; '''\
+                #                        '''gene.de.file <- "${SOURCES[0].abspath}"; '''\
+                #                        '''rmarkdown::render(input = "''' + \
+                #                        str(cuffdiff_gene_diffexp_analysis_template) + '''", '''\
+                #    	                '''output_file = "$TARGET.abspath", '''\
+                #    	                '''intermediates_dir = dirname("${SOURCES[0].abspath}") )' '''
+                #    report_cuffdiff = env.Command(report_cuffdiff_target, 
+                #                                [gene_diffexp],
+                #                                report_cuffdiff_cmd)
             else:
                 ## Normalize expression values: CUFFNORM
                 env_cuffnorm = env.Clone()
@@ -496,23 +475,30 @@ if env['BYPASS_LINEAR'] == 'False':
                 gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
                 gene_meta = File(get_matching_nodes(cuffnorm, ".*read_groups.info")[0]).abspath
             
-        if 'deseq' in env['DIFF_EXP']: #DESEQ:
-            ## COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
-            deseq_annotation = cuffmerge
-            deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
-            metafile = File(env['META']).abspath
-            deseq_cpus = env['CPUS']
-            deseq_stranded = 'no'
-            if 'fr-firststrand' in env['CUFFLINKS_PARAMS']:
-            	deseq_stranded = 'yes'
-            else:
-            	deseq_stranded = 'no'
-            deseq = SConscript(os.path.join(deseq_dir, 'ccp_DESeq.scons'),
-            					src_dir = env['SCONSCRIPT_HOME'],
-            					variant_dir = deseq_dir, duplicate = 0,
-                                exports = '''env deseq_annotation deseq_alignments '''
-                                        '''metafile deseq_cpus deseq_stranded ''')
-            Depends(deseq, [cuffmerge, alignments])
+        if 'deseq' in env['DIFF_EXP']:
+            print "deseq to be implemented"
+            #lindiffexp = SConscript(os.path.join(lindiffexp_dir,
+            #                                     'ccp_linear_diffexp.scons'),
+            #                       src_dir = env['SCONSCRIPT_HOME'],
+            #                       variant_dir = lindiffexp_dir, duplicate = 0,
+            #                       exports = '''env_linear_diffexp''')
+ 
+            ### COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
+            #deseq_annotation = cuffmerge
+            #deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
+            #metafile = File(env['META']).abspath
+            #deseq_cpus = env['CPUS']
+            #deseq_stranded = 'no'
+            #if 'fr-firststrand' in env['CUFFLINKS_PARAMS']:
+            #	deseq_stranded = 'yes'
+            #else:
+            #	deseq_stranded = 'no'
+            #deseq = SConscript(os.path.join(deseq_dir, 'ccp_DESeq.scons'),
+            #					src_dir = env['SCONSCRIPT_HOME'],
+            #					variant_dir = deseq_dir, duplicate = 0,
+            #                    exports = '''env deseq_annotation deseq_alignments '''
+            #                            '''metafile deseq_cpus deseq_stranded ''')
+            #Depends(deseq, [cuffmerge, alignments])
 	
     else:
         ## case of only one sample
@@ -540,6 +526,18 @@ if env['BYPASS_LINEAR'] == 'False':
     gene_exp_analysis = env.Command(gene_exp_analysis_targets, 
                                     gene_exp_analysis_sources, 
                                     gene_exp_analysis_cmd)
+
+    ## DIFFERENTIAL LINEAR EXPRESSION
+    if not env['DIFF_EXP'] == '':
+        lindiffexp_dir = 'linear_diffexp'
+        env_linear_diffexp = env.Clone()
+        lindiffexp = SConscript(os.path.join(lindiffexp_dir,
+                                             'ccp_linear_diffexp.scons'),
+                                src_dir = env['SCONSCRIPT_HOME'],
+                                variant_dir = lindiffexp_dir, duplicate = 0,
+                                exports = '''env_linear_diffexp SymLink get_matching_nodes''')
+
+
 
 else:
     ## DO NOT ANALYZE GENE EXPRESSION: USE MOCK EMPTY FILES
@@ -673,10 +671,11 @@ if env['QRE_FIND'] == 'True':
 Clean('.', samples_dir)
 Clean('.', cuffmerge_dir)
 Clean('.', transcript_sequences_dir)
-Clean('.', cuffquant_dir)
-Clean('.', cuffdiff_dir)
+#Clean('.', cuffquant_dir)
+#Clean('.', cuffdiff_dir)
 Clean('.', geneexp_dir)
-Clean('.', deseq_dir)
+#Clean('.', deseq_dir)
+Clean('.', lindiffexp_dir)
 Clean('.', circRNA_collect_dir)
 Clean('.', circrna_analyze_dir)
 Clean('.', read_stats_collect_dir)
