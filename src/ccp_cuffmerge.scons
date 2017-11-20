@@ -16,7 +16,7 @@ import os, itertools, zipfile
 Import('*')
 
 try:
-    env = env
+    env = env.Clone()
     gtf_files = transcripts_gtf_files
     CPUS      = cuffmerge_cpus
     ANNOTATION = cuffmerge_annotation
