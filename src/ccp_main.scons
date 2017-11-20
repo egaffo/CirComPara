@@ -163,9 +163,11 @@ if env['CIRC_PE_MAPPING'].lower() == 'true':
 else:
     env.Replace(CIRC_PE_MAPPING = False)
 
-env.SetDefault(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
+#env.SetDefault(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].lower() == 'true':
 	env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True)
+else:
+    env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
 
 if env['CIRCRNA_METHODS'] == ['']:
     env.Replace(CIRCRNA_METHODS = ['ciri', 'circexplorer2_bwa', 
@@ -186,6 +188,8 @@ if env['DIFF_EXP'].lower() == 'true':
 env.SetDefault(DESEQ = False)
 if env['DESEQ'].lower() == 'true':
     env.Replace(DESEQ = True)
+
+env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
 
 samples_dir = 'samples'
 
@@ -274,14 +278,13 @@ deseq_dir = 'deseq'
 ## the directory where to collect gene expression results
 geneexp_dir = 'geneexp'
 
-env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
 
 if env['BYPASS_LINEAR'] == 'False':
     if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
         ## MERGE THE TRANSCRIPTS PREDICTED IN THE VARIOUS SAMPLES
         transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
-        if len(transcripts_gtf_files) > 1:
-        
+
+        if len(transcripts_gtf_files) > 1:        
             if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
                 cuffmerge_cpus = env['CPUS']
                 cuffmerge_annotation = env['ANNOTATION']
@@ -295,7 +298,6 @@ if env['BYPASS_LINEAR'] == 'False':
                 env.Replace(ANNOTATION = cuffmerge)
 
             if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
-
                 stringtiemerge_list_target = os.path.join(cuffmerge_dir,
                                                           'transcripts_gtf_files_mergelist.txt')
                 stringtiemerge_list_cmd = '''echo -ne '${"\\\\n".join([str(s.path) '''\
@@ -318,18 +320,15 @@ if env['BYPASS_LINEAR'] == 'False':
                 
                 env.Replace(ANNOTATION = stringtiemerge)
                 
-        else:
+        elif len(transcripts_gtf_files) == 1:
             env.Replace(ANNOTATION = transcripts_gtf_files)
     
     ## RETRIEVE TRANSCRIPT SEQUENCES
-    transcript_sequences_annotation = File(env['ANNOTATION']) #cuffmerge
-    transcript_sequences_genome = env['GENOME_FASTA']
     transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
                                                    'ccp_transcript_fastas.scons'), 
                                       src_dir = env['SCONSCRIPT_HOME'],
                                       variant_dir = transcript_sequences_dir, duplicate = 0,
-                                      exports = '''env transcript_sequences_annotation '''
-                                      '''transcript_sequences_genome''')
+                                      exports = '''env''')
     
     ## QUANTIFY EXPRESSION
     alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
@@ -345,7 +344,7 @@ if env['BYPASS_LINEAR'] == 'False':
     if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
         sample = ','.join(samples.keys())
         gene_meta = env['META']
-        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
+        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
             ## (RE)COMPUTE GENE ABUNDANCES USING MERGED ANNOTATION
             gene_exp = []
             for sample_name in samples.keys():
@@ -433,31 +432,6 @@ if env['BYPASS_LINEAR'] == 'False':
             gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
             gene_meta = File(get_matching_nodes(cuffnorm, ".*read_groups.info")[0]).abspath
             
-        if 'deseq' in env['DIFF_EXP']:
-            print "deseq to be implemented"
-            #lindiffexp = SConscript(os.path.join(lindiffexp_dir,
-            #                                     'ccp_linear_diffexp.scons'),
-            #                       src_dir = env['SCONSCRIPT_HOME'],
-            #                       variant_dir = lindiffexp_dir, duplicate = 0,
-            #                       exports = '''env_linear_diffexp''')
- 
-            ### COMPUTE DIFFERENTIAL EXPRESSION: DESEQ
-            #deseq_annotation = cuffmerge
-            #deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
-            #metafile = File(env['META']).abspath
-            #deseq_cpus = env['CPUS']
-            #deseq_stranded = 'no'
-            #if 'fr-firststrand' in env['CUFFLINKS_PARAMS']:
-            #	deseq_stranded = 'yes'
-            #else:
-            #	deseq_stranded = 'no'
-            #deseq = SConscript(os.path.join(deseq_dir, 'ccp_DESeq.scons'),
-            #					src_dir = env['SCONSCRIPT_HOME'],
-            #					variant_dir = deseq_dir, duplicate = 0,
-            #                    exports = '''env deseq_annotation deseq_alignments '''
-            #                            '''metafile deseq_cpus deseq_stranded ''')
-            #Depends(deseq, [cuffmerge, alignments])
-	
     else:
         ## case of only one sample
         if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
@@ -466,6 +440,31 @@ if env['BYPASS_LINEAR'] == 'False':
             #link_cufflinks_dir = env.Command(cuffdiff_dir, gene_exp[0].dir, SymLink)
             sample = str(samples.keys()[0])
 
+    if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
+        ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
+        htseq_count_annotation = env['ANNOTATION']
+        htseq_counts_dir = 'htseq_counts'
+        htseq_counts = []
+        for algn in get_matching_nodes(runs, alignment_matching_regexp):
+            sample_name = os.path.splitext(File(algn).name)[0]
+            mapping_file = algn
+            htseq_count_cpus = env['CPUS']
+            htseq_count_stranded = 'no'
+            if '--rna-strandness FR' in env['HISAT2_EXTRA_PARAMS']: 
+                htseq_count_stranded = 'yes'
+            ## GET READ COUNTS
+            htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.scons'), 
+                                     src_dir = env['SCONSCRIPT_HOME'], 
+                                     variant_dir = htseq_counts_dir, duplicate = 0, 
+                                     exports = '''env mapping_file sample_name '''
+                                               '''htseq_count_annotation htseq_count_cpus '''
+                                               '''htseq_count_stranded ''')
+            htseq_counts.append(htseq_count)
+
+        env.Replace(EXPRESSION_FILES = htseq_counts)
+        ## TODO: fix gene expression report for htseq_count. 
+        gene_meta = env['META'] # 
+        gene_exp = htseq_counts #
 
     ## REPORT GENE EXPRESSION
     gene_exp_analysis_template = os.path.join("$SCONSCRIPT_HOME", "gene_expression_analysis.Rmd")
@@ -494,8 +493,6 @@ if env['BYPASS_LINEAR'] == 'False':
                                 src_dir = env['SCONSCRIPT_HOME'],
                                 variant_dir = lindiffexp_dir, duplicate = 0,
                                 exports = '''env_linear_diffexp SymLink get_matching_nodes''')
-
-
 
 else:
     ## DO NOT ANALYZE GENE EXPRESSION: USE MOCK EMPTY FILES
@@ -629,8 +626,8 @@ if env['QRE_FIND'] == 'True':
 Clean('.', samples_dir)
 Clean('.', cuffmerge_dir)
 Clean('.', transcript_sequences_dir)
-#Clean('.', cuffquant_dir)
-#Clean('.', cuffdiff_dir)
+Clean('.', cuffquant_dir)
+Clean('.', cuffdiff_dir)
 Clean('.', geneexp_dir)
 #Clean('.', deseq_dir)
 Clean('.', lindiffexp_dir)

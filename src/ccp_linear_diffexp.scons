@@ -13,7 +13,6 @@ except NameError:
     vars.Add('CPUS', '', '')
     vars.Add('EXTRA_PARAMS', '', '')
     vars.Add('SCONSCRIPT_HOME', '', '')
-    vars.Add('STRANDNESS_PARAMS', '', '')
     vars.Add('EXPRESSION_FILES', '', '')
 
     env = Environment(variables = vars,
@@ -32,17 +31,6 @@ with open(env['META']) as csvfile:
         conditions[row['condition']].add(row['sample'])
 
 env['SAMPLES'] = Flatten([list(s) for s in conditions.values()])
-
-#deseq_annotation = cuffmerge
-#deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
-#metafile = File(env['META']).abspath
-#deseq_cpus = env['CPUS']
-#deseq_stranded = 'no'
-#if 'fr-firststrand' in env['CUFFLINKS_PARAMS']:
-#	deseq_stranded = 'yes'
-#else:
-#	deseq_stranded = 'no'
-
 
 if len(conditions.keys()) > 1:
     
@@ -70,20 +58,12 @@ if len(conditions.keys()) > 1:
         diffexp_dir = 'cuffdiff'
         env.Replace(EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS'])
         env['CONDITIONS'] = conditions
-        
     
     ## PREPARE VARIABLES FOR DESEQ
     if 'deseq' in env['DIFF_EXP']:
         diffexp_sconscript = 'ccp_DESeq.scons'
         diffexp_dir = 'DESeq2'
 
-        #deseq = SConscript(os.path.join(deseq_dir, 'ccp_DESeq.scons'),
-        #					src_dir = env['SCONSCRIPT_HOME'],
-        #					variant_dir = deseq_dir, duplicate = 0,
-        #                    exports = '''env deseq_annotation deseq_alignments '''
-        #                            '''metafile deseq_cpus deseq_stranded ''')
-        #Depends(deseq, [cuffmerge, alignments])
-    
     ## COMPUTE DIFFERENTIAL EXPRESSION
     diffexp = SConscript(os.path.join(diffexp_dir, diffexp_sconscript),
                      src_dir = env['SCONSCRIPT_HOME'],
@@ -115,4 +95,4 @@ else:
     print "No conditions to contrast in differential linear expression analysis"
 
 
-
+Return('diffexp')
