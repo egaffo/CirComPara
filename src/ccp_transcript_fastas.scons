@@ -1,14 +1,13 @@
-import os
-
 Import('*')
 
 ## NEEDS: 'gffread' from Cufflinks packages
 #transcript_sequences_annotation: the GFF annotation (e.g. merge.gtf from cuffmerge)
 #transcript_sequences_genome: the genome in FASTA format (single multifasta preferred,not compressed)
+env = env.Clone()
 
 fastas_cmd = 'gffread -w ${TARGET} -g ${SOURCES[0]} ${SOURCES[1]}'
 fastas = env.Command('transcripts.fa', 
-                     [transcript_sequences_genome, transcript_sequences_annotation], 
+                     [env['GENOME_FASTA'], env['ANNOTATION']], 
                      fastas_cmd)
 
 Return('fastas')
