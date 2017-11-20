@@ -70,16 +70,8 @@ cuffdiff_parameters = {}
 
 try:
     env = env.Clone()
-    CPUS        = cuffdiff_cpus
-    CONDITIONS  = cuffdiff_conditions
-    ANNOTATION  = cuffdiff_annotation
-    QUANTITIES  = cuffdiff_quantities
-    EXTRA_PARAMS = cuffdiff_extra_params
-
-    cuffdiff_labels = [get_node_condition(n, cuffdiff_conditions) for n in cuffdiff_quantities]
-   
-    cuffdiff_parameters = format_cuffdiff_sample_arguments(cuffdiff_conditions, cuffdiff_quantities)
-
+    cuffdiff_labels = [get_node_condition(n, env['CONDITIONS']) for n in env['EXPRESSION_FILES']]
+    cuffdiff_parameters = format_cuffdiff_sample_arguments(env['CONDITIONS'], env['EXPRESSION_FILES'])
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
@@ -103,15 +95,11 @@ except NameError:
 
     CPUS = env['CPUS']
     QUANTITIES = ' '.join(env['QUANTITIES'].split('@'))
-    ANNOTATION = env['ANNOTATION']
-    CONDITIONS = env['CONDITIONS']
-    EXTRA_PARAMS = env['EXTRA_PARAMS']
 
     cuffdiff_parameters = {'LABELS': CONDITIONS, 'SAMS': QUANTITIES}
 
-cuffdiff_cmd = 'cuffdiff -q $(--no-update-check -p ' + CPUS + '$) -o ' + Dir('.').path + ' ' +\
-               EXTRA_PARAMS +\
-               ' -L ' + cuffdiff_parameters['LABELS'] + ' ${SOURCES[0]} ' +\
+cuffdiff_cmd = 'cuffdiff -q $(--no-update-check -p $CPUS $) -o ' + Dir('.').path + ' ' +\
+               '$EXTRA_PARAMS -L ' + cuffdiff_parameters['LABELS'] + ' ${SOURCES[0]} ' +\
                cuffdiff_parameters['SAMS']
 
 cuffdiff_targets = ['isoforms.fpkm_tracking', 'genes.fpkm_tracking', 
@@ -125,7 +113,7 @@ cuffdiff_targets = ['isoforms.fpkm_tracking', 'genes.fpkm_tracking',
                     'splicing.diff', 'cds.diff',
                     'promoters.diff', 'read_groups.info', 'run.info']
 cuffdiff = env.Command(cuffdiff_targets,  
-                       [cuffdiff_annotation, cuffdiff_quantities], 
+                       [env['ANNOTATION'], env['EXPRESSION_FILES']], 
                        cuffdiff_cmd)
 
 Return('cuffdiff')

@@ -15,7 +15,6 @@ except NameError:
     vars.Add('SCONSCRIPT_HOME', '', '')
     vars.Add('STRANDNESS_PARAMS', '', '')
     vars.Add('EXPRESSION_FILES', '', '')
-    #vars.Add('', '', '')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -34,12 +33,6 @@ with open(env['META']) as csvfile:
 
 env['SAMPLES'] = Flatten([list(s) for s in conditions.values()])
 
-#cuffdiff_annotation = cuffmerge
-#cuffdiff_quantities = get_matching_nodes(cuffquant, '.*\.cxb')
-#cuffdiff_conditions = conditions
-#cuffdiff_cpus = env['CPUS']
-#cuffdiff_extra_params = env['CUFFDIFF_EXTRA_PARAMS']
-#
 #deseq_annotation = cuffmerge
 #deseq_alignments = get_matching_nodes(runs, alignment_matching_regexp)
 #metafile = File(env['META']).abspath
@@ -75,15 +68,9 @@ if len(conditions.keys()) > 1:
     if 'cuffdiff' in env['DIFF_EXP']:
         diffexp_sconscript = 'ccp_cuffdiff.scons'
         diffexp_dir = 'cuffdiff'
+        env.Replace(EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS'])
+        env['CONDITIONS'] = conditions
         
-        #cuffdiff = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffdiff.scons'),
-        #                      src_dir = env['SCONSCRIPT_HOME'],
-        #                      variant_dir = cuffdiff_dir, duplicate = 0,
-        #                      exports = '''env cuffdiff_cpus cuffdiff_conditions '''
-        #                      '''cuffdiff_annotation cuffdiff_quantities cuffdiff_extra_params''')
-        #
-        #Depends(cuffdiff, cuffquant)
-            
     
     ## PREPARE VARIABLES FOR DESEQ
     if 'deseq' in env['DIFF_EXP']:
