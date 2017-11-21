@@ -271,13 +271,6 @@ for sample in sorted(samples.keys()):
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
 cuffmerge_dir = 'cuffmerge'
 transcript_sequences_dir = 'transcript_sequences'
-cuffquant_dir = 'cuffquant'
-cuffdiff_dir = 'cuffdiff'
-htseq_counts_dir = 'htseq_counts'
-
-## the directory where to collect gene expression results
-geneexp_dir = 'geneexp'
-
 
 if env['BYPASS_LINEAR'] == 'False':
     if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
@@ -330,163 +323,24 @@ if env['BYPASS_LINEAR'] == 'False':
                                       variant_dir = transcript_sequences_dir, duplicate = 0,
                                       exports = '''env''')
     
+
     ## QUANTIFY EXPRESSION
-    alignment_matching_regexp = '.*hisat2_out.*\.bam' #'.*mappings.*\.bam'
-    alignments = get_matching_nodes(runs, alignment_matching_regexp)
+    linexp_dir = 'linear_expression'
+    env_linear_expression = env.Clone()
+    env_linear_expression['RUNS'] = runs
+    env_linear_expression['SAMPLES'] = samples
+    linexp = SConscript(os.path.join(linexp_dir, 'ccp_linear_expression.scons'),
+                                src_dir = env['SCONSCRIPT_HOME'],
+                                variant_dir = linexp_dir, duplicate = 0,
+                                exports = '''env_linear_expression SymLink get_matching_nodes''')
 
-    gene_exp = ''
-    gene_meta = ''
-    sample = ''
-    
-    ballgown_dir = os.path.join(geneexp_dir, 'ballgown')
-    ballgown_files = []
-    
-    if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
-        sample = ','.join(samples.keys())
-        gene_meta = env['META']
-        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
-            ## (RE)COMPUTE GENE ABUNDANCES USING MERGED ANNOTATION
-            gene_exp = []
-            for sample_name in samples.keys():
-                
-                alignment = get_matching_nodes(alignments, '.*' + sample_name + '.*')
-
-                if len(alignment) > 1: 
-                    print 'Warning: multiple alignments matched for sample ' +\
-                          sample_name + '. Will use only the first: ' +\
-                          alignment[0].path
-
-                alignment = alignment[0]
-                
-                gene_ab_targets = [sample_name + '_transcripts.gtf', 
-                                   sample_name + '_gene_abund.tab',
-                                   sample_name + '_cov_refs.gtf']
-                
-                gene_ab_targets = [os.path.join(geneexp_dir, sample_name, t) for t in gene_ab_targets]
-
-                gene_ab_targets.extend([os.path.join(ballgown_dir, 
-                                                     sample_name,
-                                                     tab) for tab in ['e2t.ctab', 
-                                                                    'e_data.ctab',  
-                                                                    'i2t.ctab',  
-                                                                    'i_data.ctab',  
-                                                                    't_data.ctab']]
-                                        )
-                
-                gene_ab_cmd = 'stringtie $( -p $CPUS $) -e -G ${SOURCES[1]} -o ${TARGETS[0]} '\
-                              '-A ${TARGETS[1]} -C ${TARGETS[2]} -b ${TARGETS[3].dir} ${SOURCES[0]}' 
-                gene_ab = env.Command(gene_ab_targets, 
-                                      [alignment, env['ANNOTATION']], 
-                                      gene_ab_cmd)
-                gene_exp.append(gene_ab[1].abspath)
-                ballgown_files.append(gene_ab[3:])
-
-        else:
-            ## JUST COLLECT GENE ABUNDANCES ALREADY COMPUTED WITH GIVEN ANNOTATION
-            # TODO: use finer way to collect files, by grubbing dictionary results from the runs 
-            # gene_exp = []
-            # sample_list = []
-            # for sample_name in samples.keys():
-            #     gene_exp.append(runs[sample_name]['LINEAR_EXPRESSION']['STRINGTIE']['GENE_ABUND'])
-            #     sample_list.append(sample_name)
-            # sample = ','.join(sample_list)
-            # TODO: collect ballgown_files
-            gene_exp = get_matching_nodes(runs, '.*gene_abund\.tab')
-            ballgown_files = get_matching_nodes(runs, '.*\.ctab')
-
-        env.Replace(EXPRESSION_FILES = ballgown_files)
-
-       
-    if len(samples.keys()) > 1:        
-        if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or ('cuffdiff' in env['DIFF_EXP']):
-            cuffquant_annotation = env['ANNOTATION']
-            cuffquant_alignments = alignments
-            cuffquant_genome_fasta = env['GENOME_FASTA']
-            cuffquant_extra_params = env['CUFFQUANT_EXTRA_PARAMS']
-            
-            cuffquant_cpus = env['CPUS']
-            
-            cuffquant = SConscript(os.path.join(cuffquant_dir, 'ccp_cuffquant.scons'),
-                                   src_dir = env['SCONSCRIPT_HOME'],
-                                   variant_dir = cuffquant_dir, duplicate = 0,
-                                   exports = '''env cuffquant_alignments cuffquant_annotation '''
-                                   '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
-            
-            env.Replace(EXPRESSION_FILES = get_matching_nodes(cuffquant, '.*\.cxb'))
-            
-            Depends(cuffquant, [env['ANNOTATION'], alignments])
-            
-            ## Normalize expression values: CUFFNORM
-            env_cuffnorm = env.Clone()
-            env_cuffnorm['QUANT_FILES']= get_matching_nodes(cuffquant, '.*\.cxb')
-            env_cuffnorm['EXTRA_PARAMS']= env['CUFFNORM_EXTRA_PARAMS'] #TODO: set strandness when required
-            env_cuffnorm['LABELS'] = conditions
-            
-            cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffnorm.scons'),
-                                  src_dir = env['SCONSCRIPT_HOME'],
-                                  variant_dir = cuffdiff_dir, duplicate = 0,
-                                  exports = '''env_cuffnorm''')
-            
-            Depends(cuffnorm, cuffquant)
-            
-            gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
-            gene_meta = File(get_matching_nodes(cuffnorm, ".*read_groups.info")[0]).abspath
-            
-    else:
-        ## case of only one sample
-        if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
-            gene_exp = get_matching_nodes(runs, '.*genes.fpkm_tracking')
-            gene_meta = ''
-            #link_cufflinks_dir = env.Command(cuffdiff_dir, gene_exp[0].dir, SymLink)
-            sample = str(samples.keys()[0])
-
-    if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
-        ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
-        htseq_count_annotation = env['ANNOTATION']
-        htseq_counts = []
-        for algn in get_matching_nodes(runs, alignment_matching_regexp):
-            sample_name = os.path.splitext(File(algn).name)[0]
-            mapping_file = algn
-            htseq_count_cpus = env['CPUS']
-            htseq_count_stranded = 'no'
-            if '--rna-strandness FR' in env['HISAT2_EXTRA_PARAMS']: 
-                htseq_count_stranded = 'yes'
-            ## GET READ COUNTS
-            htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.scons'), 
-                                     src_dir = env['SCONSCRIPT_HOME'], 
-                                     variant_dir = htseq_counts_dir, duplicate = 0, 
-                                     exports = '''env mapping_file sample_name '''
-                                               '''htseq_count_annotation htseq_count_cpus '''
-                                               '''htseq_count_stranded ''')
-            htseq_counts.append(htseq_count)
-
-        env.Replace(EXPRESSION_FILES = htseq_counts)
-        ## TODO: fix gene expression report for htseq_count. 
-        gene_meta = env['META'] # 
-        gene_exp = htseq_counts #
-
-    ## REPORT GENE EXPRESSION
-    gene_exp_analysis_template = os.path.join("$SCONSCRIPT_HOME", "gene_expression_analysis.Rmd")
-    gene_exp_analysis_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[0].abspath}"); '''\
-                            '''meta.file <- "${SOURCES[0].abspath}"; '''\
-                            '''gene.xpr.file <- "${','.join([str(s.abspath) for s in SOURCES][1:])}"; '''\
-                            '''linear.method <- "${ ','.join( LINEAR_EXPRESSION_METHODS ) }"; '''\
-                            '''rmarkdown::render(input = "''' + \
-                            str(gene_exp_analysis_template) + '''", '''\
-                            '''output_file = "$TARGET.abspath", '''\
-                            '''intermediates_dir = dirname("${TARGETS[0].abspath}") )' '''
-    gene_exp_analysis_targets = [os.path.join(geneexp_dir, "gene_expression_analysis.html"),
-                                 os.path.join(geneexp_dir, "gene_expression_FPKM_table.csv")]
-                                # Figs_geneexp
-    gene_exp_analysis_sources = [gene_meta, gene_exp]
-    gene_exp_analysis = env.Command(gene_exp_analysis_targets, 
-                                    gene_exp_analysis_sources, 
-                                    gene_exp_analysis_cmd)
+    gene_exp = linexp['GENE_EXP']
 
     ## DIFFERENTIAL LINEAR EXPRESSION
     if not env['DIFF_EXP'] == '':
         lindiffexp_dir = 'linear_diffexp'
         env_linear_diffexp = env.Clone()
+        env_linear_diffexp['EXPRESSION_FILES'] = linexp['EXPRESSION_FILES']
         lindiffexp = SConscript(os.path.join(lindiffexp_dir,
                                              'ccp_linear_diffexp.scons'),
                                 src_dir = env['SCONSCRIPT_HOME'],
@@ -560,13 +414,15 @@ circrna_collect = SConscript(os.path.join(circRNA_collect_dir,
                             variant_dir = circRNA_collect_dir, duplicate = 0,
                             exports = '''env_circrna_collect''')
 
-## ANALYZE AND REPORT CIRCRNAS                  
+## ANALYZE AND REPORT CIRCRNAS 
+
+
 circrna_analyze_dir = 'circrna_analyze'
 env_circrna_analyze = env.Clone()
 env_circrna_analyze['META'] = File(env['META']).abspath
 env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
 env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
-env_circrna_analyze['GENEEXP'] = gene_exp_analysis[1] #gene_exp
+env_circrna_analyze['GENEEXP'] = linexp['GENE_EXP_ANALYSIS'][1] #gene_exp_analysis[1] #gene_exp
 env_circrna_analyze['GENEMETA'] = env_circrna_analyze['META'] #File(gene_meta).abspath
 if int(env_circrna_analyze['MIN_METHODS']) > len(env['CIRCRNA_METHODS']):
     env_circrna_analyze['MIN_METHODS'] = len(env['CIRCRNA_METHODS'])
@@ -625,10 +481,7 @@ if env['QRE_FIND'] == 'True':
 Clean('.', samples_dir)
 Clean('.', cuffmerge_dir)
 Clean('.', transcript_sequences_dir)
-Clean('.', cuffquant_dir)
-Clean('.', cuffdiff_dir)
-Clean('.', geneexp_dir)
-Clean('.', htseq_counts_dir)
+Clean('.', linexp_dir)
 Clean('.', lindiffexp_dir)
 Clean('.', circRNA_collect_dir)
 Clean('.', circrna_analyze_dir)
