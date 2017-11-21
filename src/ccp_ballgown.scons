@@ -41,7 +41,13 @@ ballgown_R_cmd = '''library(data.table);'''\
 ballgown_cmd = '''Rscript -e "''' + ballgown_R_cmd + '''"'''
 
 ballgown = env.Command(ballgown_targets, 
-                        ballgown_sources,
-                        ballgown_cmd)
+                       ballgown_sources,
+                       ballgown_cmd)
 
-Return('ballgown')
+results = {'GENE_EXPRESSION': ballgown, 
+           'META': env['META'], 
+           'GENE_DIFF_TESTS': ballgown, 
+           'ALL': ballgown}
+
+
+Return('results')

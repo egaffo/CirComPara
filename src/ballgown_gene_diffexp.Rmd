@@ -1,0 +1,47 @@
+---
+title: 'CirComPara: differential gene expression by Ballgown'
+date: "`r Sys.Date()`"  
+output: 
+  html_document: 
+    keep_md: no
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    theme: "readable"
+---
+
+```{r global_options, include=FALSE}
+## variables to be defined in parent frame
+# results.dir <- "ballgown/"
+# meta.file <- "meta.csv"
+# gene.de.file <- "any"
+# gene.expr <- "any"
+# child.Rmd <- $SCONSCRIPT_HOME/_lindiffexp.Rmd
+
+library(data.table)
+library(knitr)
+
+dir.create(path = results.dir, showWarnings = F, recursive = T)
+knitr::opts_chunk$set(fig.width = 7, 
+                      fig.height = 4, 
+                      dev = c('png'), 
+                      fig.pos = "center",
+                      fig.path = file.path(results.dir, paste0('Figs_deg_ballgown', .Platform$file.sep)),
+                      echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir = results.dir)
+```
+
+```{r load data}
+
+print("Report for Ballgown differential expression analysis not yet implemented")
+# ```{r, child=child.Rmd}
+# ```
+
+```
