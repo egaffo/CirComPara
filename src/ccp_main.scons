@@ -325,11 +325,11 @@ if env['BYPASS_LINEAR'] == 'False':
     
 
     ## QUANTIFY EXPRESSION
-    linexp_dir = 'linear_expression'
+    linexp_dir = 'linear_quantexp'
     env_linear_expression = env.Clone()
     env_linear_expression['RUNS'] = runs
     env_linear_expression['SAMPLES'] = samples
-    linexp = SConscript(os.path.join(linexp_dir, 'ccp_linear_expression.scons'),
+    linexp = SConscript(os.path.join(linexp_dir, 'ccp_linear_quantexp.scons'),
                                 src_dir = env['SCONSCRIPT_HOME'],
                                 variant_dir = linexp_dir, duplicate = 0,
                                 exports = '''env_linear_expression SymLink get_matching_nodes''')
