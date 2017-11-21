@@ -269,90 +269,23 @@ for sample in sorted(samples.keys()):
 	Depends(run_sample, env['GENEPRED']) 
 
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
-cuffmerge_dir = 'cuffmerge'
-transcript_sequences_dir = 'transcript_sequences'
-
+linexp_dir = 'linear_expression'
 if env['BYPASS_LINEAR'] == 'False':
-    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
-        ## MERGE THE TRANSCRIPTS PREDICTED IN THE VARIOUS SAMPLES
-        transcripts_gtf_files = get_matching_nodes(runs, '.*transcripts\.gtf')
-
-        if len(transcripts_gtf_files) > 1:        
-            if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
-                cuffmerge_cpus = env['CPUS']
-                cuffmerge_annotation = env['ANNOTATION']
-                cuffmerge_genome_fasta = env['GENOME_FASTA']
-                cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'ccp_cuffmerge.scons'),
-                                        src_dir = env['SCONSCRIPT_HOME'],
-                                        variant_dir = cuffmerge_dir, duplicate = 0,
-                                        exports = 'env transcripts_gtf_files cuffmerge_cpus '''
-                                        '''cuffmerge_annotation cuffmerge_genome_fasta''')
-                
-                env.Replace(ANNOTATION = cuffmerge)
-
-            if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
-                stringtiemerge_list_target = os.path.join(cuffmerge_dir,
-                                                          'transcripts_gtf_files_mergelist.txt')
-                stringtiemerge_list_cmd = '''echo -ne '${"\\\\n".join([str(s.path) '''\
-                                          '''for s in SOURCES])}' > ${TARGETS[0]}''' 
-                stringtiemerge_list = env.Command(stringtiemerge_list_target,
-                                                  transcripts_gtf_files,
-                                                  stringtiemerge_list_cmd)
-
-                stringtiemerge_targets = [os.path.join(cuffmerge_dir, 'stringtiemerge.gtf')]
-                stringtiemerge_cmd = 'stringtie --merge -p $CPUS -o ${TARGETS[0]} '\
-                
-                if not env['ANNOTATION'] == '':
-                    stringtiemerge_cmd = stringtiemerge_cmd + ' -G ${SOURCES[1]}' 
-                
-                stringtiemerge_cmd = stringtiemerge_cmd + ' ${SOURCES[0]}'
-                
-                stringtiemerge = env.Command(stringtiemerge_targets,
-                                            [stringtiemerge_list, env['ANNOTATION']],
-                                            stringtiemerge_cmd)
-                
-                env.Replace(ANNOTATION = stringtiemerge)
-                
-        elif len(transcripts_gtf_files) == 1:
-            env.Replace(ANNOTATION = transcripts_gtf_files)
-    
-    ## RETRIEVE TRANSCRIPT SEQUENCES
-    transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
-                                                   'ccp_transcript_fastas.scons'), 
-                                      src_dir = env['SCONSCRIPT_HOME'],
-                                      variant_dir = transcript_sequences_dir, duplicate = 0,
-                                      exports = '''env''')
-    
-
-    ## QUANTIFY EXPRESSION
-    linexp_dir = 'linear_quantexp'
     env_linear_expression = env.Clone()
-    env_linear_expression['RUNS'] = runs
     env_linear_expression['SAMPLES'] = samples
-    linexp = SConscript(os.path.join(linexp_dir, 'ccp_linear_quantexp.scons'),
-                                src_dir = env['SCONSCRIPT_HOME'],
-                                variant_dir = linexp_dir, duplicate = 0,
-                                exports = '''env_linear_expression SymLink get_matching_nodes''')
-
-    gene_exp = linexp['GENE_EXP']
-
-    ## DIFFERENTIAL LINEAR EXPRESSION
-    if not env['DIFF_EXP'] == '':
-        lindiffexp_dir = 'linear_diffexp'
-        env_linear_diffexp = env.Clone()
-        env_linear_diffexp['EXPRESSION_FILES'] = linexp['EXPRESSION_FILES']
-        lindiffexp = SConscript(os.path.join(lindiffexp_dir,
-                                             'ccp_linear_diffexp.scons'),
-                                src_dir = env['SCONSCRIPT_HOME'],
-                                variant_dir = lindiffexp_dir, duplicate = 0,
-                                exports = '''env_linear_diffexp SymLink get_matching_nodes''')
-
+    env_linear_expression['RUNS'] = runs
+    linexp = env.SConscript(os.path.join(linexp_dir,
+                                         'ccp_linear_expression.scons'),
+                            src_dir = env['SCONSCRIPT_HOME'],
+                            variant_dir = linexp_dir, duplicate = 0,
+                            exports = '''env_linear_expression '''
+                                      '''SymLink '''
+                                      '''get_matching_nodes''')
 else:
     ## DO NOT ANALYZE GENE EXPRESSION: USE MOCK EMPTY FILES
     print "BYPASS_LINEAR = " + env['BYPASS_LINEAR'] +\
           ": skipping linear transcript analysis"
     
-    cuffmerge = env['ANNOTATION']
     gene_exp = env.Command(os.path.join(geneexp_dir, 'empty_geneexp.csv'), 
     			'', 'touch $TARGET')
     gene_meta = ''
@@ -432,7 +365,7 @@ circrna_analyze = SConscript(os.path.join(circrna_analyze_dir,
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = circrna_analyze_dir, duplicate = 0,
                             exports = '''env_circrna_analyze''')
-Depends(circrna_analyze, gene_exp)
+Depends(circrna_analyze, linexp['GENE_EXP_ANALYSIS'][1])#gene_exp)
 
 ## collect read processing statistics
 clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
@@ -467,7 +400,7 @@ read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_stati
 qre_dir = 'qre'
 if env['QRE_FIND'] == 'True':
     ## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
-    qre_GTF = cuffmerge
+    qre_GTF = env['ANNOTATION'] #cuffmerge
     qre_GENOME = env['GENOME_FASTA']
     qre = SConscript(os.path.join(qre_dir, 'ccp_QRE_finder.scons'),
                      src_dir = env['SCONSCRIPT_HOME'],
@@ -479,10 +412,7 @@ if env['QRE_FIND'] == 'True':
 
 ## CLEAN DIRS WHEN CLEANING TARGETS
 Clean('.', samples_dir)
-Clean('.', cuffmerge_dir)
-Clean('.', transcript_sequences_dir)
 Clean('.', linexp_dir)
-Clean('.', lindiffexp_dir)
 Clean('.', circRNA_collect_dir)
 Clean('.', circrna_analyze_dir)
 Clean('.', read_stats_collect_dir)
