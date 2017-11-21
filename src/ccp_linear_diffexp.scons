@@ -51,6 +51,7 @@ if len(conditions.keys()) > 1:
                                           SymLink)
         
         env.Replace(EXPRESSION_FILES = bg_dirs)
+        #TODO: report_template = 'ballgown_gene_diffexp.Rmd'
 
     ## PREPARE VARIABLES FOR CUFFDIFF
     if 'cuffdiff' in env['DIFF_EXP']:
@@ -58,11 +59,16 @@ if len(conditions.keys()) > 1:
         diffexp_dir = 'cuffdiff'
         env.Replace(EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS'])
         env['CONDITIONS'] = conditions
-    
+
+        report_template = "cuffdiff_gene_diffexp.Rmd"
+        
+   
     ## PREPARE VARIABLES FOR DESEQ
     if 'deseq' in env['DIFF_EXP']:
         diffexp_sconscript = 'ccp_DESeq.scons'
         diffexp_dir = 'DESeq2'
+        #TODO: report_template = 'DESeq_gene_diffexp.Rmd'
+        
 
     ## COMPUTE DIFFERENTIAL EXPRESSION
     diffexp = SConscript(os.path.join(diffexp_dir, diffexp_sconscript),
@@ -70,26 +76,26 @@ if len(conditions.keys()) > 1:
                      variant_dir = diffexp_dir, duplicate = 0,
                      exports = '''env''')
 
-
     ## MAKE DIFFERENTIAL LINEAR EXPRESSION REPORT
-    #gene_exp = get_matching_nodes(cuffdiff, ".*genes.read_group_tracking")
-    #gene_meta = File(get_matching_nodes(cuffdiff, ".*read_groups.info")[0]).abspath
-    #
-    #gene_diffexp = get_matching_nodes(cuffdiff, ".*gene_exp.diff") 
-    #cuffdiff_gene_diffexp_analysis_template = os.path.join("$SCONSCRIPT_HOME", 
-    #							"cuffdiff_gene_diffexp.Rmd")
-    #report_cuffdiff_target = [os.path.join(os.path.dirname(gene_diffexp[0].path), 
-    #		     	  	       "cuffdiff_gene_diffexp.html")]
-    #report_cuffdiff_cmd = '''Rscript -e 'results.dir <- dirname("${SOURCES[0].abspath}"); '''\
-    #	                '''meta.file <- "''' + str(gene_meta) + '''"; '''\
-    #                    '''gene.de.file <- "${SOURCES[0].abspath}"; '''\
-    #                    '''rmarkdown::render(input = "''' + \
-    #                    str(cuffdiff_gene_diffexp_analysis_template) + '''", '''\
-    #	                '''output_file = "$TARGET.abspath", '''\
-    #	                '''intermediates_dir = dirname("${SOURCES[0].abspath}") )' '''
-    #report_cuffdiff = env.Command(report_cuffdiff_target, 
-    #                            [gene_diffexp],
-    #                            report_cuffdiff_cmd)
+    gene_exp = diffexp['GENE_EXPRESSION']
+    gene_meta = diffexp['META']
+    gene_diffexp = diffexp['GENE_DIFF_TESTS']
+
+    gene_diffexp_analysis_template = os.path.join("$SCONSCRIPT_HOME", 
+    							report_template)
+    report_cuffdiff_target = [report_template.split('.')[0] + ".html",
+                              'DEG_tests_by_contrast.csv']
+    report_cuffdiff_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[1].abspath}"); '''\
+    	                '''meta.file <- "${SOURCES[1].abspath}"; '''\
+                        '''child.Rmd <- file.path("$SCONSCRIPT_HOME", "_lindiffexp.Rmd"); '''\
+                        '''gene.de.file <- "${SOURCES[0].abspath}"; '''\
+                        '''rmarkdown::render(input = "''' + \
+                        str(gene_diffexp_analysis_template) + '''", '''\
+    	                '''output_file = "${TARGETS[0].abspath}", '''\
+    	                '''intermediates_dir = "${TARGETS[0].dir}" )' '''
+    report_cuffdiff = env.Command(report_cuffdiff_target, 
+                                [gene_diffexp, gene_meta],
+                                report_cuffdiff_cmd)
 
 else:
     print "No conditions to contrast in differential linear expression analysis"

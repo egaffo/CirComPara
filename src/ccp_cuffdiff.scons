@@ -116,4 +116,9 @@ cuffdiff = env.Command(cuffdiff_targets,
                        [env['ANNOTATION'], env['EXPRESSION_FILES']], 
                        cuffdiff_cmd)
 
-Return('cuffdiff')
+results = {'GENE_EXPRESSION': cuffdiff[9], #genes.read_group_tracking
+           'META': cuffdiff[19], #read_groups.info 
+           'GENE_DIFF_TESTS': cuffdiff[13], #gene_exp.diff 
+           'ALL': cuffdiff}
+
+Return('results')
