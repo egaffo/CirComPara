@@ -273,7 +273,7 @@ cuffmerge_dir = 'cuffmerge'
 transcript_sequences_dir = 'transcript_sequences'
 cuffquant_dir = 'cuffquant'
 cuffdiff_dir = 'cuffdiff'
-deseq_dir = 'deseq'
+htseq_counts_dir = 'htseq_counts'
 
 ## the directory where to collect gene expression results
 geneexp_dir = 'geneexp'
@@ -443,7 +443,6 @@ if env['BYPASS_LINEAR'] == 'False':
     if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
         ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
         htseq_count_annotation = env['ANNOTATION']
-        htseq_counts_dir = 'htseq_counts'
         htseq_counts = []
         for algn in get_matching_nodes(runs, alignment_matching_regexp):
             sample_name = os.path.splitext(File(algn).name)[0]
