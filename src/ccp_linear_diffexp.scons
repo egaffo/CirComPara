@@ -51,7 +51,8 @@ if len(conditions.keys()) > 1:
                                           SymLink)
         
         env.Replace(EXPRESSION_FILES = bg_dirs)
-        #TODO: report_template = 'ballgown_gene_diffexp.Rmd'
+
+        report_template = 'ballgown_gene_diffexp.Rmd'
 
     ## PREPARE VARIABLES FOR CUFFDIFF
     if 'cuffdiff' in env['DIFF_EXP']:
@@ -59,7 +60,7 @@ if len(conditions.keys()) > 1:
         diffexp_dir = 'cuffdiff'
         env.Replace(EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS'])
         env['CONDITIONS'] = conditions
-
+        
         report_template = "cuffdiff_gene_diffexp.Rmd"
         
    
@@ -67,7 +68,8 @@ if len(conditions.keys()) > 1:
     if 'deseq' in env['DIFF_EXP']:
         diffexp_sconscript = 'ccp_DESeq.scons'
         diffexp_dir = 'DESeq2'
-        #TODO: report_template = 'DESeq_gene_diffexp.Rmd'
+        
+        report_template = 'DESeq_gene_diffexp.Rmd'
         
 
     ## COMPUTE DIFFERENTIAL EXPRESSION

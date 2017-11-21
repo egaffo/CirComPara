@@ -83,25 +83,15 @@ def writeDESeqSampleTable(target, source, env):
 
 try:
     env = env.Clone()
-    #CPUS        = deseq_cpus
-    #META        = metafile
-    #ANNOTATION  = deseq_annotation
-    #QUANTITIES  = deseq_alignments
-    #STRANDED    = deseq_stranded
-
 except NameError as ne:
     print 'ccp_DESeq.scons: cannot import', ne, '. Assume command line script call.'
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
     vars.Add('CPUS', 'Set number of CPUs', '4')
-    #vars.Add('QUANTITIES', 'Comma separated list of alignment files (SAM/BAM)', 
-    #         'cond1_1.bam,cond1_2.bam,cond2_1.bam,cond2_2.bam') 
     vars.Add('ANNOTATION', 'Gene annotation (a.i. an Ensembl GFF)', 'merged.gtf')
     vars.Add('META', '''Conditions to test differential expression in a comma separated '''\
              '''values (CSV) table. Required colums are 'sample','condition','file' ''', 
              'meta.csv')
-    #vars.Add('STRANDED', '''Tells whether strand orientation should be considedred in '''\
-    #         '''expression read count. ['no', 'fr-firststrand'] ''', 'no')
     vars.Add('EXPRESSION_FILES', 'Expression table files (comma separated), '\
              'as output by hgtseq-count', '')
 
@@ -113,39 +103,13 @@ except NameError as ne:
         print "Run sample: unknown variables", unknown.keys()
         Exit(1)
 
-    #CPUS       = env['CPUS']
-    #QUANTITIES = env['QUANTITIES'].split(',')
-    #ANNOTATION = env['ANNOTATION']
-    #META       = env['META']
-    #STRANDED   = env['STRANDED']
     env.Replace(EXPRESSION_FILES = env['EXPRESSION_FILES'].split(','))
 
 env.SetDefault(SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src'))
 
-### COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
-#htseq_count_annotation = ANNOTATION
-#htseq_counts_dir = 'htseq_counts'
-#htseq_counts = []
-#for algn in QUANTITIES:
-#    ## GET SAMPLE NAME
-#    #sample_name = os.path.splitext(os.path.basename(File(algn).path))[0]
-#    sample_name = os.path.splitext(File(algn).name)[0]
-#    mapping_file = algn
-#    htseq_count_cpus = CPUS
-#    htseq_count_stranded = STRANDED
-#    ## GET READ COUNTS
-#    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.scons'), 
-#                             src_dir = SCONSCRIPT_HOME, 
-#                             variant_dir = htseq_counts_dir, duplicate = 0, 
-#                             exports = '''env mapping_file sample_name '''
-#                                       '''htseq_count_annotation htseq_count_cpus '''
-#                                       '''htseq_count_stranded ''')
-#    htseq_counts.append(htseq_count)
-
-
-raw_count_matrix = ''
-norm_count_matrix = ''
-deTests = ''
+raw_count_matrix = None
+norm_count_matrix = None
+deTests = None
 
 #htseq_counts
 if len(env['EXPRESSION_FILES']) > 1:
@@ -195,7 +159,9 @@ if len(env['EXPRESSION_FILES']) > 1:
     Clean('.', deTests_file)
     Clean('.', deTests_report_dir)
 
-#Clean('.', htseq_counts_dir)
+results = {'GENE_EXPRESSION': norm_count_matrix[0], 
+           'META': env['META'], 
+           'GENE_DIFF_TESTS': deTests[0], 
+           'ALL': [raw_count_matrix, norm_count_matrix, deTests]}
 
-#Return('htseq_counts raw_count_matrix norm_count_matrix deTests')
-Return('raw_count_matrix norm_count_matrix deTests')
+Return('results')
