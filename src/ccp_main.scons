@@ -399,7 +399,7 @@ if env['BYPASS_LINEAR'] == 'False':
        
     if len(samples.keys()) > 1:        
         if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or ('cuffdiff' in env['DIFF_EXP']):
-            cuffquant_annotation = cuffmerge
+            cuffquant_annotation = env['ANNOTATION']
             cuffquant_alignments = alignments
             cuffquant_genome_fasta = env['GENOME_FASTA']
             cuffquant_extra_params = env['CUFFQUANT_EXTRA_PARAMS']
@@ -414,7 +414,7 @@ if env['BYPASS_LINEAR'] == 'False':
             
             env.Replace(EXPRESSION_FILES = get_matching_nodes(cuffquant, '.*\.cxb'))
             
-            Depends(cuffquant, [cuffmerge, alignments])
+            Depends(cuffquant, [env['ANNOTATION'], alignments])
             
             ## Normalize expression values: CUFFNORM
             env_cuffnorm = env.Clone()
