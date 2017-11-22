@@ -1,0 +1,68 @@
+import os 
+
+Import('*')
+
+try:
+    env = env_circular_expression.Clone()
+except NameError, ne:
+    vars = Variables('vars.py')
+    vars.Add('', '', '')
+
+    env = Environment(ENV=os.environ, SHELL = '/bin/bash',
+                      variables=vars)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+runs    = env['RUNS']
+samples = env['SAMPLES']
+linexp  = env['LINEXP'] 
+
+circRNA_collect_dir = 'circRNA_collection'
+
+env_merge_sample_circrnas = env.Clone()
+env_merge_sample_circrnas['SAMPLES'] = samples
+env_merge_sample_circrnas['RUNS'] = runs
+merge_sample_circrnas = SConscript(os.path.join(circRNA_collect_dir, 
+					'ccp_merge_sample_circrnas.scons'),
+                            src_dir = env['SCONSCRIPT_HOME'], 
+                            variant_dir = circRNA_collect_dir, duplicate = 0,
+                            exports = '''env_merge_sample_circrnas get_matching_nodes''')
+
+
+env_circrna_collect = env.Clone()
+env_circrna_collect['CSVS'] = merge_sample_circrnas
+env_circrna_collect['GTF'] = env['ANNOTATION'] #cuffmerge
+circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 
+                                          'ccp_collect_circrnas.scons'), 
+                            src_dir = env['SCONSCRIPT_HOME'], 
+                            variant_dir = circRNA_collect_dir, duplicate = 0,
+                            exports = '''env_circrna_collect''')
+
+## ANALYZE AND REPORT CIRCRNAS 
+circrna_analyze_dir = 'circrna_analyze'
+env_circrna_analyze = env.Clone()
+env_circrna_analyze['META'] = File(env['META']).abspath
+env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
+env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
+env_circrna_analyze['GENEEXP'] = linexp['GENE_EXP_ANALYSIS'][1] #gene_exp_analysis[1] #gene_exp
+env_circrna_analyze['GENEMETA'] = env_circrna_analyze['META'] #File(gene_meta).abspath
+if int(env_circrna_analyze['MIN_METHODS']) > len(env['CIRCRNA_METHODS']):
+    env_circrna_analyze['MIN_METHODS'] = len(env['CIRCRNA_METHODS'])
+
+circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 
+                                          'ccp_analyze_circrnas.scons'),
+                            src_dir = env['SCONSCRIPT_HOME'],
+                            variant_dir = circrna_analyze_dir, duplicate = 0,
+                            exports = '''env_circrna_analyze''')
+Depends(circrna_analyze, linexp['GENE_EXP_ANALYSIS'][1])#gene_exp)
+
+Clean('.', circRNA_collect_dir)
+Clean('.', circrna_analyze_dir)
+
+
+results = {}
+
+Return('results')

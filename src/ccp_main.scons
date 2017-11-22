@@ -268,7 +268,10 @@ for sample in sorted(samples.keys()):
                                                   'circexplorer2_tophat']]):
 	Depends(run_sample, env['GENEPRED']) 
 
-## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
+## LINEAR EXPRESSION: 
+## - TRANSCRIPTOME RECONSTRUCTION, 
+## - NORMALIZED QUANTIFICATION
+## - DIFFERENTIAL EXPRESSION
 linexp_dir = 'linear_expression'
 if env['BYPASS_LINEAR'] == 'False':
     env_linear_expression = env.Clone()
@@ -291,8 +294,33 @@ else:
     gene_meta = ''
     gene_exp_analysis = ['', gene_exp]
 
-### COLLECT CIRCRNA RESULTS
-circRNA_collect_dir = 'circRNA_collection'
+### COLLECT AND REPORT CIRCRNA RESULTS
+circexp_dir = 'circular_expression'
+env_circular_expression = env.Clone()
+env_circular_expression['SAMPLES'] = samples
+env_circular_expression['RUNS'] = runs
+env_circular_expression['LINEXP'] = linexp
+circexp = env.SConscript(os.path.join(circexp_dir,
+                                      'ccp_circular_expression.scons'),
+                         src_dir = env['SCONSCRIPT_HOME'],
+                         variant_dir = circexp_dir, duplicate = 0,
+                         exports = '''env_circular_expression '''
+                                   '''SymLink '''
+                                   '''get_matching_nodes''')
+
+
+## COLLECT AND REPORT READ PROCESSING STATISTICS
+clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
+mapped_reads_linear_stats_files = get_matching_nodes(runs, '.*processings.*hisat2\.log')
+read_stats_collect_dir = 'read_stats_collect'
+reads_stats_collect_cmd = '''grep --with-filename Input ''' +\
+                          ' '.join(f.path for f in clean_reads_stats_files) +\
+                          ''' > $TARGET && grep --with-filename "." ''' +\
+                          ' '.join(f.path for f in mapped_reads_linear_stats_files) +\
+                          ''' >> $TARGET'''
+reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_stats_collect.txt'), 
+                              [clean_reads_stats_files, mapped_reads_linear_stats_files],
+                              reads_stats_collect_cmd)
 
 ##COLLECT CIRCRNA ALIGNMENT NUMBER
 # testrealign mapped reads
@@ -323,63 +351,10 @@ collect_circrna_maps_counts_sources = [testrealign_mappings, find_circ_mappings,
 				       bwa_mappings, star_mappings, 
 				       tophat_mappings]
 collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
-collect_circrna_maps_counts = env.Command(os.path.join(circRNA_collect_dir, 
+collect_circrna_maps_counts = env.Command(os.path.join(read_stats_collect_dir, 
                                                        'circrna_maps_counts.txt'), 
                                           collect_circrna_maps_counts_sources, 
                                           collect_circrna_maps_counts_cmd)
-
-env_merge_sample_circrnas = env.Clone()
-env_merge_sample_circrnas['SAMPLES'] = samples
-env_merge_sample_circrnas['RUNS'] = runs
-merge_sample_circrnas = SConscript(os.path.join(circRNA_collect_dir, 
-					'ccp_merge_sample_circrnas.scons'),
-                            src_dir = env['SCONSCRIPT_HOME'], 
-                            variant_dir = circRNA_collect_dir, duplicate = 0,
-                            exports = '''env_merge_sample_circrnas get_matching_nodes''')
-
-
-env_circrna_collect = env.Clone()
-env_circrna_collect['CSVS'] = merge_sample_circrnas
-env_circrna_collect['GTF'] = env['ANNOTATION'] #cuffmerge
-circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 
-                                          'ccp_collect_circrnas.scons'), 
-                            src_dir = env['SCONSCRIPT_HOME'], 
-                            variant_dir = circRNA_collect_dir, duplicate = 0,
-                            exports = '''env_circrna_collect''')
-
-## ANALYZE AND REPORT CIRCRNAS 
-
-
-circrna_analyze_dir = 'circrna_analyze'
-env_circrna_analyze = env.Clone()
-env_circrna_analyze['META'] = File(env['META']).abspath
-env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
-env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
-env_circrna_analyze['GENEEXP'] = linexp['GENE_EXP_ANALYSIS'][1] #gene_exp_analysis[1] #gene_exp
-env_circrna_analyze['GENEMETA'] = env_circrna_analyze['META'] #File(gene_meta).abspath
-if int(env_circrna_analyze['MIN_METHODS']) > len(env['CIRCRNA_METHODS']):
-    env_circrna_analyze['MIN_METHODS'] = len(env['CIRCRNA_METHODS'])
-
-circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 
-                                          'ccp_analyze_circrnas.scons'),
-                            src_dir = env['SCONSCRIPT_HOME'],
-                            variant_dir = circrna_analyze_dir, duplicate = 0,
-                            exports = '''env_circrna_analyze''')
-Depends(circrna_analyze, linexp['GENE_EXP_ANALYSIS'][1])#gene_exp)
-
-## collect read processing statistics
-clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
-mapped_reads_linear_stats_files = get_matching_nodes(runs, '.*processings.*hisat2\.log')
-read_stats_collect_dir = 'read_stats_collect'
-reads_stats_collect_cmd = '''grep --with-filename Input ''' +\
-                          ' '.join(f.path for f in clean_reads_stats_files) +\
-                          ''' > $TARGET && grep --with-filename "." ''' +\
-                          ' '.join(f.path for f in mapped_reads_linear_stats_files) +\
-                          ''' >> $TARGET'''
-reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_stats_collect.txt'), 
-                              [clean_reads_stats_files, mapped_reads_linear_stats_files],
-                              reads_stats_collect_cmd)
-#Depends(reads_stats_collect, runs)
 
 ## report read processing statistics
 read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
@@ -397,6 +372,7 @@ read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_stati
 				collect_circrna_maps_counts_sources],
                                 read_stats_report_cmd)
 
+## ADDITIONAL ANALYSIS
 qre_dir = 'qre'
 if env['QRE_FIND'] == 'True':
     ## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
@@ -411,10 +387,9 @@ if env['QRE_FIND'] == 'True':
 
 
 ## CLEAN DIRS WHEN CLEANING TARGETS
+Clean('.', indexes_dir)
 Clean('.', samples_dir)
 Clean('.', linexp_dir)
-Clean('.', circRNA_collect_dir)
-Clean('.', circrna_analyze_dir)
+Clean('.', circexp_dir)
 Clean('.', read_stats_collect_dir)
 Clean('.', qre_dir)
-Clean('.', indexes_dir)
