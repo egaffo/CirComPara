@@ -60,7 +60,7 @@ out_dir = 'find_circ_out'
 env.SetDefault(FINDCIRC_EXTRA_PARAMS = '')
 
 cat_cmd = 'cat'
-if env['READS'][0].path.endswith('.gz'):
+if File(env['READS'][0]).path.endswith('.gz'):
     cat_cmd = 'zcat'
 
 find_circ_cmd = 'unmapped2anchors.py -Q <( ' + cat_cmd + ' ${SOURCES} ) |' + \
