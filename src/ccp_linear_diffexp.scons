@@ -32,6 +32,9 @@ with open(env['META']) as csvfile:
 
 env['SAMPLES'] = Flatten([list(s) for s in conditions.values()])
 
+diffexp = None
+report  = None
+
 if len(conditions.keys()) > 1:
     
     ## PREPARE VARIABLES FOR BALLGOWN
@@ -85,9 +88,9 @@ if len(conditions.keys()) > 1:
 
     gene_diffexp_analysis_template = os.path.join("$SCONSCRIPT_HOME", 
     							report_template)
-    report_cuffdiff_target = [report_template.split('.')[0] + ".html",
+    report_target = [report_template.split('.')[0] + ".html",
                               'DEG_tests_by_contrast.csv']
-    report_cuffdiff_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[1].abspath}"); '''\
+    report_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[1].abspath}"); '''\
     	                '''meta.file <- "${SOURCES[1].abspath}"; '''\
                         '''child.Rmd <- file.path("$SCONSCRIPT_HOME", "_lindiffexp.Rmd"); '''\
                         '''gene.de.file <- "${SOURCES[0].abspath}"; '''\
@@ -95,12 +98,14 @@ if len(conditions.keys()) > 1:
                         str(gene_diffexp_analysis_template) + '''", '''\
     	                '''output_file = "${TARGETS[0].abspath}", '''\
     	                '''intermediates_dir = "${TARGETS[0].dir}" )' '''
-    report_cuffdiff = env.Command(report_cuffdiff_target, 
+    report = env.Command(report_target, 
                                 [gene_diffexp, gene_meta],
-                                report_cuffdiff_cmd)
+                                report_cmd)
 
 else:
     print "No conditions to contrast in differential linear expression analysis"
 
+results = {'DIFFEXP': diffexp,
+           'REPORT': report}
 
-Return('diffexp')
+Return('results')

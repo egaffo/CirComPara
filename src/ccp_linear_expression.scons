@@ -95,6 +95,10 @@ if not env['DIFF_EXP'] == '':
                             variant_dir = lindiffexp_dir, duplicate = 0,
                             exports = '''env_linear_diffexp SymLink get_matching_nodes''')
 
+    #lindiffexp['DIFFEXP']
+    #lindiffexp['REPORT']
+
+
 Clean('.', cuffmerge_dir)
 Clean('.', transcript_sequences_dir)
 Clean('.', lindiffexp_dir)
