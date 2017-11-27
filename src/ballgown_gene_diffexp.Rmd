@@ -17,12 +17,14 @@ output:
 ## variables to be defined in parent frame
 # results.dir <- "ballgown/"
 # meta.file <- "meta.csv"
-# gene.de.file <- "any"
+# gene.de.file <- "ballgown.rda"
 # gene.expr <- "any"
 # child.Rmd <- $SCONSCRIPT_HOME/_lindiffexp.Rmd
+sig.thr <- .1
 
 library(data.table)
 library(knitr)
+library(ballgown)
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 7, 
@@ -40,8 +42,35 @@ knitr::opts_knit$set(root.dir = results.dir)
 
 ```{r load data}
 
-print("Report for Ballgown differential expression analysis not yet implemented")
-# ```{r, child=child.Rmd}
-# ```
+load(gene.de.file)
 
+gid2gn <- as.data.table(unique(texpr(bg, meas = "all")[, c("gene_id", "gene_name")]))
+
+gene_meta <- unique(fread(meta.file)[, .(sample_id = sample, condition)])
+
+stat_results <- stattest(bg, feature = 'gene', meas = 'FPKM', 
+                         covariate = 'condition', getFC = T)
+
+gene.de <- merge(as.data.table(stat_results), 
+                 gid2gn, by.x = "id", by.y = "gene_id")
+
+g_expr <- as.data.table(gexpr(bg), keep.rownames = T)
+
+g_expr[,  avgFPKM := apply(.SD, 1, mean), by = rn, 
+       .SDcols = names(g_expr)[!names(g_expr) %in% "rn"]]
+
+gene.de <- merge(gene.de, g_expr[, .(rn, avgFPKM)], by.x = "id", by.y = "rn")
+gene.de$contrast <- paste(unique(gene_meta$condition), collapse = " vs ")
+
+gene.de <- gene.de[, .(gene_id = id, 
+            gene = gene_name,
+            p_value = pval, 
+            q_value = qval, 
+            "log2(fold_change)" = fc,
+            significant = ifelse(qval <= sig.thr, "yes", "no"),
+            contrast,
+            avgFPKM)]
+```
+
+```{r, child=child.Rmd}
 ```
