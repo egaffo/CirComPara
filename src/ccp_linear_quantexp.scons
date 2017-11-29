@@ -92,7 +92,8 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
     env.Replace(EXPRESSION_FILES = ballgown_files)
 
    
-if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or ('cuffdiff' in env['DIFF_EXP']):
+if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
+    (env['DIFF_EXP'] and 'cuffdiff' in env['DIFF_EXP']): ## exploit lazy evaluation
     if len(env['SAMPLES'].keys()) > 1:        
         cuffquant_annotation = env['ANNOTATION']
         cuffquant_alignments = env['LINEAR_ALIGNMENTS']

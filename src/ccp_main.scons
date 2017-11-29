@@ -182,8 +182,8 @@ env.Replace(LINEAR_EXPRESSION_METHODS = env['LINEAR_EXPRESSION_METHODS'].strip()
 #	env.AppendUnique(TOPHAT_PARAMS = ['--bowtie1'])
 
 env.SetDefault(DIFF_EXP = False)
-if env['DIFF_EXP'].lower() == 'true':
-    env.Replace(DIFF_EXP = True)
+if env['DIFF_EXP'].strip() == '':
+    env.Replace(DIFF_EXP = False)
 
 env.SetDefault(DESEQ = False)
 if env['DESEQ'].lower() == 'true':
@@ -218,6 +218,12 @@ with open(env['META']) as csvfile:
         except KeyError as ke:
             #print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
             pass
+
+if len(conditions.keys()) < 2:
+    print "WARNING: " + str(conditions.keys()) + " is the only "\
+          "condition set for the samples. Differential "\
+          "expression analysis will not be performed."
+    env.Replace(DIFF_EXP = False)
 
 ## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
 #TODO in F-CirComPara

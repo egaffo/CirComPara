@@ -85,7 +85,7 @@ env['GENE_EXP_ANALYSIS'] = linquantexp['GENE_EXP_ANALYSIS']
 env['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']
 
 ## DIFFERENTIAL LINEAR EXPRESSION
-if not env['DIFF_EXP'] == '':
+if env['DIFF_EXP']:
     lindiffexp_dir = 'linear_diffexp'
     env_linear_diffexp = env.Clone()
     #env_linear_diffexp['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']
@@ -97,11 +97,11 @@ if not env['DIFF_EXP'] == '':
 
     #lindiffexp['DIFFEXP']
     #lindiffexp['REPORT']
+    Clean('.', lindiffexp_dir)
 
 
 Clean('.', cuffmerge_dir)
 Clean('.', transcript_sequences_dir)
-Clean('.', lindiffexp_dir)
 
 Return('env')
 

@@ -56,7 +56,7 @@ circrnas_analysis = env.Command(circrnas_analysis_targets,
                                 circrnas_analysis_sources, 
                                 circrnas_analysis_cmd)
 
-if not env['DIFF_EXP'].lower() == 'false':
+if env['DIFF_EXP']:
     circrnas_diffexp_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                            '''meta.file <- "${SOURCES[0].abspath}"; '''\
                            '''circrnas.per.sample.file <- "${SOURCES[1].abspath}"; '''\
