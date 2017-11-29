@@ -805,11 +805,11 @@ Number of circRNAs expressed per gene, per each sample, have been saved in file 
 
 ```{r plot_circrnas_per_gene_per_condition, echo=FALSE, include=TRUE, fig.width=12, fig.height=8}
 circRNAs_per_gene.per.cond.file <- "Not applicable to this settings"
+circRNAs.to.gene.per.sample <- merge(circRNAs.to.gene.per.sample, 
+                                         intgroup.dt[, .(sample_id, condition)], by = "sample_id")
 if(intgroup.dt[, .N, by=condition][, .N] > 1){
     
     combined_gtf <- merge(combined_gtf, intgroup.dt[, .(sample_id, condition)], by = "sample_id")
-    circRNAs.to.gene.per.sample <- merge(circRNAs.to.gene.per.sample, 
-                                         intgroup.dt[, .(sample_id, condition)], by = "sample_id")
     
     n.circ.per.gene.per.condition <- unique(circRNAs.to.gene.per.sample[, .(circ_id, gene_id, gene_name, condition)])[
         , .(n_circRNAs = .N,
