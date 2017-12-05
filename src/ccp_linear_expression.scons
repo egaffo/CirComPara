@@ -65,11 +65,12 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
         env.Replace(ANNOTATION = transcripts_gtf_files)
 
 ## RETRIEVE TRANSCRIPT SEQUENCES
+env_transcript_fastas = env.Clone()
 transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
                                                'ccp_transcript_fastas.scons'), 
                                   src_dir = env['SCONSCRIPT_HOME'],
                                   variant_dir = transcript_sequences_dir, duplicate = 0,
-                                  exports = '''env''')
+                                  exports = '''env_transcript_fastas''')
 
 
 ## QUANTIFY EXPRESSION
