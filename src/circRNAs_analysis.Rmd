@@ -226,8 +226,15 @@ if(nrow(circrnas.gtf) > 0){
   ## normalize circrna reads by the amount of backsplice Reads in method (Per Million reads - RPM)
   circrnas.gtf[, RPM := (V6/sum(V6))*10^6, by = .(sample_id, V2)]
   ## compute median of normalized value
-  circrna.rpms <- data.table::dcast(data = circrnas.gtf, formula = sample_id + gene_id + V1 + V4 + V5 + V7 ~ V2, value.var = "RPM", fill = 0)
-  circrna.rpms$medRPM <- apply(X = circrna.rpms[, 7:ncol(circrna.rpms), with = F], MARGIN = 1, FUN = median)
+  circrna.rpms <- data.table::dcast(data = circrnas.gtf, 
+                                    formula = sample_id + gene_id + V1 + V4 + V5 + V7 ~ V2, 
+                                    value.var = "RPM", fill = 0)
+  ## account also 0s for the computation of the meadian RPM
+  #circrna.rpms$medRPM <- apply(X = circrna.rpms[, 7:ncol(circrna.rpms), with = F], MARGIN = 1, FUN = median)
+  ## remove 0s from computation of the meadian RPM
+  circrna.rpms <- merge(circrna.rpms, 
+                        circrnas.gtf[, .(medRPM = median(RPM)), by = .(sample_id, gene_id)], 
+                        by = c("sample_id", "gene_id"))
 }else{
   circrnas.gtf[, `:=`(RPM="", gene_id="")]
   circrna.rpms <- circrnas.gtf
