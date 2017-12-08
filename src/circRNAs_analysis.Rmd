@@ -432,6 +432,44 @@ sharedByMethod.barplot + guides(fill=FALSE) +
 
 ```
 
+```{r}
+## save methods detecting each circRNA
+cmet_per_circ.file <- file.path(results.dir, "cmet_per_circ.csv")
+
+circ_met <- circrnas.gtf[V6 >= min_reads, 
+             .(c_methods = paste0(sort(unique(V2)), collapse = "|"), 
+               n_methods = length(unique(V2))),  
+             by = .(sample_id, gene_id)] #[n_methods >= min_methods]
+
+write.csv(circ_met[order(sample_id)], cmet_per_circ.file, row.names = F)
+```
+
+Methods detecting each circRNAs are listed in  <a href="`r basename(cmet_per_circ.file)`">`r basename(cmet_per_circ.file)`</a>.
+
+```{r, fig.height=6}
+circ_met.to.plot <- circrnas.gtf[V6 >= min_reads, 
+                                 .(c_methods = paste0(sort(unique(V2)), collapse = "|"), 
+                                   n_methods = length(unique(V2))),  
+                                 by = .(gene_id)]
+
+ggplot(data = circ_met.to.plot, mapping = aes(x = factor(n_methods))) + 
+    geom_bar(aes(fill = c_methods), stat = "count", position = "stack") + 
+    geom_text(stat = 'count', aes(label=..count..), vjust = -0.3, 
+              size = default.font.size*(5/14)) + 
+    geom_text(stat = 'count', aes(label = "", y = ..count.. +1)) + 
+    scale_y_continuous(expand = c(0, 0)) + 
+    scale_fill_discrete("Method combinations") +
+    xlab("Number of methods") + ylab("CircRNA number") +
+    ggtitle(paste("Number of circRNAs (with \u2265", 
+                  min_reads, "reads)\ncommonly detected by the methods")) +
+    theme_bw() + 
+    theme(legend.position = "bottom", legend.direction = "vertical",
+          text = element_text(size=default.font.size), 
+          plot.title = element_text(hjust = 0.5))
+    
+```
+
+
 ## CircRNAs detected in total
 
 For each method, at least `r min_reads` reads were required to consider a circRNAs as detected. Further, circRNAs detected by at least `r min_methods` methods are considered more reliable.
