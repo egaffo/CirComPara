@@ -453,27 +453,41 @@ write.csv(circ_met[order(sample_id)], cmet_per_circ.file, row.names = F)
 
 Methods detecting each circRNAs are listed in  <a href="`r basename(cmet_per_circ.file)`">`r basename(cmet_per_circ.file)`</a>.
 
-```{r, fig.height=6}
-circ_met.to.plot <- circrnas.gtf[V6 >= min_reads, 
-                                 .(c_methods = paste0(sort(unique(V2)), collapse = "|"), 
-                                   n_methods = length(unique(V2))),  
-                                 by = .(gene_id)]
+```{r}
+reduce.cmeth.names <- function(x){
+    x <- gsub("circexplorer2", "ce2", x)
+    x <- gsub("segemehl", "se", x)
+    x <- gsub("tophat", "th", x)
+    x
+}
 
-ggplot(data = circ_met.to.plot, mapping = aes(x = factor(n_methods))) + 
-    geom_bar(aes(fill = c_methods), stat = "count", position = "stack") + 
-    geom_text(stat = 'count', aes(label=..count..), vjust = -0.3, 
+circ_met.to.plot <- circrnas.gtf[V6 >= min_reads, 
+                                 .N, 
+                                 by = .(gene_id, 
+                                        V2)][, .(c_methods = paste0(sort(unique(reduce.cmeth.names(V2))), 
+                                                                                    collapse = "|"), 
+                                                                 n_methods = length(unique(V2))), by = gene_id]
+circ_met.plot.height <- max(c(4, (circ_met.to.plot[, .N, by = c_methods][, .N]*0.5)/2.54))
+```
+
+```{r, fig.height=`circ_met.plot.height`}
+ggplot(circ_met.to.plot, aes(x = c_methods)) + 
+    geom_bar(stat = "count", position = "stack", color = "black", 
+             aes(fill = factor(n_methods))) + 
+    scale_fill_brewer(direction = 1) + 
+    guides(fill=FALSE) + 
+    geom_text(stat = 'count', aes(label = ..count..), hjust = -.05,
               size = default.font.size*(5/14)) + 
-    geom_text(stat = 'count', aes(label = "", y = ..count.. +1)) + 
     scale_y_continuous(expand = c(0, 0)) + 
-    scale_fill_discrete("Method combinations") +
-    xlab("Number of methods") + ylab("CircRNA number") +
-    ggtitle(paste("Number of circRNAs (with \u2265", 
-                  min_reads, "reads)\ncommonly detected by the methods")) +
+    coord_flip() + 
+    facet_grid(facets = n_methods ~ ., scales = "free_y", space = "free") +
+    geom_text(stat = 'count', aes(label = "", y = ..count.. * 1.1)) + 
+    xlab("Method combinations") + ylab("CircRNAs") +
+    ggtitle(paste("CircRNAs commonly\ndetected by the methods")) +
     theme_bw() + 
-    theme(legend.position = "bottom", legend.direction = "vertical",
-          text = element_text(size=default.font.size), 
+    theme(text = element_text(size = default.font.size), 
           plot.title = element_text(hjust = 0.5))
-    
+
 ```
 
 
