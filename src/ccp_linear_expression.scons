@@ -33,7 +33,7 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
             cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'ccp_cuffmerge.scons'),
                                     src_dir = env['SCONSCRIPT_HOME'],
                                     variant_dir = cuffmerge_dir, duplicate = 0,
-                                    exports = 'env transcripts_gtf_files cuffmerge_cpus '''
+                                    exports = '''env transcripts_gtf_files cuffmerge_cpus '''
                                     '''cuffmerge_annotation cuffmerge_genome_fasta''')
             
             env.Replace(ANNOTATION = cuffmerge)
@@ -59,10 +59,23 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
                                         [stringtiemerge_list, env['ANNOTATION']],
                                         stringtiemerge_cmd)
             
+
+            if not env['ANNOTATION'] == '':
+                env_gffcompare = env.Clone()
+                env_gffcompare['MERGED_TRANSCRIPTS'] = stringtiemerge
+
+                gffcompare = SConscript(os.path.join(cuffmerge_dir, 'ccp_gffcompare.scons'),
+                                        src_dir = env['SCONSCRIPT_HOME'],
+                                        variant_dir = cuffmerge_dir, duplicate = 0,
+                                        exports = '''env_gffcompare''')
+                
+                stringtiemerge = gffcompare[0]
+
             env.Replace(ANNOTATION = stringtiemerge)
             
     elif len(transcripts_gtf_files) == 1:
         env.Replace(ANNOTATION = transcripts_gtf_files)
+
 
 ## RETRIEVE TRANSCRIPT SEQUENCES
 env_transcript_fastas = env.Clone()
