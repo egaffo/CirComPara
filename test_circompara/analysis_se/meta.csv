@@ -1,0 +1,5 @@
+file,sample,condition,adapter
+../reads/readsA_1.fastq.gz,sample_A,A,../../tools/Trimmomatic-0.36/adapters/TruSeq3-PE-2.fa
+../reads/readsB_1.fastq.gz,sample_B,B,../../tools/Trimmomatic-0.36/adapters/TruSeq3-PE-2.fa
+../reads/readsA_2.fastq.gz,sample_C,C,../../tools/Trimmomatic-0.36/adapters/TruSeq3-PE-2.fa
+../reads/readsB_2.fastq.gz,sample_D,D,../../tools/Trimmomatic-0.36/adapters/TruSeq3-PE-2.fa
