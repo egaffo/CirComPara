@@ -119,7 +119,7 @@ vars.Add('DIFF_EXP', 'Set the method to and enable differential expression '\
          'supported: cufflinks, ballgown, DESeq2.'\
      	 'Only available if more than one sample and more than one condition are given. '\
          'N.B: differential expression tests for circRNAs is not yet'\
-         'implemented', 'ballgown')
+         'implemented', '')
 vars.Add('DESEQ', '(Experimental) Set True to enable differential gene expression computation '\
          'also with DESeq2. Only available if more than one sample and more than one condition are given', 
          'False')
@@ -190,6 +190,13 @@ if env['DESEQ'].lower() == 'true':
     env.Replace(DESEQ = True)
 
 env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
+
+if not env['ANNOTATION'] == '':
+    env.Replace(ANNOTATION = File(env['ANNOTATION']).abspath)
+
+if not env['GENOME_FASTA'] == '':
+    env.Replace(GENOME_FASTA = File(env['GENOME_FASTA']).abspath)
+
 
 samples_dir = 'samples'
 
