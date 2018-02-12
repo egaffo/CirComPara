@@ -1,0 +1,11 @@
+#!/bin/bash
+
+export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))
+
+export PATH=$CIRCOMPARA_HOME/bin/:$PATH
+
+## export environment variable for local R repository
+export R_LIBS="$CIRCOMPARA_HOME/tools/R_libs"
+
+## install other tools
+$CIRCOMPARA_HOME/src/install_R_libs.R 
