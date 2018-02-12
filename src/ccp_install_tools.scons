@@ -304,3 +304,17 @@ stringtie = env.Command(stringtie_target,
 
 stringtie_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), stringtie[1], SymLink)
 
+# GFFCOMPARE
+gffcompare_dir =	'gffcompare-0.10.3.Linux_x86_64'
+gffcompare_tar = 'gffcompare-0.10.3.Linux_x86_64.tar.gz'
+gffcompare_url = 'http://ccb.jhu.edu/software/stringtie/dl/' + gffcompare_tar
+gffcompare_target = [os.path.join(tools_dir, gffcompare_tar),
+		    os.path.join(tools_dir, gffcompare_dir, 'gffcompare')]
+gffcompare = env.Command(gffcompare_target,
+                         [],
+                         ['wget -O ${TARGETS[0]} ' + gffcompare_url,
+                         'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}']
+                         )
+
+gffcompare_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), gffcompare[1], SymLink)
+
