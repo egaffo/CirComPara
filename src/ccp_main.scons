@@ -31,8 +31,10 @@ def SymLink(target, source, env):
         os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
     except OSError, e:
         if e.errno == errno.EEXIST:
-            os.rmdir(os.path.abspath(str(target[0])))
+            os.unlink(os.path.abspath(str(target[0])))
             os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+
+
 
 def get_matching_nodes(nodelist, rexpression, abspath = False):
     files = []        
@@ -43,6 +45,8 @@ def get_matching_nodes(nodelist, rexpression, abspath = False):
         if re.match(rexpression, path):
             files.append(node)
     return files
+
+
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
