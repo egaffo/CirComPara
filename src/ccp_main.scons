@@ -301,15 +301,16 @@ if env['BYPASS_LINEAR'] == 'False':
                             exports = '''env_linear_expression '''
                                       '''SymLink '''
                                       '''get_matching_nodes''')
+
+    env.Replace(ANNOTATION = linexp['ANNOTATION'])
 else:
     ## DO NOT ANALYZE GENE EXPRESSION: USE MOCK EMPTY FILES
     print "BYPASS_LINEAR = " + env['BYPASS_LINEAR'] +\
           ": skipping linear transcript analysis"
     
-    gene_exp = env.Command(os.path.join(geneexp_dir, 'empty_geneexp.csv'), 
+    gene_exp = env.Command(os.path.join(linexp_dir, 'empty_geneexp.csv'), 
     			'', 'touch $TARGET')
-    gene_meta = ''
-    gene_exp_analysis = ['', gene_exp]
+    linexp = {'GENE_EXP_ANALYSIS': ['', gene_exp]}
 
 ### COLLECT AND REPORT CIRCRNA RESULTS
 circexp_dir = 'circular_expression'
