@@ -60,7 +60,12 @@ collect_circrna_maps_counts_sources = [testrealign_mappings, find_circ_mappings,
                                        ciri_mappings, CIRCexplorer_mappings,
 				       bwa_mappings, star_mappings, 
 				       tophat_mappings]
-collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
+
+if len(set(Flatten(collect_circrna_maps_counts_sources))) > 0:
+    collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
+else:
+    collect_circrna_maps_counts_cmd = '''touch $TARGET '''
+
 collect_circrna_maps_counts = env.Command(os.path.join(read_stats_collect_dir, 
                                                        'circrna_maps_counts.txt'), 
                                           collect_circrna_maps_counts_sources, 

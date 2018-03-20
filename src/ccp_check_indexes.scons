@@ -37,12 +37,6 @@ except NameError as ne:
 
     env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
-if env['CIRCRNA_METHODS'] == ['']:
-    env.Replace(CIRCRNA_METHODS = ['ciri', 'circexplorer2_bwa', 
-                                   'circexplorer2_segemehl',
-                                   'circexplorer2_star', 'circexplorer2_tophat', 
-                                   'findcirc', 'testrealign'])
-
 annotation_dir = 'ccp_indexes'
 
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER

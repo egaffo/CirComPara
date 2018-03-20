@@ -69,8 +69,9 @@ except NameError:
     vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
 	     'reconstruction. Default only quantifies genes and transcripts from the given '\
 	     'annotation GTF file', 'False')
-    vars.Add('BYPASS_LINEAR', 'Skip analysis of linear transcripts. This will also skip '\
-	     'the analysis of linear-to-circular expression correlation',
+    vars.Add('BYPASS', 'Skip analysis of linear/circular transcripts. This will also skip '\
+	     'the analysis of linear-to-circular expression correlation.'\
+         '{linear,circular}',
 	     'False')
 
     env = Environment(variables = vars,
@@ -159,7 +160,7 @@ results.append(mappings)
 mapping_file = mappings[0]
 env['ALIGNMENTS'] = mappings[0]
 
-if env['BYPASS_LINEAR'] == 'False':
+if not env['BYPASS'] == 'linear':
     ## EXPRESSION ANALYSIS
     expression_cpus = env['CPUS']
     expression_genome_fasta = env['GENOME_FASTA'] 
@@ -189,84 +190,86 @@ else:
 
 ## CIRCRNA DETECTION
 unmapped_dir = os.path.join(build_dir, 'unmapped_reads')
-## Extract unmapped reads in FASTQ format from BAM alignments
-unmapped_reads_target = ['singleton.fastq.gz']
-#unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s >( gzip -c > ${TARGETS[0]} ) '''
-unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s ${str(TARGETS[0].abspath).replace('.gz', '')}  '''
-#SAMFLAG 3328 = 256+1024+2048
-#4: read unmapped
-#8: mate unmapped
-#256: not primary alignment
-#1024: read is PCR or optical duplicate
-#2048: supplementary alignment
-# samtools fastq:
-# -s FILE   write singleton reads to FILE [assume single-end]
-# -n        don't append /1 and /2 to the read name
-if len(env['READS']) > 1:
-    paired_end_read_files = ['unmapped_1.fastq.gz', 'unmapped_2.fastq.gz']
-    unmapped_reads_target.extend(paired_end_read_files)
-    unmapped_reads_cmd = unmapped_reads_cmd +\
-                         ''' -1 ${str(TARGETS[1].abspath).replace('.gz', '')} '''\
-                         ''' -2 ${str(TARGETS[2].abspath).replace('.gz', '')} ${SOURCE} '''\
-                         '''&& gzip ${str(TARGETS[1].abspath).replace('.gz', '')} '''\
-                         '''&& gzip ${str(TARGETS[2].abspath).replace('.gz', '')} '''
-#                         ''' -1 >( gzip -c > ${TARGETS[1]} )'''\
-#                         ''' -2 >( gzip -c > ${TARGETS[2]} ) ${SOURCE}'''
-    unmapped_reads_cmd = unmapped_reads_cmd +\
-                        ''' && gzip ${str(TARGETS[0].abspath).replace('.gz', '')}'''
+
+if not env['BYPASS'] == 'circular':
+    ## Extract unmapped reads in FASTQ format from BAM alignments
+    unmapped_reads_target = ['singleton.fastq.gz']
+    #unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s >( gzip -c > ${TARGETS[0]} ) '''
+    unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s ${str(TARGETS[0].abspath).replace('.gz', '')}  '''
+    #SAMFLAG 3328 = 256+1024+2048
+    #4: read unmapped
+    #8: mate unmapped
+    #256: not primary alignment
+    #1024: read is PCR or optical duplicate
+    #2048: supplementary alignment
+    # samtools fastq:
+    # -s FILE   write singleton reads to FILE [assume single-end]
+    # -n        don't append /1 and /2 to the read name
+    if len(env['READS']) > 1:
+        paired_end_read_files = ['unmapped_1.fastq.gz', 'unmapped_2.fastq.gz']
+        unmapped_reads_target.extend(paired_end_read_files)
+        unmapped_reads_cmd = unmapped_reads_cmd +\
+                             ''' -1 ${str(TARGETS[1].abspath).replace('.gz', '')} '''\
+                             ''' -2 ${str(TARGETS[2].abspath).replace('.gz', '')} ${SOURCE} '''\
+                             '''&& gzip ${str(TARGETS[1].abspath).replace('.gz', '')} '''\
+                             '''&& gzip ${str(TARGETS[2].abspath).replace('.gz', '')} '''
+    #                         ''' -1 >( gzip -c > ${TARGETS[1]} )'''\
+    #                         ''' -2 >( gzip -c > ${TARGETS[2]} ) ${SOURCE}'''
+        unmapped_reads_cmd = unmapped_reads_cmd +\
+                            ''' && gzip ${str(TARGETS[0].abspath).replace('.gz', '')}'''
+        
+        unmapped_reads = env.Command([os.path.join(unmapped_dir, f) for f in unmapped_reads_target], 
+                                     mapping_file.abspath, 
+                                     unmapped_reads_cmd)
+        
+    else:
+        #unmapped_reads_target.append('unmapped.fastq.gz')
+        #unmapped_reads_cmd = unmapped_reads_cmd + ''' ${SOURCE} | gzip -c > ${TARGETS[1]}'''
+        unmapped_reads = mappings[2]
     
-    unmapped_reads = env.Command([os.path.join(unmapped_dir, f) for f in unmapped_reads_target], 
-                                 mapping_file.abspath, 
-                                 unmapped_reads_cmd)
+    results.append(unmapped_reads)
+                        
+    # run circRNA detection pipeline 
+    sample_cpus         = env['CPUS']
+    sample_genome_fasta = env['GENOME_FASTA']
+    sample_annotation   = env['ANNOTATION']
     
-else:
-    #unmapped_reads_target.append('unmapped.fastq.gz')
-    #unmapped_reads_cmd = unmapped_reads_cmd + ''' ${SOURCE} | gzip -c > ${TARGETS[1]}'''
-    unmapped_reads = mappings[2]
-
-results.append(unmapped_reads)
-                    
-# run circRNA detection pipeline 
-sample_cpus         = env['CPUS']
-sample_genome_fasta = env['GENOME_FASTA']
-sample_annotation   = env['ANNOTATION']
-
-if len(env['READS']) > 1:
-    sample_raw_reads    = [f.abspath for f in unmapped_reads[1:3]]
-else:
-    sample_raw_reads    = [unmapped_reads.abspath]
-
-sample_segemehl_index     = env['SEGEMEHL_INDEX']
-ciri_bwa_index            = env['BWA_INDEX']
-ciri_bwa_extra_parameters = env['BWA_PARAMS']
-ciri_script               = env['CIRI']
-
-bowtie2_index = env['BOWTIE2_INDEX']
-
-star_index  = env['STAR_INDEX']
-gene_pred   = env['GENEPRED']
-
-## set strandness parameter for circRNA detection methods
-## check by HISAT parameters
-strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
-if strandness_pattern.search(hisat2_extra_params):
-    ## Environment is propagated to the Sconscript
-    env['FINDCIRC_EXTRA_PARAMS'] = ' --strandpref --stranded '
-
-## select which circRNA methods have to be performed
-circrna_methods = env['CIRCRNA_METHODS']
-env_sample_circrna_methods = env.Clone()
-env_sample_circrna_methods.Replace(READS = sample_raw_reads)
-ciri_extra_parameters = env['CIRI_EXTRA_PARAMS']
-circrnas = env.SConscript(os.path.join(build_dir, ccp_circrna_methods), 
-                        src_dir = SRC_DIR, 
-                        variant_dir = build_dir, duplicate = 0,
-                        exports = '''env_sample_circrna_methods sample_cpus sample_genome_fasta '''
-                        '''sample_annotation sample_raw_reads sample_segemehl_index '''
-                        '''ciri_bwa_index ciri_bwa_extra_parameters '''
-                        '''ciri_script bowtie2_index star_index gene_pred '''
-                        '''ciri_extra_parameters circrna_methods''')
-results.append(circrnas)
+    if len(env['READS']) > 1:
+        sample_raw_reads    = [f.abspath for f in unmapped_reads[1:3]]
+    else:
+        sample_raw_reads    = [unmapped_reads.abspath]
+    
+    sample_segemehl_index     = env['SEGEMEHL_INDEX']
+    ciri_bwa_index            = env['BWA_INDEX']
+    ciri_bwa_extra_parameters = env['BWA_PARAMS']
+    ciri_script               = env['CIRI']
+    
+    bowtie2_index = env['BOWTIE2_INDEX']
+    
+    star_index  = env['STAR_INDEX']
+    gene_pred   = env['GENEPRED']
+    
+    ## set strandness parameter for circRNA detection methods
+    ## check by HISAT parameters
+    strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+    if strandness_pattern.search(hisat2_extra_params):
+        ## Environment is propagated to the Sconscript
+        env['FINDCIRC_EXTRA_PARAMS'] = ' --strandpref --stranded '
+    
+    ## select which circRNA methods have to be performed
+    circrna_methods = env['CIRCRNA_METHODS']
+    env_sample_circrna_methods = env.Clone()
+    env_sample_circrna_methods.Replace(READS = sample_raw_reads)
+    ciri_extra_parameters = env['CIRI_EXTRA_PARAMS']
+    circrnas = env.SConscript(os.path.join(build_dir, ccp_circrna_methods), 
+                            src_dir = SRC_DIR, 
+                            variant_dir = build_dir, duplicate = 0,
+                            exports = '''env_sample_circrna_methods sample_cpus sample_genome_fasta '''
+                            '''sample_annotation sample_raw_reads sample_segemehl_index '''
+                            '''ciri_bwa_index ciri_bwa_extra_parameters '''
+                            '''ciri_script bowtie2_index star_index gene_pred '''
+                            '''ciri_extra_parameters circrna_methods''')
+    results.append(circrnas)
 
 #Depends(circrnas, unmapped_reads)
 
