@@ -58,10 +58,10 @@ vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', '')
 vars.Add('CIRCRNA_METHODS', 
 	 'Comma separated list of circRNA detection methods to use. '\
 	 'Repeated values will be collapsed. Currently supported: ciri, find_circ, '\
-	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, testrealign (unfiltered segemehl, '\
-	 'DEPRECATED: use circexplorer2_segemehl for a better filtering of segemehl predictions). '\
+	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, testrealign ('\
+	 'circexplorer2_segemehl is actually a filtering of testrealign predictions). '\
 	 'Set an empty string to use all methods available (including deprecated methods). ', 
-         'ciri,find_circ,circexplorer2_star,circexplorer2_bwa,circexplorer2_segemehl')
+     '')
 
 # non-basic parameters
 vars.Add('CPUS', 'Set number of CPUs', '4')
@@ -122,7 +122,7 @@ vars.Add('DIFF_EXP', 'Set the method to and enable differential expression '\
          'computation for linear genes/transcripts. Current methods '\
          'supported: cufflinks, ballgown, DESeq2.'\
      	 'Only available if more than one sample and more than one condition are given. '\
-         'N.B: differential expression tests for circRNAs is not yet'\
+         'N.B: differential expression tests for circRNAs is not yet '\
          'implemented', '')
 vars.Add('DESEQ', '(Experimental) Set True to enable differential gene expression computation '\
          'also with DESeq2. Only available if more than one sample and more than one condition are given', 
@@ -135,9 +135,10 @@ vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
                         'define the circRNA as reliable. If this value exceeds the number '\
                         'of methods specified, it will be set to the number of methods.', 2)
 vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
-vars.Add('BYPASS_LINEAR', 'Skip analysis of linear transcripts. This will also skip '\
-			  'the analysis of linear-to-circular expression correlation',
-	 'False')
+vars.Add('BYPASS', 'Skip analysis of linear/circular transcripts. This will also skip '\
+			       'the analysis of linear-to-circular expression correlation.'\
+                   '{linear,circular}',
+                   'False')
 vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
         'collapsed into single-end reads to search for circRNA backsplices. Set'\
         'this option to "True" to force circRNA method aligners to'\
@@ -173,12 +174,15 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].lower() == 'true':
 else:
     env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
 
-if env['CIRCRNA_METHODS'] == ['']:
-    env.Replace(CIRCRNA_METHODS = ['ciri', 'circexplorer2_bwa', 
-                                   'circexplorer2_segemehl',
-                                   'circexplorer2_star', 'circexplorer2_tophat', 
-                                   'findcirc', 'testrealign'])
-env.Replace(CIRCRNA_METHODS = sorted(set([m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')])))
+if not env['BYPASS'] == 'circular':
+    if env['CIRCRNA_METHODS'] == ['']:
+        env.Replace(CIRCRNA_METHODS = ['ciri', 'circexplorer2_bwa', 
+                                       'circexplorer2_segemehl',
+                                       'circexplorer2_star', 'circexplorer2_tophat', 
+                                       'findcirc', 'testrealign'])
+    env.Replace(CIRCRNA_METHODS = sorted(set([m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')])))
+else:
+    env['CIRCRNA_METHODS'] == ['']
 
 env.Replace(LINEAR_EXPRESSION_METHODS = env['LINEAR_EXPRESSION_METHODS'].strip().split(','))
 
@@ -290,7 +294,7 @@ for sample in sorted(samples.keys()):
 ## - NORMALIZED QUANTIFICATION
 ## - DIFFERENTIAL EXPRESSION
 linexp_dir = 'linear_expression'
-if env['BYPASS_LINEAR'] == 'False':
+if not env['BYPASS'] == 'linear':
     env_linear_expression = env.Clone()
     env_linear_expression['SAMPLES'] = samples
     env_linear_expression['RUNS'] = runs
@@ -305,7 +309,7 @@ if env['BYPASS_LINEAR'] == 'False':
     env.Replace(ANNOTATION = linexp['ANNOTATION'])
 else:
     ## DO NOT ANALYZE GENE EXPRESSION: USE MOCK EMPTY FILES
-    print "BYPASS_LINEAR = " + env['BYPASS_LINEAR'] +\
+    print "BYPASS = " + env['BYPASS'] +\
           ": skipping linear transcript analysis"
     
     gene_exp = env.Command(os.path.join(linexp_dir, 'empty_geneexp.csv'), 
@@ -314,18 +318,19 @@ else:
 
 ### COLLECT AND REPORT CIRCRNA RESULTS
 circexp_dir = 'circular_expression'
-env_circular_expression = env.Clone()
-env_circular_expression['SAMPLES'] = samples
-env_circular_expression['RUNS'] = runs
-env_circular_expression['LINEXP'] = linexp
-circexp = env.SConscript(os.path.join(circexp_dir,
-                                      'ccp_circular_expression.scons'),
-                         src_dir = env['SCONSCRIPT_HOME'],
-                         variant_dir = circexp_dir, duplicate = 0,
-                         exports = '''env_circular_expression '''
-                                   '''SymLink '''
-                                   '''get_matching_nodes''')
-
+if not env['BYPASS'] == 'circular':
+    env_circular_expression = env.Clone()
+    env_circular_expression['SAMPLES'] = samples
+    env_circular_expression['RUNS'] = runs
+    env_circular_expression['LINEXP'] = linexp
+    circexp = env.SConscript(os.path.join(circexp_dir,
+                                          'ccp_circular_expression.scons'),
+                             src_dir = env['SCONSCRIPT_HOME'],
+                             variant_dir = circexp_dir, duplicate = 0,
+                             exports = '''env_circular_expression '''
+                                       '''SymLink '''
+                                       '''get_matching_nodes''')
+    
 
 ## COLLECT AND REPORT READ PROCESSING STATISTICS
 collect_read_stats_dir = 'read_statistics'
