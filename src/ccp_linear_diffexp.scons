@@ -41,20 +41,28 @@ if len(conditions.keys()) > 1:
     if 'ballgown' in env['DIFF_EXP']:
         diffexp_sconscript = 'ccp_ballgown.scons'
         diffexp_dir = 'ballgown'
+        
+        ctabs = ['e2t.ctab', 
+                 'e_data.ctab', 
+                 'i2t.ctab', 
+                 'i_data.ctab',
+                 't_data.ctab']
 
         bg_dirs = {}
         for sample in env['SAMPLES']:
+            bg_dirs[sample] = []
+            for ctab in ctabs:
+            
+                rexpr = '.*' + os.path.sep + sample + os.path.sep + '.*' + ctab
+                sample_ctabs = get_matching_nodes(env['EXPRESSION_FILES'], 
+                                                  rexpr)
+                sample_link = os.path.join(diffexp_dir, sample, ctab)
+                bg_dirs[sample].extend(env.Command(sample_link,
+                                              sample_ctabs,
+                                              SymLink))
 
-            rexpr = '.*' + os.path.sep + sample + os.path.sep + '.*\.ctab'
-            sample_ctabs = get_matching_nodes(env['EXPRESSION_FILES'], 
-                                              rexpr)
-            sample_link = os.path.join(diffexp_dir, sample)
-            bg_dirs[sample] = env.Command(sample_link,
-                                          sample_ctabs[0].dir,
-                                          SymLink)
-        
         env.Replace(EXPRESSION_FILES = bg_dirs)
-
+        
         report_template = 'ballgown_gene_diffexp.Rmd'
 
     ## PREPARE VARIABLES FOR CUFFDIFF
@@ -80,6 +88,9 @@ if len(conditions.keys()) > 1:
                      src_dir = env['SCONSCRIPT_HOME'],
                      variant_dir = diffexp_dir, duplicate = 0,
                      exports = '''env''')
+
+    if 'ballgown' in env['DIFF_EXP']:
+        Depends(diffexp['GENE_DIFF_TESTS'], bg_dirs.values())
 
     ## MAKE DIFFERENTIAL LINEAR EXPRESSION REPORT
     gene_exp = diffexp['GENE_EXPRESSION']

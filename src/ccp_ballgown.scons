@@ -22,25 +22,13 @@ except NameError:
     #TODO: 
     #env.Replace(EXPRESSION_FILES = from list to dictionary)
 
-ctabs = ['e2t.ctab', 
-         'e_data.ctab', 
-         'i2t.ctab', 
-         'i_data.ctab',
-         't_data.ctab']
-
-## the following ctab_files will be required to bind the 
-## dependency of Ballgown object to the ctab files of each sample
-ctab_files = [[File(os.path.join(sample_link[0], ctab)) \
-              for sample_link in env['EXPRESSION_FILES'].iteritems()] \
-             for ctab in ctabs]
-
 ballgown_targets = 'ballgown.rda'
 
 ballgown_sources = [env['META'], 
-                    ctab_files]
+                    env['EXPRESSION_FILES'].values()]
 
 
-ballgown_ctabs =  ",".join([sample + "='" + sample_link[0].path + "'" \
+ballgown_ctabs =  ",".join([sample + "='" + sample_link[0].dir.path + "'" \
                             for sample,sample_link in env['EXPRESSION_FILES'].items()])
 
 ballgown_R_cmd = '''library(data.table);'''\
