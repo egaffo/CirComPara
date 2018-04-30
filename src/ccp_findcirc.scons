@@ -66,8 +66,8 @@ if File(env['READS'][0]).path.endswith('.gz'):
 find_circ_cmd = 'unmapped2anchors.py -Q <( ' + cat_cmd + ' ${SOURCES} ) |' + \
                 ' bowtie2 --reorder --score-min=C,-15,0 -q -x ' + \
                 ' $BOWTIE2_INDEX -U - 2> ${TARGETS[2]} | find_circ.py ' + \
-                ' -G $GENOME_FASTA -p ${SAMPLE}_ -s ' + \
-                '${TARGETS[3]} -R ${TARGETS[1]} $FINDCIRC_EXTRA_PARAMS > ${TARGETS[0]}'
+                ' -G $GENOME_FASTA -p ${SAMPLE}_ -s ${TARGETS[3]}' + \
+                ' -R ${TARGETS[1]} $FINDCIRC_EXTRA_PARAMS > ${TARGETS[0]}'
 
 
 find_circ = env.Command([os.path.join(out_dir, 'sites.bed'), 
@@ -90,10 +90,27 @@ filter_circ = env.Command([os.path.join(out_dir, 'circ_candidates.bed')],
 
 Clean('.', out_dir)
 
+## Collect backsplice read names
+## use the sites.reads file: consider only the FASTA headers
+## in which it is reported the read name as a second field
+## with attached an underscore and a number
+## N.B.: count only circRNAs in circ_candidates.bed
+bks_reads_cmd = '''grep ">" ${SOURCES[0]} | '''\
+                '''grep -f <(cut -f 4 ${SOURCES[1]}) | '''\
+                '''sed -E "s/>[^ ]+ ([^_]+)_[0-9]+/\\1/g" | '''\
+                '''sort | uniq -c | '''\
+                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
+                '''sort -k1,1nr > ${TARGETS[0]} '''
+
+bks_reads = env.Command([os.path.join(out_dir, env['SAMPLE'] + '.fc.bks.reads')], 
+                        [find_circ[1], filter_circ], 
+                        bks_reads_cmd)
+
+
 ## Collect mapped reads count
 mapped_reads_target = os.path.join(out_dir, 'find_circ_mapped_reads_count.txt')
 mapped_reads_cmd    = '''sed "s@.*circ_reads': \([0-9]*\).*@\\1@g" $SOURCE > $TARGET'''
 mapped_reads        = env.Command(mapped_reads_target, find_circ[3], mapped_reads_cmd)
 
 
-Return('find_circ filter_circ mapped_reads')
+Return('find_circ filter_circ mapped_reads bks_reads')
