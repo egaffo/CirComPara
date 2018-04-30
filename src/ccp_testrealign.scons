@@ -86,5 +86,4 @@ bks_reads = env.Command([env['SAMPLE'] + '.testrealign.bks.reads'],
                         [env['ALIGNMENTS'], bed], 
                         bks_reads_cmd)
 
-#Return('sort_alignments', 'collect_splice', 'extract_circular', 'mapped_reads')
-Return('collect_splice', 'extract_circular')
+Return('collect_splice', 'extract_circular', 'bed', 'bks_reads')
