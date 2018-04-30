@@ -59,24 +59,30 @@ bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
 if env['ALIGNER'].lower() == 'star':
     ALIGNER = 'STAR'    
     bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+    bks_sfx = ".ce2star"
 
 if env['ALIGNER'].lower() == 'bwa':
     ALIGNER = 'BWA'
+    bks_sfx = ".ce2bwa"
 
 if env['ALIGNER'].lower() == 'segemehl':
     ALIGNER = 'segemehl'
+    bks_sfx = ".ce2seg"
 
 if env['ALIGNER'].lower() == 'tophat':
     ALIGNER = 'TopHat-Fusion'
     bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+    bks_sfx = ".ce2th"
 
 if env['ALIGNER'].lower() == 'tophat_pe':
     ALIGNER = 'TopHat-Fusion'
     env.Replace(OPTIONS = '--pe')
     bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+    bks_sfx = ".ce2th"
 
 if env['ALIGNER'].lower() == 'mapsplice':
     ALIGNER = 'MapSplice'
+    bks_sfx = ".ce2ms"
  
 CIRCexplorer2_cmd = 'CIRCexplorer2 parse $OPTIONS -o $TARGET.dir -t ' + \
                     ALIGNER + ' $SOURCE'
@@ -156,7 +162,7 @@ bks_reads_cmd = bks_reads_cmd + \
                     '''sort -k1,1nr > ${TARGETS[0]} '''
     
 bks_reads = env.Command([os.path.join(out_dir, 
-                                      env['SAMPLE'] + '.ce2.bks.reads')], 
+                                      env['SAMPLE'] + bks_sfx + '.bks.reads')], 
                         [env['ALIGNMENTS'], bed], 
                         bks_reads_cmd)
 
