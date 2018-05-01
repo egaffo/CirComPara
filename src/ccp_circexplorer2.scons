@@ -55,6 +55,16 @@ env['OPTIONS'] = ''
 bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
                 '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
 
+## use sed to write a BED file with 'single nucleotide' intervals
+## NB: stop position is not included in BED format (intervals are 
+## 0-based and 'half-open'), so the stop position must be incremented by 1.
+## Only the first six tab-separated fields are considered
+bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                    '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
+                    '''\\1\\t\\2\\t$$((\\2+1))\\t\\4\\t\\5\\t\\6\\n'''\
+                    '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\6"/e' '''\
+                    '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
+
 #TopHat-Fusion, STAR, MapSplice, BWA, segemel
 if env['ALIGNER'].lower() == 'star':
     ALIGNER = 'STAR'    
@@ -68,6 +78,15 @@ if env['ALIGNER'].lower() == 'bwa':
 if env['ALIGNER'].lower() == 'segemehl':
     ALIGNER = 'segemehl'
     bks_sfx = ".ce2seg"
+    ## segemehl coordinates seem to refer to the intron and not the
+    ## spliced exons. So, CE2 start position must be increased to 
+    ## comply with segemehl SAM.
+    ## Moreover, strand seems to be always +
+    bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                        '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
+                        '''\\1\\t$$((\\2+1))\\t$$((\\2+2))\\t\\4\\t\\5\\t\\+\\n'''\
+                        '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\+"/e' '''\
+                        '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
 if env['ALIGNER'].lower() == 'tophat':
     ALIGNER = 'TopHat-Fusion'
@@ -143,15 +162,6 @@ if not env['GENEPRED'] == '':
     #                        [env['ALIGNMENTS'], vcf], 
     #                        bks_reads_cmd)
 
-## use sed to write a BED file with 'single nucleotide' intervals
-## NB: stop position is not included in BED format (intervals are 
-## 0-based and 'half-open'), so the stop position must be incremented by 1.
-## Only the first six tab-separated fields are considered
-bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
-                    '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
-                    '''\\1\\t\\2\\t$$((\\2+1))\\t\\4\\t\\5\\t\\6\\n'''\
-                    '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\6"/e' '''\
-                    '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
                   [circ_bed],
                   bed_cmd)
