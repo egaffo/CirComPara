@@ -57,30 +57,37 @@ circ_gtf_cmd = circ_gtf_cmd + '''} | sort -k1,1 -k4,4n > ${TARGETS[0]}'''
 circ_gtf_target = 'circrnas.gtf'
 circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
 
-## append to exons.gtf the genes that have no exon annotated
-extract_exons_cmd = '''grep -w exon ${SOURCES[0]} | '''\
-                    '''tee ${TARGETS[0]} | '''\
-                    '''sed -r 's/.*gene_id "([^"]+)".*/gene_id "\\1"/' | '''\
-                    '''sort | uniq > ${TARGETS[1]} '''
+## compute gene introns
+merge_exons_cmd = '''grep -w exon ${SOURCES[0]} | '''\
+                  '''sort -k1,1 -k4,4n | '''\
+                  '''bedtools merge -s -i stdin | '''\
+'''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)/\\1\\t\\2\\t\\3\\t\\.\\t\\.\\t\\4/' >  $TARGET'''
+merge_exons = env.Command('merged_exons.bed', 
+                          [env['GTF']], 
+                          merge_exons_cmd)
 
-extract_exons = env.Command(['exons.gtf', 'genes_with_exons.txt'], 
-                            [env['GTF']], 
-                            extract_exons_cmd)
+introns_cmd = '''bedtools subtract -s -a <( grep -w gene ${SOURCES[0]} ) '''\
+              '''-b ${SOURCES[1]} | sed 's/\\tgene\\t/\\tintron\\t/' > $TARGET'''
+introns = env.Command('introns.gtf',
+                      [[env['GTF'], merge_exons]],
+                      introns_cmd)
 
-non_exon_genes_cmd = ''' grep -w gene ${SOURCES[0]} | '''\
-                     '''{ grep -v -f ${SOURCES[1]} || true; } > ${TARGETS[0]}'''
-non_exon_genes = env.Command(['non_exon_genes.gtf'], 
-                             [env['GTF'], extract_exons[1]], 
-                             non_exon_genes_cmd)
+## compute genes' exon-intron chain 
+exon_intron_annotation_cmd = '''cat <( grep -w exon ${SOURCES[0]} ) ${SOURCES[1]} | '''\
+                             '''sort -k1,1 -k4,4n | gzip -c > $TARGET'''
+exon_intron_annotation = env.Command('exon_intron_sorted.gtf.gz',
+                                     [env['GTF'], introns],
+                                     exon_intron_annotation_cmd)
 
-## intersect circRNAs with gene annotation: keep only 'exon' features from GTF
-circ_gene_combine_cmd = '''bedtools intersect -sorted -wa -wb -a ${SOURCES[0]} '''\
-                        '''-b <( cat ${SOURCES[1]} ${SOURCES[2]} | '''\
-                        '''sort -k1,1 -k4,4n ) -s -loj | '''\
+## intersect circRNAs with gene annotation: use exon-intron GTF
+circ_gene_combine_cmd = '''bedtools intersect -s -loj -sorted -wa -wb '''\
+                        '''-a ${SOURCES[0]} -b ${SOURCES[1]} | '''\
                         '''gzip -c > $TARGET'''
-circ_gene_combine_sources = [circ_gtf, extract_exons[0], non_exon_genes]
+circ_gene_combine_sources = [circ_gtf, 
+                             exon_intron_annotation] 
 circ_gene_combine_target = 'combined_circrnas.gtf.gz'
-circ_gene_combine = env.Command(circ_gene_combine_target, circ_gene_combine_sources, 
+circ_gene_combine = env.Command(circ_gene_combine_target, 
+                                circ_gene_combine_sources, 
                                 circ_gene_combine_cmd)
 
 Return('circ_gene_combine circ_gtf')
