@@ -28,12 +28,12 @@ except NameError:
         print "Run sample: unknown variables", unknown.keys()
         Exit(1)
 
-    csvs = env['CSVS'].rstrip().split(',')
-    circrna_analyze_circexplorer = csvs[0]
-    circrna_analyze_ciri         = csvs[1]
-    circrna_analyze_findcirc     = csvs[2]
-    circrna_analyze_testrealign     = csvs[3]
-    GTF = env['GTF']
+    #csvs = env['CSVS'].rstrip().split(',')
+    #circrna_analyze_circexplorer = csvs[0]
+    #circrna_analyze_ciri         = csvs[1]
+    #circrna_analyze_findcirc     = csvs[2]
+    #circrna_analyze_testrealign     = csvs[3]
+    #GTF = env['GTF']
 
 methods = {'CIRI': 'ciri',
 	   'FINDCIRC': 'findcirc',
@@ -50,18 +50,35 @@ circ_gtf_cmd = '''{ '''
 for k,v in env['CSVS'].iteritems():
     if v:
 	circ_gtf_sources.append(v)
-        circ_gtf_cmd = circ_gtf_cmd + '''convert_circrna_collect_tables.py -p ''' + methods[k] +\
-		       ''' ''' + v[0].path + ''' ; '''
+        circ_gtf_cmd = circ_gtf_cmd + '''convert_circrna_collect_tables.py -p ''' +\
+                       methods[k] + ''' ''' + v[0].path + ''' ; '''
 circ_gtf_cmd = circ_gtf_cmd + '''} | sort -k1,1 -k4,4n > ${TARGETS[0]}'''
 
 circ_gtf_target = 'circrnas.gtf'
 circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
 
+## append to exons.gtf the genes that have no exon annotated
+extract_exons_cmd = '''grep -w exon ${SOURCES[0]} | '''\
+                    '''tee ${TARGETS[0]} | '''\
+                    '''sed -r 's/.*gene_id "([^"]+)".*/gene_id "\\1"/' | '''\
+                    '''sort | uniq > ${TARGETS[1]} '''
+
+extract_exons = env.Command(['exons.gtf', 'genes_with_exons.txt'], 
+                            [env['GTF']], 
+                            extract_exons_cmd)
+
+non_exon_genes_cmd = ''' grep -w gene ${SOURCES[0]} | '''\
+                     '''{ grep -v -f ${SOURCES[1]} || true; } > ${TARGETS[0]}'''
+non_exon_genes = env.Command(['non_exon_genes.gtf'], 
+                             [env['GTF'], extract_exons[1]], 
+                             non_exon_genes_cmd)
+
 ## intersect circRNAs with gene annotation: keep only 'exon' features from GTF
-circ_gene_combine_cmd = '''bedtools intersect -wa -wb -a ${SOURCES[0]} '''\
-                        '''-b <( grep -w exon ${SOURCES[1]} ) -s -loj'''\
-                        ''' | gzip -c > $TARGET'''
-circ_gene_combine_sources = [circ_gtf, env['GTF']]
+circ_gene_combine_cmd = '''bedtools intersect -sorted -wa -wb -a ${SOURCES[0]} '''\
+                        '''-b <( cat ${SOURCES[1]} ${SOURCES[2]} | '''\
+                        '''sort -k1,1 -k4,4n ) -s -loj | '''\
+                        '''gzip -c > $TARGET'''
+circ_gene_combine_sources = [circ_gtf, extract_exons[0], non_exon_genes]
 circ_gene_combine_target = 'combined_circrnas.gtf.gz'
 circ_gene_combine = env.Command(circ_gene_combine_target, circ_gene_combine_sources, 
                                 circ_gene_combine_cmd)
