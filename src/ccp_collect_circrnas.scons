@@ -61,7 +61,8 @@ circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
 merge_exons_cmd = '''grep -w exon ${SOURCES[0]} | '''\
                   '''sort -k1,1 -k4,4n | '''\
                   '''bedtools merge -s -i stdin | '''\
-'''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)/\\1\\t\\2\\t\\3\\t\\.\\t\\.\\t\\4/' >  $TARGET'''
+                  '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)/'''\
+                  '''\\1\\t\\2\\t\\3\\t\\.\\t\\.\\t\\4/' >  $TARGET'''
 merge_exons = env.Command('merged_exons.bed', 
                           [env['GTF']], 
                           merge_exons_cmd)
@@ -74,16 +75,49 @@ introns = env.Command('introns.gtf',
 
 ## compute genes' exon-intron chain 
 exon_intron_annotation_cmd = '''cat <( grep -w exon ${SOURCES[0]} ) ${SOURCES[1]} | '''\
+                             '''sed -r 's/(.+)gene_id "([^"]+)".*gene_name '''\
+                             '''"([^"]+)".*gene_biotype "([^"]+)".*/\\1gene_id '''\
+                             '''"\\2"; gene_name "\\3"; gene_biotype "\\4";/' | '''\
+                             '''sort | uniq | '''\
                              '''sort -k1,1 -k4,4n | gzip -c > $TARGET'''
 exon_intron_annotation = env.Command('exon_intron_sorted.gtf.gz',
                                      [env['GTF'], introns],
                                      exon_intron_annotation_cmd)
 
+## compute unique circRNA IDs
+unique_circ_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                  '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                  '''([^\\t]+)\\tgene_id "([^"]+)".*/'''\
+                  '''\\1\\t\\.\\t\\.\\t\\4\\t\\5\\t\\.\\t\\7\\t\\.\\t'''\
+                  '''gene_id "\\9";/' ${SOURCES[0]} | '''\
+                  '''sort | uniq | sort -k1,1 -k4,4n -k5,5n | '''\
+                  '''gzip -c > ${TARGETS[0]}'''
+unique_circ = env.Command('unique_circ_ids.gtf.gz',
+                          [circ_gtf,], 
+                          unique_circ_cmd)
+
+## translate backsplice intervals into start and stop single nucleotide intervals
+snp_unique_circ_cmd = '''zcat ${SOURCES[0]} | '''\
+                      '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                                '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                                '''([^\\t]+)\\t([^\\t]+)\\tgene_id "([^"]+)";'''\
+                                '''/echo -e "\\1\\t\\2\\tstart\\t'''\
+                                       '''\\4\\t$$((\\4+1))\\t\\6\\t'''\
+                                       '''\\7\\t\\8\\tgene_id @\\9@;\\n'''\
+                                       '''\\1\\t\\2\\tstop\\t'''\
+                                       '''$$((\\5-1))\\t\\5\\t\\6\\t'''\
+                                       '''\\7\\t\\8\\tgene_id @\\9@;"/e' | '''\
+                                       '''sed -r 's/@/"/g' | '''\
+                                       '''sort -k1,1 -k4,4n -k5,5n | gzip -c > $TARGET '''
+snp_unique_circ = env.Command('snp_unique_circ.gtf.gz',
+                              [unique_circ], 
+                              snp_unique_circ_cmd)
+
 ## intersect circRNAs with gene annotation: use exon-intron GTF
 circ_gene_combine_cmd = '''bedtools intersect -s -loj -sorted -wa -wb '''\
                         '''-a ${SOURCES[0]} -b ${SOURCES[1]} | '''\
                         '''gzip -c > $TARGET'''
-circ_gene_combine_sources = [circ_gtf, 
+circ_gene_combine_sources = [snp_unique_circ, 
                              exon_intron_annotation] 
 circ_gene_combine_target = 'combined_circrnas.gtf.gz'
 circ_gene_combine = env.Command(circ_gene_combine_target, 
