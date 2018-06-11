@@ -135,19 +135,38 @@ set.seed(1)
 
 ## Per sample comparison of processing steps
 
-```{r Per sample comparison of processing step read counts, echo=FALSE}
+```{r}
+## function to compute color hues and colors to give to each sample
+get.color.hues <- function(meta){
+    intgroup.dt <- meta[, .(.N), by = .(sample_id = sample, 
+                                        condition)][order(sample_id), 
+                                                    .(sample_id), by = condition]
+    samples.per.condition <- data.frame(intgroup.dt[, .N, by = .(condition)], 
+                                        row.names = "condition")
+    n.conditions <- nrow(samples.per.condition)
+    hues <- brewer_pal(palette = "Set2")(n.conditions)
+    
+    for(i in 1:n.conditions){
+        n.hues <- samples.per.condition[i, 1] + 2
+        col.hues <- colorRampPalette(colors = c(hues[i], 
+                                                "white"))(n.hues)[1:(n.hues-2)]
+        
+        intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
+                                                                          hue = hues[i])]
+    }
+    intgroup.dt[]
+}
+```
+
+
+```{r, echo=FALSE}
 if(meta_file != ""){
     meta <- fread(meta_file)
-    
-    intgroup.dt <- meta[, .(sample_id = sample, condition)][order(sample_id)]
-    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
-    intgroup.dt <- merge(intgroup.dt, 
-                         intgroup.dt[, .(samples_per_condition = .N), 
-                                     by = condition][, hue := brewer.pal(8, 
-                                                                         "Set2")[1:length(condition)]][], 
-                         by = "condition")[, color := muted(hue, l = color_luminance)][]
+    intgroup.dt <- get.color.hues(meta)
 }
+```
 
+```{r Per sample comparison of processing step read counts, echo=FALSE}
 read.processing.table.m <- melt(read.processing.table, id.vars = "Sample", 
                                 variable.name = "Processing step", 
                                 value.name = "Read count")
@@ -199,6 +218,7 @@ ggplot(data = read.processing.table.m[`Processing step` %in% c("Linearly mapped"
 ```
 
 ## Comparison of processing step read counts
+
 ```{r Comparison of processing step read counts, echo=FALSE}
 ## by read counts
 read.processing.boxplot <- ggplot(read.processing.table.m, aes(x=`Processing step`, y=`Read count`)) + 
@@ -234,7 +254,9 @@ read.processing.table.m$Sample <- factor(read.processing.table.m$Sample,
                                                  levels = unique(meta[order(condition, sample), sample]), 
                                                  ordered = T)
 ## by read counts
-read.processing.bars <- ggplot(read.processing.table.m, aes(x=Sample, y=`Read count`, fill = Sample)) +
+read.processing.bars <- ggplot(read.processing.table.m, aes(x=Sample, y=`Read count`, 
+                                                            fill = Sample, 
+                                                            color = Sample)) +
     geom_bar(stat = "identity") + 
     facet_wrap(facets = ~ `Processing step`, scales = "free_y") +
     theme(axis.text.x = element_text(angle=45, hjust=1)) + 
@@ -242,7 +264,8 @@ read.processing.bars <- ggplot(read.processing.table.m, aes(x=Sample, y=`Read co
     theme(plot.title = element_text(hjust = 0.5))
 if(meta_file != ""){
     read.processing.bars + 
-        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) + 
+        scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id]))
 }else{
     read.processing.bars
 }
@@ -252,7 +275,9 @@ read.processing.table.perc.m$Sample <- factor(read.processing.table.perc.m$Sampl
                                                  levels = unique(meta[order(condition, sample), sample]), 
                                                  ordered = T)
 read.processing.perc.bars <- ggplot(read.processing.table.perc.m, 
-                                    aes(x=Sample, y=`Raw reads %`, fill = Sample)) +
+                                    aes(x=Sample, y=`Raw reads %`, 
+                                                            fill = Sample, 
+                                                            color = Sample)) +
     geom_bar(stat = "identity") + 
     facet_wrap(facets = ~ `Processing step`, scales = "free_y") +
     theme(axis.text.x = element_text(angle=45, hjust=1)) + 
@@ -260,7 +285,8 @@ read.processing.perc.bars <- ggplot(read.processing.table.perc.m,
     theme(plot.title = element_text(hjust = 0.5))
 if(meta_file != ""){
     read.processing.perc.bars + 
-        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) + 
+        scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id]))
 }else{
     read.processing.perc.bars
 }
@@ -337,6 +363,7 @@ if(nrow(circrna.mappings.table.perc.m) > 0){
 ```
 
 ## CircRNA method aligned read comparison
+
 ```{r plot circrna methods compared, echo=FALSE}
 ## by read count boxplot
 circrna.mappings.boxplot <- ggplot(data = circrna.mappings.table.m,#[`CircRNA method` != "Linearly unmapped"], 
@@ -356,14 +383,16 @@ if(meta_file != ""){
 if(nrow(circrna.mappings.table.perc.m) > 0){
     ## by read count barplot per method
     circrna.mappings.barplot <- ggplot(data = circrna.mappings.table.m[`CircRNA method` != "Linearly unmapped"],
-                                       aes(x = Sample, y = `Mapped reads`, fill = Sample)) + 
+                                       aes(x = Sample, y = `Mapped reads`, 
+                                           fill = Sample, color = Sample)) + 
         geom_bar(stat = "identity") + facet_wrap(facets = ~ `CircRNA method`, scales = "free_y") +
         theme(axis.text.x = element_text(angle=45, hjust=1)) + 
         ggtitle("CircRNA methods' alignment counts") + 
         theme(plot.title = element_text(hjust = 0.5))
     if(meta_file != ""){
         circrna.mappings.barplot + 
-            scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+            scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) + 
+        scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id]))
     }else{
         circrna.mappings.barplot
     }
@@ -392,14 +421,16 @@ if(nrow(circrna.mappings.table.perc.m) > 0){
                                                    levels = unique(meta[order(condition, sample), sample]), 
                                                    ordered = T)
     circrna.mappings.perc.barplot <- ggplot(data = circrna.mappings.table.perc.m,
-                                            aes(x = Sample, y = `Linearly unmapped %`, fill = Sample)) + 
+                                            aes(x = Sample, y = `Linearly unmapped %`, 
+                                                fill = Sample, color = Sample)) + 
         geom_bar(stat = "identity") + facet_wrap(facets = ~ `CircRNA method`) +
         theme(axis.text.x = element_text(angle=45, hjust=1)) + 
         ggtitle("Fraction of linearly unmapped reads aligned by each circRNA method\nSamples compared by method") + 
         theme(plot.title = element_text(hjust = 0.5))
     if(meta_file != ""){
         circrna.mappings.perc.barplot + 
-            scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+            scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) +
+            scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id]))
     }else{
         circrna.mappings.perc.barplot
     }
