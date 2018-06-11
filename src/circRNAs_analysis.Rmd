@@ -539,32 +539,34 @@ The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per
 
 ```{r set custom color shades}
 ## set custom color shades
-# if(gene_meta_file != ""){
-#     gene_meta <- fread(gene_meta_file)
-#     gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
-#     
-#     intgroup.dt <- gene_meta[, .(sample_id, condition)][order(condition, sample_id)]
-#     intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
-#     intgroup.dt <- merge(intgroup.dt, 
-#                          intgroup.dt[, .(samples_per_condition = .N), 
-#                                      by = condition][, hue := brewer.pal(8, 
-#                                                                          "Set2")[1:length(condition)]][], 
-#                          by = "condition")[, color := muted(hue, l = color_luminance)][]
-# }else{
-    meta <- unique(fread(meta_file)[, .(sample_id = sample, condition)])
-    intgroup.dt <- meta[, .(sample_id, condition)][order(condition, sample_id)]
-    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
-    intgroup.dt <- merge(intgroup.dt, 
-                         intgroup.dt[, .(samples_per_condition = .N), 
-                                     by = condition][, hue := brewer.pal(8, 
-                                                                         "Set2")[1:length(condition)]][], 
-                         by = "condition")[, color := muted(hue, l = color_luminance)][]
+## function to compute color hues and colors to give to each sample
+get.color.hues <- function(meta){
+    intgroup.dt <- meta[, .(.N), by = .(sample_id,
+                                        condition)][order(sample_id), 
+                                                    .(sample_id, samples_per_condition = .N), by = condition]
+    samples.per.condition <- data.frame(intgroup.dt[, .N, by = .(condition)], 
+                                        row.names = "condition")
+    n.conditions <- nrow(samples.per.condition)
+    hues <- brewer_pal(palette = "Set2")(n.conditions)
     
-    # hue <- brewer.pal(8, "Set2")[1]
-    # sample_id <- unique(circrnas.gtf[, sample_id])
-    # intgroup.dt <- data.table(condition = sample_id, sample_id = sample_id, hue = hue, color = hue)
-#}
+    for(i in 1:n.conditions){
+        n.hues <- samples.per.condition[i, 1] + 2
+        col.hues <- colorRampPalette(colors = c(hues[i], 
+                                                "white"))(n.hues)[1:(n.hues-2)]
+        
+        intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
+                                                                          hue = hues[i])]
+    }
+    intgroup.dt[]
+}
+```
 
+
+```{r, echo=FALSE}
+if(meta_file != ""){
+    meta <- unique(fread(meta_file)[, .(sample_id = sample, condition)])
+    intgroup.dt <- get.color.hues(meta)
+}
 ```
 
 ## CircRNAs detected by sample
@@ -606,17 +608,26 @@ reliable.circ.tab.long.d$sample_id <- factor(reliable.circ.tab.long.d$sample_id,
 reliable.circ.barplot <- ggplot(data = reliable.circ.tab.long.d, 
                                 mapping = aes(x = sample_id, y = count,
                                               fill = sample_id)) + 
-  geom_bar(stat = "identity", width = .7, colour="black", position = "dodge") + 
+  geom_bar(stat = "identity", width = .7, aes(colour = sample_id), position = "dodge") + 
   geom_text(stat='identity', aes(label= count), vjust=-0.3, size=default.font.size*(5/14)) +
-  facet_wrap(facets = ~ Filter) + ggtitle("CircRNAs per sample") + xlab("") + ylab("Number of circRNAs") + 
-  theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+  facet_wrap(facets = ~ Filter) + 
+    ggtitle("CircRNAs per sample") + 
+    xlab("") + 
+    ylab("Number of circRNAs") + 
+    theme_bw() + 
+    theme(plot.title = element_text(hjust = 0.5))
 ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
 reliable.circ.barplot.limits <- c(0, max(reliable.circ.tab.long$count)*1.1)
-reliable.circ.barplot <- reliable.circ.barplot + guides(fill = FALSE) +
-  theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
-  scale_y_continuous(expand = c(0, 0), limits = reliable.circ.barplot.limits)
+reliable.circ.barplot <- reliable.circ.barplot + 
+    guides(fill = FALSE, color = FALSE) +
+    theme(text = element_text(size=default.font.size), 
+        axis.text.x = element_text(angle=45, hjust=1)) + 
+    scale_y_continuous(expand = c(0, 0), limits = reliable.circ.barplot.limits)
 
-reliable.circ.barplot + scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+reliable.circ.barplot + 
+    scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) +
+    scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id]))
+
 ```
 
 ## Categories of detected circRNAs 
@@ -876,18 +887,22 @@ circRNAs.per.gene.per.sample$sample_id <- factor(circRNAs.per.gene.per.sample$sa
 ## barplot
 circRNAs.per.gene.per.sample.plot <- ggplot(data = circRNAs.per.gene.per.sample, 
                                             mapping = aes(x = factor(circRNAs_per_gene),
-                                                          fill = sample_id)) + 
-    geom_bar(stat = "count") + facet_wrap(facets = ~ sample_id, scales = "free") + 
+                                                          fill = sample_id, 
+                                                          color = sample_id)) + 
+    geom_bar(stat = "count") + 
+    facet_wrap(facets = ~ sample_id, scales = "free") + 
     ggtitle("CircRNAs per gene") + xlab("Number of circRNAs") + ylab("Number of genes") + 
     theme_bw()
 circRNAs.per.gene.per.sample.plot <- circRNAs.per.gene.per.sample.plot + 
     theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=90, hjust=1))
 if(gene_meta_file != ""){
     circRNAs.per.gene.per.sample.plot <- circRNAs.per.gene.per.sample.plot + 
-        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+        scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) +
+        scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id]))
 }
-circRNAs.per.gene.per.sample.plot + theme(plot.title = element_text(hjust = 0.5)) + 
-    guides(fill = FALSE)
+circRNAs.per.gene.per.sample.plot + 
+    theme(plot.title = element_text(hjust = 0.5)) + 
+    guides(fill = FALSE, color = FALSE)
 ```
 
 Number of circRNAs expressed per gene, per each sample, have been saved in file <a href="`r basename(circRNAs_per_gene.per.sample.file)`">`r basename(circRNAs_per_gene.per.sample.file)`</a>. 
@@ -1132,22 +1147,25 @@ if(file.info(gene_fpkm_file)$size > 0){
                                                                        ordered = T)
     cog.by.sample.barplot <- ggplot(data = number.of.circRNA.overlapping.genes.per.sample, 
                                     mapping = aes(x = sample_id, y = `Number of circRNA-overlapping genes`,
-                                                  fill = sample_id)) + 
-        geom_bar(stat = "identity", width = .7, colour="black") + 
+                                                  fill = sample_id,
+                                                  color = sample_id)) + 
+        geom_bar(stat = "identity", width = .7) + 
         geom_text(stat='identity', aes(label = `Number of circRNA-overlapping genes`), 
-                  vjust=-0.3, size=default.font.size*(5/14)) +
+                  vjust=-0.3, size=default.font.size*(5/14), color = "black") +
         ggtitle("CircRNA-overlapping gene counts") + xlab("") + ylab("Number of genes") + 
         theme_bw()
     ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
     cog.by.sample.barplot.limits <- c(0, max(expressed_genes.by.sample$`Number of expressed circRNA-overlapping genes`)*1.1)
-    cog.by.sample.barplot <- cog.by.sample.barplot + guides(fill = FALSE) +
+    cog.by.sample.barplot <- cog.by.sample.barplot + 
+        guides(fill = FALSE, color = FALSE) +
         theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
         scale_y_continuous(expand = c(0, 0), limits = cog.by.sample.barplot.limits) + 
         theme(plot.title = element_text(hjust = 0.5))
     
     if(gene_meta_file != ""){
         cog.by.sample.barplot <- cog.by.sample.barplot + 
-            scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+            scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) + 
+            scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id]))
     }
 
     expressed_genes.by.sample$sample_id <- factor(expressed_genes.by.sample$sample_id,
@@ -1155,21 +1173,25 @@ if(file.info(gene_fpkm_file)$size > 0){
                                                   ordered = T)
     expressed_genes.by.sample.plot <- ggplot(data = expressed_genes.by.sample, 
                                              mapping = aes(x = sample_id, y = `Number of expressed circRNA-overlapping genes`,
-                                                           fill = sample_id)) + 
-        geom_bar(stat = "identity", width = .7, colour="black") + 
-        geom_text(stat='identity', aes(label = `Number of expressed circRNA-overlapping genes`), vjust=-0.3, size=default.font.size*(5/14)) +
+                                                           fill = sample_id,
+                                                           color = sample_id)) + 
+        geom_bar(stat = "identity", width = .7) + 
+        geom_text(stat='identity', aes(label = `Number of expressed circRNA-overlapping genes`), 
+                  vjust=-0.3, size=default.font.size*(5/14), color = "black") +
         ggtitle("Gene expressed (i.e. FPKM > 0) that overlap circRNAs") + xlab("") + ylab("Number of genes") + 
         theme_bw()
     ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
     expressed_genes.by.sample.plot.limits <- c(0, max(expressed_genes.by.sample$`Number of expressed circRNA-overlapping genes`)*1.1)
-    expressed_genes.by.sample.plot <- expressed_genes.by.sample.plot + guides(fill = FALSE) +
+    expressed_genes.by.sample.plot <- expressed_genes.by.sample.plot + 
+        guides(fill = FALSE, color = FALSE) +
         theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
         scale_y_continuous(expand = c(0, 0), limits = expressed_genes.by.sample.plot.limits) + 
         theme(plot.title = element_text(hjust = 0.5))
     
     if(gene_meta_file != ""){
         expressed_genes.by.sample.plot <- expressed_genes.by.sample.plot + 
-            scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id]))
+            scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) +
+            scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id]))
     }
     
     multiplot(cog.by.sample.barplot, expressed_genes.by.sample.plot, cols = 2)
@@ -1558,7 +1580,8 @@ if(file.info(gene_fpkm_file)$size > 0){
         negative.cond.corr <- as.data.table(data.frame("Only negative" = sapply(split(cor.by.cond.w.labels[corr < 0 ]$corr, 
                                                                                       f = cor.by.cond.w.labels[corr < 0 ]$condition), 
                                                                                 summary)), keep.rownames = T)
-        corr.by.cond.summaries <- merge(merge(total.cond.corr, positive.cond.cor, 
+        corr.by.cond.summaries <- merge(merge(total.cond.corr, 
+                                              positive.cond.cor, 
                                               by = "rn", all = T), 
                                         negative.cond.corr, by = "rn", all = T)
         
