@@ -28,7 +28,7 @@ ballgown_sources = [env['META'],
                     env['EXPRESSION_FILES'].values()]
 
 
-ballgown_ctabs =  ",".join([sample + "='" + sample_link[0].dir.path + "'" \
+ballgown_ctabs =  ",".join(["'" + sample + "'" + "='" + sample_link[0].dir.path + "'" \
                             for sample,sample_link in env['EXPRESSION_FILES'].items()])
 
 ballgown_R_cmd = '''library(data.table);'''\
