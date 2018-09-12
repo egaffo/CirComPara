@@ -164,8 +164,10 @@ if(meta.file != ""){
     
     # remove not expressed genes
     countData <- genes.per.sample.matrix[rowSums(genes.per.sample.matrix) > 0, ]
+    
+    do.scale <- ifelse(ncol(countData) > 2, T, F)
 
-    pca <- prcomp(t(countData), scale. = T)
+    pca <- prcomp(t(countData), scale. = do.scale)
     
     intgroup <- c("condition")
     percentVar <- pca$sdev^2/sum(pca$sdev^2)
