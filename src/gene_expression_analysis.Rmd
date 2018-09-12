@@ -165,47 +165,55 @@ if(meta.file != ""){
     # remove not expressed genes
     countData <- genes.per.sample.matrix[rowSums(genes.per.sample.matrix) > 0, ]
     
-    do.scale <- ifelse(ncol(countData) > 2, T, F)
-
-    pca <- prcomp(t(countData), scale. = do.scale)
-    
-    intgroup <- c("condition")
-    percentVar <- pca$sdev^2/sum(pca$sdev^2)
-    ## compute PC variance explained % and plot
-    percentVar.df <- data.frame(PCs = paste0("PC", 1:length(percentVar)), 
-                                Variation_percentage = percentVar*100)
-    percentVar.df$PCs <- factor(percentVar.df$PCs, levels = percentVar.df$PCs, ordered = T)
-    pc.var.explained.plot <- ggplot(data = percentVar.df, aes(x = PCs, y = Variation_percentage)) + 
-        geom_bar(stat = "identity") + 
-        geom_text(aes(label = round(Variation_percentage, 2)), vjust = -.5) + 
-        ylab("Variation explained %") + theme_bw() + 
-        ggtitle("Amount of variation explained by the principal components") + 
-        theme(plot.title = element_text(hjust = 0.5))
-    
-    ## compute and plot PCs
-    # intgroup.df <- as.data.frame(colData(rld)[, intgroup, drop = FALSE])
-    intgroup.df <- data.frame(intgroup.dt[, c("sample_id", intgroup), with = F], row.names = "sample_id")
-    group <- if (length(intgroup) > 1) {
-        factor(apply(intgroup.df, 1, paste, collapse = " : "))
-    } else {
-        #colData(rld)[[intgroup]]
-        intgroup
+    pca.plot <- tryCatch({
+        
+        do.scale <- ifelse(ncol(countData) > 2, T, F)
+        
+        pca <- prcomp(t(countData), scale. = do.scale)
+        
+        intgroup <- c("condition")
+        percentVar <- pca$sdev^2/sum(pca$sdev^2)
+        ## compute PC variance explained % and plot
+        percentVar.df <- data.frame(PCs = paste0("PC", 1:length(percentVar)), 
+                                    Variation_percentage = percentVar*100)
+        percentVar.df$PCs <- factor(percentVar.df$PCs, levels = percentVar.df$PCs, ordered = T)
+        pc.var.explained.plot <- ggplot(data = percentVar.df, aes(x = PCs, y = Variation_percentage)) + 
+            geom_bar(stat = "identity") + 
+            geom_text(aes(label = round(Variation_percentage, 2)), vjust = -.5) + 
+            ylab("Variation explained %") + theme_bw() + 
+            ggtitle("Amount of variation explained by the principal components") + 
+            theme(plot.title = element_text(hjust = 0.5))
+        
+        ## compute and plot PCs
+        # intgroup.df <- as.data.frame(colData(rld)[, intgroup, drop = FALSE])
+        intgroup.df <- data.frame(intgroup.dt[, c("sample_id", intgroup), with = F], row.names = "sample_id")
+        group <- if (length(intgroup) > 1) {
+            factor(apply(intgroup.df, 1, paste, collapse = " : "))
+        } else {
+            #colData(rld)[[intgroup]]
+            intgroup
+        }
+        
+        d <- data.frame(pca$x, group = group, 
+                        condition = intgroup.df[colnames(countData), ], 
+                        name = colnames(countData))
+        pca.plot <- ggplot(data = d, aes(PC1, PC2, color=condition, shape=condition, label=name)) + 
+            geom_point(size = 4, color = "black") + geom_point(size = 3, alpha = 1) + coord_fixed() + 
+            geom_text(position="jitter", hjust=0.2, vjust=-0.2, size=6, show.legend = F) +
+            xlab(paste0("PC1: ", round(percentVar[1] * 100), "% variance")) + 
+            ylab(paste0("PC2: ", round(percentVar[2] * 100), "% variance"))+ 
+            scale_color_brewer(palette = "Set2") + scale_x_continuous(expand = c(0.3,0)) +
+            scale_y_continuous(expand = c(0.3,0)) + theme_bw() + 
+            theme(legend.position="bottom") + 
+            ggtitle("Samples plotted according to the first two principal components") + 
+            theme(plot.title = element_text(hjust = 0.5))
+        
+        pca.plot
+    }, 
+    error = function(cond){
+        return(NULL)
     }
-
-    d <- data.frame(pca$x, group = group, 
-                    condition = intgroup.df[colnames(countData), ], 
-                    name = colnames(countData))
-    pca.plot <- ggplot(data = d, aes(PC1, PC2, color=condition, shape=condition, label=name)) + 
-        geom_point(size = 4, color = "black") + geom_point(size = 3, alpha = 1) + coord_fixed() + 
-        geom_text(position="jitter", hjust=0.2, vjust=-0.2, size=6, show.legend = F) +
-        xlab(paste0("PC1: ", round(percentVar[1] * 100), "% variance")) + 
-        ylab(paste0("PC2: ", round(percentVar[2] * 100), "% variance"))+ 
-        scale_color_brewer(palette = "Set2") + scale_x_continuous(expand = c(0.3,0)) +
-        scale_y_continuous(expand = c(0.3,0)) + theme_bw() + 
-        theme(legend.position="bottom") + 
-        ggtitle("Samples plotted according to the first two principal components") + 
-        theme(plot.title = element_text(hjust = 0.5))
-    
+    )
 }
 
 ```
@@ -213,7 +221,11 @@ if(meta.file != ""){
 ```{r plot pca, echo=FALSE}
 if(meta.file != ""){
     print(pc.var.explained.plot)
-    print(pca.plot)
+    if(!is.null(pca.plot)){
+        print(pca.plot)
+    }else{
+        print("Failed to compute principal components")
+    }
 }else{
     print("PCA not applicable to single sample")
 }
