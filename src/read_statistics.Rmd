@@ -146,13 +146,17 @@ get.color.hues <- function(meta){
     n.conditions <- nrow(samples.per.condition)
     hues <- brewer_pal(palette = "Set2")(n.conditions)
     
-    for(i in 1:n.conditions){
-        n.hues <- samples.per.condition[i, 1] + 2
-        col.hues <- colorRampPalette(colors = c(hues[i], 
-                                                "white"))(n.hues)[1:(n.hues-2)]
-        
-        intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
-                                                                          hue = hues[i])]
+    if(nrow(intgroup.dt) == 1){
+        intgroup.dt[, `:=`(color = hues[1],  hue = hues[1])]
+    }else{
+        for(i in 1:n.conditions){
+            n.hues <- samples.per.condition[i, "N"] + 2
+            col.hues <- colorRampPalette(colors = c(hues[i], 
+                                                    "white"))(n.hues)[1:(n.hues-2)]
+            
+            intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
+                                                                              hue = hues[i])]
+        }
     }
     intgroup.dt[]
 }

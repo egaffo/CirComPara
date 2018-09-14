@@ -541,21 +541,25 @@ The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per
 ## set custom color shades
 ## function to compute color hues and colors to give to each sample
 get.color.hues <- function(meta){
-    intgroup.dt <- meta[, .(.N), by = .(sample_id,
+    intgroup.dt <- meta[, .(.N), by = .(sample_id, 
                                         condition)][order(sample_id), 
-                                                    .(sample_id, samples_per_condition = .N), by = condition]
+                                                    .(sample_id), by = condition]
     samples.per.condition <- data.frame(intgroup.dt[, .N, by = .(condition)], 
                                         row.names = "condition")
     n.conditions <- nrow(samples.per.condition)
     hues <- brewer_pal(palette = "Set2")(n.conditions)
     
-    for(i in 1:n.conditions){
-        n.hues <- samples.per.condition[i, 1] + 2
-        col.hues <- colorRampPalette(colors = c(hues[i], 
-                                                "white"))(n.hues)[1:(n.hues-2)]
-        
-        intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
-                                                                          hue = hues[i])]
+    if(nrow(intgroup.dt) == 1){
+        intgroup.dt[, `:=`(color = hues[1],  hue = hues[1])]
+    }else{
+        for(i in 1:n.conditions){
+            n.hues <- samples.per.condition[i, "N"] + 2
+            col.hues <- colorRampPalette(colors = c(hues[i], 
+                                                    "white"))(n.hues)[1:(n.hues-2)]
+            
+            intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
+                                                                              hue = hues[i])]
+        }
     }
     intgroup.dt[]
 }
