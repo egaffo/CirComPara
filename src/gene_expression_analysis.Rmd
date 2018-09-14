@@ -208,7 +208,7 @@ if(meta.file != ""){
             ggtitle("Samples plotted according to the first two principal components") + 
             theme(plot.title = element_text(hjust = 0.5))
         
-        pca.plot
+        list(pca.plot = pca.plot, pc.var.explained.plot = pc.var.explained.plot)
     }, 
     error = function(cond){
         return(NULL)
@@ -220,9 +220,10 @@ if(meta.file != ""){
 
 ```{r plot pca, echo=FALSE}
 if(meta.file != ""){
-    print(pc.var.explained.plot)
+    
     if(!is.null(pca.plot)){
-        print(pca.plot)
+        print(pca.plot$pc.var.explained.plot)
+        print(pca.plot$pca.plot)
     }else{
         print("Failed to compute principal components")
     }
