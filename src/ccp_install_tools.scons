@@ -77,10 +77,10 @@ env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), SEGEMEHL[1], SymLink)
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), SEGEMEHL[2], SymLink)
 
 # TRIMMOMATIC
-TRIMMOMATIC_zip = 'Trimmomatic-0.36.zip'
+TRIMMOMATIC_zip = 'Trimmomatic-0.38.zip'
 TRIMMOMATIC_link = 'http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/' + TRIMMOMATIC_zip
 TRIMMOMATIC_target = [os.path.join(tools_dir, TRIMMOMATIC_zip), 
-                      os.path.join(tools_dir, 'Trimmomatic-0.36', 'trimmomatic-0.36.jar')]
+                      os.path.join(tools_dir, 'Trimmomatic-0.38', 'trimmomatic-0.38.jar')]
 #TRIMMOMATIC_source = 
 TRIMMOMATIC = env.Command(TRIMMOMATIC_target, [], ['wget -O $TARGET  ' + TRIMMOMATIC_link,
                                                    'unzip -u -d ${TARGETS[0].dir} ${TARGETS[0]}'])
