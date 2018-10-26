@@ -1577,13 +1577,33 @@ if(file.info(gene_fpkm_file)$size > 0){
         total.cond.corr <- as.data.table(data.frame("Total" = sapply(split(cor.by.cond.w.labels$corr, 
                                                                            f = cor.by.cond.w.labels$condition), 
                                                                      summary)), keep.rownames = T)
-        positive.cond.cor <- as.data.table(data.frame("Only positive" = sapply(split(cor.by.cond.w.labels[corr >= 0 ]$corr, 
-                                                                                     f = cor.by.cond.w.labels[corr >= 0 ]$condition),
-                                                                               summary)), keep.rownames = T)
+        positive.cond.cor <- 
+            data.frame("Only positive" = 
+                           sapply(split(cor.by.cond.w.labels[corr >= 0 ]$corr, 
+                                        f = cor.by.cond.w.labels[corr >= 0 ]$condition),
+                                  summary))
+        if(nrow(positive.cond.cor) == 0){
+            positive.cond.cor <- matrix(NA, nrow = 7, ncol = nrow(intgroup.dt[, .N, by = condition]))
+            colnames(positive.cond.cor) <- as.character(unique(intgroup.dt$condition))
+            rownames(positive.cond.cor) <- names(summary(cor.by.cond.w.labels$corr))
+            positive.cond.cor <- data.frame("Only positive" = positive.cond.cor)
+        }
+        positive.cond.cor <- as.data.table(positive.cond.cor, keep.rownames = T)
         
-        negative.cond.corr <- as.data.table(data.frame("Only negative" = sapply(split(cor.by.cond.w.labels[corr < 0 ]$corr, 
-                                                                                      f = cor.by.cond.w.labels[corr < 0 ]$condition), 
-                                                                                summary)), keep.rownames = T)
+        negative.cond.corr <- 
+            data.frame("Only negative" = 
+                           sapply(split(cor.by.cond.w.labels[corr < 0 ]$corr, 
+                                        f = cor.by.cond.w.labels[corr < 0 ]$condition), 
+                                  summary))
+        if(nrow(negative.cond.corr) == 0){
+            negative.cond.corr <- matrix(NA, nrow = 7, ncol = nrow(intgroup.dt[, .N, by = condition]))
+            colnames(negative.cond.corr) <- as.character(unique(intgroup.dt$condition))
+            rownames(negative.cond.corr) <- names(summary(cor.by.cond.w.labels$corr))
+            negative.cond.corr <- data.frame("Only negative" = negative.cond.corr)
+        }
+        negative.cond.corr <- 
+            as.data.table(negative.cond.corr, keep.rownames = T)
+                
         corr.by.cond.summaries <- merge(merge(total.cond.corr, 
                                               positive.cond.cor, 
                                               by = "rn", all = T), 
@@ -1644,13 +1664,19 @@ if(file.info(gene_fpkm_file)$size > 0){
             ylab("Correlation") + ggtitle("Correlation\ndistribution") + 
             theme(plot.title = element_text(hjust = 0.5))
         
-        non.na.cors.by.cond <- circrna_gene_xpr_by_cond_corr[
-            , .(pos_corr = ifelse(corr > 0, "Positive", "Negative"), corr, condition)][!is.na(corr)]
-        if(length(non.na.cors$pos_corr) == 0){
-            non.na.cors <- as.data.table(list(pos_corr = rep(c("Positive", "Negative"), intgroup.dt[, .N, by = condition][, .N]), 
-                                              corr = rep(c(NA, NA), intgroup.dt[, .N, by = condition][, .N]), 
-                                              condition = unique(intgroup.dt[, condition])))
+        non.na.cors.by.cond <- 
+            circrna_gene_xpr_by_cond_corr[, .(pos_corr = ifelse(corr > 0, 
+                                                                "Positive", "Negative"), 
+                                              corr, condition)][!is.na(corr)]
+        
+        if(length(non.na.cors.by.cond$pos_corr) == 0){
+            non.na.cors.by.cond <- 
+                as.data.table(list(pos_corr = rep(c("Positive", "Negative"), 
+                                                  intgroup.dt[, .N, by = condition][, .N]), 
+                                   corr = rep(c(NA, NA), intgroup.dt[, .N, by = condition][, .N]), 
+                                   condition = unique(intgroup.dt[, condition])))
         }
+        
         cor.abs.by.cond.boxplot <- ggplot(data = non.na.cors.by.cond) +
             geom_boxplot(aes(x = condition, y = abs(corr), fill = condition), notch = T, varwidth = T)  +
             facet_wrap(facets = ~ pos_corr) + 
