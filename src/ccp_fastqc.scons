@@ -46,11 +46,21 @@ except NameError:
 readset_basename = re.sub('\.fq$|\.fastq$', '', re.sub('\.gz$', '', fastqc_readset.name))
 fastqc_html_target = readset_basename + '_fastqc.html'
 fastqc_zip_target = readset_basename + '_fastqc.zip'
+## including the fastqc_data.txt file in the targets may result in 
+## 'target doesn't exist' if empty fastq files are processed by FASTQC.
+## We need to initialize the file.
+fastqc_data_target = os.path.join(readset_basename + "_fastqc",
+                                  "fastqc_data.txt")
 
 fastqc_quality_cmd ='''echo "No reads in ${SOURCES[0]}" > ${TARGETS[0]} && '''\
-                    '''fastqc $SOURCE -o ${TARGETS[0].dir} > ${TARGETS[2]} 2> ${TARGETS[3]} '''
-fastqc_quality = env.Command([fastqc_html_target, fastqc_zip_target,
-                             '${SOURCE.filebase}_fastqc.log', '${SOURCE.filebase}_fastqc.err'], 
+                    '''echo "No reads in ${SOURCES[0]}" > ${TARGETS[4]} && '''\
+                    '''fastqc $SOURCE -o ${TARGETS[0].dir} --extract > '''\
+                    '''${TARGETS[2]} 2> ${TARGETS[3]} '''
+fastqc_quality = env.Command([fastqc_html_target, 
+                              fastqc_zip_target,
+                              '${SOURCE.filebase}_fastqc.log', 
+                              '${SOURCE.filebase}_fastqc.err', 
+                              fastqc_data_target],
                              fastqc_readset, 
                              fastqc_quality_cmd)
 
