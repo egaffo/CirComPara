@@ -119,6 +119,24 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
     expression_results.append(stringtie)
     expression['STRINGTIE'] = stringtie
 
+    ## compute read raw counts for StringTie
+    raw_counts_sources = [stringtie['TRANSCRIPTS_GTF'],
+                          env['FASTQC_DATA']]
+    raw_counts_cmd = os.path.join(env['SCONSCRIPT_HOME'],
+                             '''get_stringtie_rawcounts.R -g ${SOURCES[0]} '''\
+                             '''-f ${','.join([str(s.abspath) for s in SOURCES[1:]])} '''\
+                             '''-o ${TARGETS[0].dir}''' + os.path.sep +\
+                             env['SAMPLE'] + '''_''')
+    raw_counts_targets = [os.path.join(stringtie_dir, f) \
+                          for f in ['gene_expression_rawcounts.csv',
+                                    'transcript_expression_rawcounts.csv']]
+    raw_counts = env.Command(raw_counts_targets, 
+                             raw_counts_sources, 
+                             raw_counts_cmd)
+
+    expression_results.append(raw_counts)
+    expression['STRINGTIE']['RAW_COUNTS'] = raw_counts
+
 
 Clean('.', htseq_count_dir)
 Clean('.', cufflinks_dir)

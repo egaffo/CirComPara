@@ -176,27 +176,15 @@ env['ALIGNMENTS'] = mappings[0]
 if not env['BYPASS'] == 'linear':
     ## EXPRESSION ANALYSIS
     env_expression = env.Clone()
+    env_expression['FASTQC_DATA'] = fastqc_data
     
     expression  = env.SConscript(os.path.join(build_dir, ccp_expression), 
                                  variant_dir = build_dir, src_dir = SRC_DIR, 
                                  duplicate = 0, exports = '''env_expression''')
 
     if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
-        ## compute raw counts from StringTie output
-        raw_counts_sources = [expression[1]['STRINGTIE']['TRANSCRIPTS_GTF'], fastqc_data]
-        raw_counts_cmd = os.path.join(env['SCONSCRIPT_HOME'],
-                                 '''get_stringtie_rawcounts.R -g ${SOURCES[0]} '''\
-                                 '''-f ${','.join([str(s.abspath) for s in SOURCES[1:]])} '''\
-                                 '''-o ${TARGETS[0].dir}''' + os.path.sep)
-        raw_counts_targets = [os.path.join(build_dir, f) \
-                              for f in ['gene_expression_rawcounts.csv',
-                                        'transcript_expression_rawcounts.csv']]
-        raw_counts = env.Command(raw_counts_targets, 
-                                 raw_counts_sources, 
-                                 raw_counts_cmd)
-
-        results.append(raw_counts)
         results.append(expression[1]['STRINGTIE']['ALL_TARGETS'])
+        results.append(expression[1]['STRINGTIE']['RAW_COUNTS'])
         # the ALL_TARGETS is a temporary hack. It will be removed when SConscript
         # results are passed as dictionaries/custom-objects and handled accordingly
     if 'htseq' in env['LINEAR_EXPRESSION_METHODS']:
