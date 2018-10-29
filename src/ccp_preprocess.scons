@@ -95,7 +95,8 @@ else:
     print env['PREPROCESSOR'] + ' preprocessor not supported. Reads will not be preprocessed'
     preprocessings.append([File(f) for f in READS])
 
-preprocessed_files = preprocessings
+preprocessed_files = {'READS' : preprocessings,
+                      'STATS' : preprocessing_stats}
 
 Clean('.', preprocess_dir)
 Return('preprocessed_files')

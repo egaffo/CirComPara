@@ -100,12 +100,16 @@ raw_reads = [File(f).abspath for f in env['READS']]
 ## COMPUTE STATISTICS ON RAW READS
 read_statistics_dir = 'read_statistics'
 raw_read_stats = []
+fastqc_data = []
 for readset in raw_reads:
     read_statistics_readset = readset
     stat = SConscript(os.path.join(read_statistics_dir, ccp_read_statistics), 
                       src_dir=SRC_DIR, variant_dir=read_statistics_dir, duplicate=0,
                       exports='env read_statistics_readset')
     raw_read_stats.append(stat)
+    ## explicit list of fastqc_data.txt files
+    if('fastqc' in env['READSTAT_METHODS'].split(',')):
+        fastqc_data.append(stat[1][4])
 
 results.append(raw_read_stats)
 
@@ -122,7 +126,8 @@ preprocess  = env.SConscript(os.path.join(build_dir, ccp_preprocess),
                              duplicate = 0, exports='env preprocess_raw_reads '''
                              '''preprocess_adapter_file preprocess_preprocessor '''
                              '''preprocess_cpus preprocess_params''')
-results.append(preprocess)
+#results.append([preprocess['READS'], preprocess['STATS']]) ##TODO:fix:adding stats makes stats dependency on genome index files
+results.append([preprocess['READS']])
 ## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript).
 ## Implementation note: here you should know what the preprocess SConscript returns to handle it 
 ## properly. For instance: Trimmomatic with paired-end reads gives four output read files and 
@@ -131,15 +136,23 @@ results.append(preprocess)
 ## reads and the list is only two elements (for paired-end reads)
 
 ## get first in pair or the single end preprocessed read file
-clean_reads = [preprocess[0][0]]
+clean_reads = [preprocess['READS'][0][0]]
 ## paired end case: add the second in pair clean read file
-if len(preprocess[0]) > 2:
+if len(preprocess['READS'][0]) > 2:
     ## case: Trimmomatic paired-end
     if env['PREPROCESSOR']=='trimmomatic':
-        clean_reads.append(preprocess[0][2])
+        clean_reads.append(preprocess['READS'][0][2])
+        fastqc_data = []
+        if('fastqc' in env['READSTAT_METHODS'].split(',')):
+            ## get clean reads' statistics only
+            for cr in clean_reads:
+                read_filename = re.sub("\.gz", "", os.path.basename(cr.abspath))
+                fastqc_data.append(get_matching_nodes(preprocess['STATS'], 
+                                   os.path.join('.*' + read_filename + '_fastqc',
+                                   'fastqc_data\.txt'))[0])
     ## case: no preprocessing was performed
     else:
-        clean_reads.append(preprocess[0][1])
+        clean_reads.append(preprocess['READS'][0][1])
 
 sample_name = env['SAMPLE']
 
@@ -177,6 +190,20 @@ if not env['BYPASS'] == 'linear':
                                  '''expression_toggle_transcriptome_reconstruction''')
 
     if 'stringtie' in env['METHODS']:
+        ## compute raw counts from StringTie output
+        raw_counts_sources = [expression[1]['STRINGTIE']['TRANSCRIPTS_GTF'], fastqc_data]
+        raw_counts_cmd = os.path.join(env['SCONSCRIPT_HOME'],
+                                 '''get_stringtie_rawcounts.R -g ${SOURCES[0]} '''\
+                                 '''-f ${','.join([str(s.abspath) for s in SOURCES[1:]])} '''\
+                                 '''-o ${TARGETS[0].dir}''' + os.path.sep)
+        raw_counts_targets = [os.path.join(build_dir, f) \
+                              for f in ['gene_expression_rawcounts.csv',
+                                        'transcript_expression_rawcounts.csv']]
+        raw_counts = env.Command(raw_counts_targets, 
+                                 raw_counts_sources, 
+                                 raw_counts_cmd)
+
+        results.append(raw_counts)
         results.append(expression[1]['STRINGTIE']['ALL_TARGETS'])
         # the ALL_TARGETS is a temporary hack. It will be removed when SConscript
         # results are passed as dictionaries/custom-objects and handled accordingly

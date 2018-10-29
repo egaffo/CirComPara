@@ -276,7 +276,7 @@ for sample in sorted(samples.keys()):
     run_sample = SConscript(os.path.join(sample_dir, 'ccp_circpipe.scons'),
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = sample_dir, duplicate = 0,
-                            exports = '''env_circpipe''')
+                            exports = '''env_circpipe get_matching_nodes''')
     runs.append(run_sample)
 
     for k in indexes['INDEXES'].keys():
