@@ -261,6 +261,7 @@ env.Replace(GENEPRED       = indexes['ENV']['GENEPRED'])
 
 ## PROCESS SAMPLES
 runs = []
+runs_dict = {}
 for sample in sorted(samples.keys()):
     
     env_circpipe = env.Clone()
@@ -277,17 +278,20 @@ for sample in sorted(samples.keys()):
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = sample_dir, duplicate = 0,
                             exports = '''env_circpipe get_matching_nodes''')
-    runs.append(run_sample)
+    runs.append(run_sample[0])
+    runs_dict[sample] = run_sample[1]
 
     for k in indexes['INDEXES'].keys():
         if indexes['INDEXES'][k]: 
-            Depends(run_sample, indexes['INDEXES'][k])
+            Depends(run_sample[0], indexes['INDEXES'][k])
 
     if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_bwa', 
                                                   'circexplorer2_star', 
                                                   'circexplorer2_segemehl', 
                                                   'circexplorer2_tophat']]):
-	Depends(run_sample, env['GENEPRED']) 
+	Depends(run_sample[0], env['GENEPRED']) 
+
+env['RUNS_DICT'] = runs_dict
 
 ## LINEAR EXPRESSION: 
 ## - TRANSCRIPTOME RECONSTRUCTION, 
