@@ -20,6 +20,8 @@ output:
 # gene.xpr.file <- "analysis/cuffdiff/genes.read_group_tracking" # if cufflinks. Comma separated list of *gene_abund.tab files if stringtie
 # sample # comma separated list if multisample
 # linear.method # comma separated list if more than one method. Currently use only the first in the list
+# gene_raw_counts_list <- "" #Comma separated list
+# trx_raw_counts_list <- "" #Comma separated list
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 12, 
@@ -121,8 +123,38 @@ if(method == "stringtie"){
               file = file.path(results.dir, "gene_expression_Nreads_table.csv"), 
               row.names = F)
     
-    gene.raw.frags.dt <- gene.xpr.nreads[, c("Gene ID", gene_meta$sample_id), with = F][, `:=`(gene_id = `Gene ID`, `Gene ID` = NULL)][]
+    gene.raw.frags.dt <- gene.xpr.nreads[, c("Gene ID", gene_meta$sample_id), 
+                                         with = F][, `:=`(gene_id = `Gene ID`, `Gene ID` = NULL)][]
     genes.read_group_tracking <- gene.xpr[, .(sample_id = sample, tracking_id = `Gene ID`, FPKM)]
+    
+    
+    ## merge gene_raw_counts_list
+    gene_raw_counts_list.paths <- strsplit(gene_raw_counts_list, ",")[[1]]
+    gene_raw_counts <- lapply(gene_raw_counts_list.paths, fread)
+    names(gene_raw_counts) <- sub("_gene_expression_rawcounts.csv", "",
+                                              sapply(gene_raw_counts_list.paths, basename,
+                                                     USE.NAMES = F))
+    gene_raw_counts <- rbindlist(gene_raw_counts, use.names = T, idcol = "sample_id")
+    
+    write.csv(x = dcast(gene_raw_counts,
+                        formula = gene_id ~ sample_id,
+                        value.var = "raw.reads", fill = 0),
+              file = file.path(results.dir, "gene_expression_rawcounts_table.csv"),
+              row.names = F)
+
+    ## merge trx_raw_counts_list
+    trx_raw_counts_list.paths <- strsplit(trx_raw_counts_list, ",")[[1]]
+    trx_raw_counts <- lapply(trx_raw_counts_list.paths, fread)
+    names(trx_raw_counts) <- sub("_transcript_expression_rawcounts.csv", "",
+                                              sapply(trx_raw_counts_list.paths, basename,
+                                                     USE.NAMES = F))
+    trx_raw_counts <- rbindlist(trx_raw_counts, use.names = T, idcol = "sample_id")
+    
+    write.csv(x = dcast(trx_raw_counts[raw.reads > 0, ],
+                        formula = gene_id + transcript_id ~ sample_id,
+                        value.var = "raw.reads", fill = 0),
+              file = file.path(results.dir, "transcript_expression_rawcounts_table.csv"), 
+              row.names = F)
 }
 ```
 
