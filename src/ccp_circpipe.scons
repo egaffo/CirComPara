@@ -278,6 +278,8 @@ if not env['BYPASS'] == 'circular':
                             '''ciri_extra_parameters circrna_methods''')
     results.append(circrnas)
 
+results_dict = {'LINEAR_EXPRESSION' : expression[1],
+                'CIRCULAR_EXPRESSION' : circrnas}
 #Depends(circrnas, unmapped_reads)
 
 ## CLEAN COMMANDS
@@ -285,4 +287,4 @@ Clean('.', read_statistics_dir)
 Clean('.', build_dir)
 Clean('.', unmapped_dir)
 
-Return('results')
+Return('results results_dict')
