@@ -127,7 +127,7 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
                              '''-f ${','.join([str(s.abspath) for s in SOURCES[1:]])} '''\
                              '''-o ${TARGETS[0].dir}''' + os.path.sep +\
                              env['SAMPLE'] + '''_''')
-    raw_counts_targets = [os.path.join(stringtie_dir, f) \
+    raw_counts_targets = [os.path.join(stringtie_dir, env['SAMPLE'] + "_" + f) \
                           for f in ['gene_expression_rawcounts.csv',
                                     'transcript_expression_rawcounts.csv']]
     raw_counts = env.Command(raw_counts_targets, 
