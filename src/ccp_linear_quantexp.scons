@@ -186,8 +186,14 @@ gene_exp_analysis_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[0].absp
                         '''output_file = "$TARGET.abspath", '''\
                         '''intermediates_dir = dirname("${TARGETS[0].abspath}") )' '''
 
-gene_exp_analysis_targets = [os.path.join(geneexp_dir, "gene_expression_analysis.html"),
-                             os.path.join(geneexp_dir, "gene_expression_FPKM_table.csv")]
+gene_exp_analysis_targets = [os.path.join(geneexp_dir, 
+                                          "gene_expression_analysis.html"),
+                             os.path.join(geneexp_dir,
+                                          "gene_expression_FPKM_table.csv"),
+                             os.path.join(geneexp_dir,
+                                          "gene_expression_rawcounts_table.csv"),
+                             os.path.join(geneexp_dir,
+                                         "transcript_expression_rawcounts_table.csv")]
                             # Figs_geneexp
 
 gene_exp_analysis_sources = [gene_meta, gene_exp, trx_exp]
