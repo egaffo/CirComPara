@@ -23,13 +23,14 @@ import os
 Import('*')
 
 try:
-    env = env.Clone()
-    CPUS        = expression_cpus
-    ANNOTATION  = expression_annotation
-    ALIGNMENTS  = mapping_file
-    SAMPLE      = sample_name
-    CUFFLINKS_PARAMS = expression_cufflinks_params
-    TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = expression_toggle_transcriptome_reconstruction
+    env = env_expression.Clone()
+    #env = env.Clone()
+    #CPUS        = expression_cpus
+    #ANNOTATION  = expression_annotation
+    #ALIGNMENTS  = mapping_file
+    #SAMPLE      = sample_name
+    #CUFFLINKS_PARAMS = expression_cufflinks_params
+    #TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = expression_toggle_transcriptome_reconstruction
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
@@ -72,18 +73,21 @@ expression = {'HTSEQ': None, 'CUFFLINKS': None, 'STRINGTIE': None}
 
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
-mapping_file = ALIGNMENTS
-sample_name  = SAMPLE
+#mapping_file = ALIGNMENTS
+#sample_name  = SAMPLE
+
+mapping_file = env['ALIGNMENTS']
+sample_name  = env['SAMPLE']
 
 htseq_count_dir = 'htseq'
 cufflinks_dir = 'cufflinks'
 stringtie_dir = 'stringtie'
 
-if 'htseq' in env['METHODS'] and not ANNOTATION == '':
+if 'htseq' in env['LINEAR_EXPRESSION_METHODS'] and not env['ANNOTATION'] == '':
     ## RUN HTSEQ-COUNT
-    htseq_count_annotation = ANNOTATION
-    htseq_count_cpus = CPUS
-    htseq_count_stranded = 'yes' if 'fr-firststrand' in CUFFLINKS_PARAMS else 'no'
+    htseq_count_annotation = env['ANNOTATION']
+    htseq_count_cpus = env['CPUS']
+    htseq_count_stranded = 'yes' if 'fr-firststrand' in env['CUFFLINKS_PARAMS'] else 'no'
     htseq = SConscript(os.path.join(htseq_count_dir, 'ccp_htseq_count.scons'), 
                        variant_dir = htseq_count_dir, src_dir = SRC_DIR, 
                        duplicate = 0, exports = '''env mapping_file sample_name '''
@@ -91,12 +95,12 @@ if 'htseq' in env['METHODS'] and not ANNOTATION == '':
     expression_results.append(htseq)
     expression['HTSEQ'] = htseq
 
-if 'cufflinks' in env['METHODS']:
+if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
     ## RUN CUFFLINKS
-    cufflinks_annotation = ANNOTATION
-    cufflinks_cpus = CPUS
-    cufflinks_params = CUFFLINKS_PARAMS
-    cufflinks_toggle_transcriptome_reconstruction = TOGGLE_TRANSCRIPTOME_RECONSTRUCTION
+    cufflinks_annotation = env['ANNOTATION']
+    cufflinks_cpus = env['CPUS']
+    cufflinks_params = env['CUFFLINKS_PARAMS']
+    cufflinks_toggle_transcriptome_reconstruction = env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']
     cufflinks = SConscript(os.path.join(cufflinks_dir, 'ccp_cufflinks.scons'),
                            variant_dir = cufflinks_dir, src_dir = SRC_DIR, 
                            duplicate = 0, exports = '''env mapping_file sample_name '''
@@ -105,7 +109,7 @@ if 'cufflinks' in env['METHODS']:
     expression_results.append(cufflinks)
     expression['CUFFLINKS'] = cufflinks
 
-if 'stringtie' in env['METHODS']:
+if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
     ## RUN STRINGTIE
     env_stringtie = env.Clone()
     stringtie = SConscript(os.path.join(stringtie_dir, 'ccp_stringtie.scons'), 
