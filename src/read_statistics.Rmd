@@ -301,7 +301,7 @@ if(meta_file != ""){
 # Circular RNA methods' alignments
 
 ```{r Circular RNA methods alignments, echo=FALSE, include=FALSE}
-circrna.mappings <- fread(paste0("zcat ", circrna.reads.stats.file), showProgress = F)
+circrna.mappings <- fread(cmd = paste0("zcat ", circrna.reads.stats.file), showProgress = F)
 colnames(circrna.mappings) <- c("file", "alignments", "readname")
 
 circrna.mappings[, `:=`(Sample = file_path_sans_ext(basename(file)), 
