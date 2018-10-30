@@ -78,7 +78,7 @@ read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''circrna.reads.stats.file <- "${SOURCES[1].abspath}"; '''\
                         '''meta_file <- "${SOURCES[2].abspath}"; '''\
                         '''rmarkdown::render(input = "$SCONSCRIPT_HOME/read_statistics.Rmd",'''\
-                        '''output_file = "$TARGET.abspath", '''\
+                        '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
 read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_statistics.html'),

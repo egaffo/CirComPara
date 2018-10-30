@@ -189,7 +189,7 @@ gene_exp_analysis_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[0].absp
                         '''linear.method <- "${ ','.join( LINEAR_EXPRESSION_METHODS ) }"; '''\
                         '''rmarkdown::render(input = "''' + \
                         str(gene_exp_analysis_template) + '''", '''\
-                        '''output_file = "$TARGET.abspath", '''\
+                        '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("${TARGETS[0].abspath}") )' '''
 
 gene_exp_analysis_targets = [os.path.join(geneexp_dir, 

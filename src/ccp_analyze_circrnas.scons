@@ -47,7 +47,7 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''min_reads <- ${MIN_READS}; '''\
                         '''meta_file <- "$META"; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
-                        '''output_file = "$TARGET.abspath", '''\
+                        '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
 circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
@@ -61,7 +61,7 @@ if env['DIFF_EXP']:
                            '''meta.file <- "${SOURCES[0].abspath}"; '''\
                            '''circrnas.per.sample.file <- "${SOURCES[1].abspath}"; '''\
                            '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circrnas_diffexp.Rmd",'''\
-                           '''output_file = "$TARGET.abspath", '''\
+                           '''output_file = "$TARGET.abspath", quiet=T,'''\
                            '''intermediates_dir = dirname("$TARGET.abspath") )' '''
     
     circrnas_diffexp_targets = "circrnas_diffexp.html"
