@@ -146,7 +146,7 @@ if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
 if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
     ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
     htseq_counts = []
-    env_htseq_count = env.Copy()
+    env_htseq_count = env.Clone()
     #for algn in get_matching_nodes(env['RUNS'], alignment_matching_regexp):
     for algn in env['LINEAR_ALIGNMENTS']:
         env_htseq_count['SAMPLE'] = os.path.splitext(File(algn).name)[0]
@@ -168,7 +168,10 @@ if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
 
     ## TODO: fix gene expression report for htseq_count. 
     gene_meta = env['META']  
-    gene_exp = Flatten(htseq_counts) 
+    gene_exp = Flatten(htseq_counts)
+    trx_exp = gene_exp
+    gene_raw_counts_list = gene_exp
+    trx_raw_counts_list = gene_exp
 
 ## REPORT GENE EXPRESSION
 gene_exp_analysis_template = os.path.join("$SCONSCRIPT_HOME", "gene_expression_analysis.Rmd")
