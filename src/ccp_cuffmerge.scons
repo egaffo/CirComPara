@@ -16,11 +16,7 @@ import os, itertools, zipfile
 Import('*')
 
 try:
-    env = env.Clone()
-    gtf_files = transcripts_gtf_files
-    CPUS      = cuffmerge_cpus
-    ANNOTATION = cuffmerge_annotation
-    GENOME_FASTA = cuffmerge_genome_fasta
+    env = env_cuffmerge.Clone()
 except NameError:
     vars = Variables('vars.py')
     vars.Add('CPUS', 'Max parallel jobs to execute', '4')
@@ -38,10 +34,7 @@ except NameError:
         print "Unknown variables:", unknown.keys()
         Exit(1)
    
-    GENOME_FASTA = env['GENOME_FASTA']
-    ANNOTATION = env['ANNOTATION']
-    gtf_files = [File(f).abspath for f in env['TRANSCRIPT_FILES'].split(',')]
-    CPUS = env['CPUS']
+    env['TRANSCRIPT_FILES'] = [File(f) for f in env['TRANSCRIPT_FILES'].split(',')]
 
 ## COLLECT TRANSCRIPTS.GTF FILES
 def WriteAssemblies(target, source, env):
@@ -49,18 +42,21 @@ def WriteAssemblies(target, source, env):
         for gtf in source:
             print>>af, gtf.path
 
-write_af = env.Command('assemblies.txt', [gtf_files], WriteAssemblies)
+write_af = env.Command('assemblies.txt', 
+                       env['TRANSCRIPT_FILES'], 
+                       WriteAssemblies)
 
 ## MERGE TRANSCRIPTS.GTF FILES
-add_options = ' -s ' + GENOME_FASTA
-if not ANNOTATION == '':
-    add_options = add_options + ' -g ' + ANNOTATION
+add_options = ' -s ' + env['GENOME_FASTA']
+if not env['ANNOTATION'] == '':
+    add_options = add_options + ' -g ' + env['ANNOTATION']
 
 cuffmerge_out_dir = 'merged'
-cuffmerge_cmd = 'cuffmerge $(-p ' + CPUS + '$) -o ${TARGET.dir} ' +\
+cuffmerge_cmd = 'cuffmerge $(-p $CPUS $) -o ${TARGET.dir} ' +\
                 add_options + ' ${SOURCE}'
 cuffmerge = env.Command(os.path.join(cuffmerge_out_dir, 'merged.gtf'), 
-                        [write_af, gtf_files], cuffmerge_cmd)
+                        [write_af, env['TRANSCRIPT_FILES']], 
+                        cuffmerge_cmd)
 
 ## AMEND DIRECTORY FROM LOG FILES WHEN CLEANING AND THE DIRECTORY ITSELF
 Clean(cuffmerge, os.path.join(cuffmerge_out_dir, 'logs'))
