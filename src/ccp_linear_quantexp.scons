@@ -22,7 +22,7 @@ except NameError:
 ## QUANTIFY EXPRESSION
 gene_exp = ''
 gene_meta = ''
-sample = ''
+#sample = ''
 
 cuffquant_dir = 'cuffquant'
 cuffdiff_dir = 'cuffdiff'
@@ -37,7 +37,7 @@ env['LINEAR_ALIGNMENTS'] = get_matching_nodes(env['RUNS'],
                                               '.*hisat2_out.*\.bam')
 
 if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
-    sample = ','.join(env['SAMPLES'].keys())
+    #sample = ','.join(env['SAMPLES'].keys())
     gene_meta = env['META']
     if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
         ## (RE)COMPUTE GENE ABUNDANCES USING MERGED ANNOTATION
@@ -101,7 +101,7 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
    
 if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
     (env['DIFF_EXP'] and 'cuffdiff' in env['DIFF_EXP']): ## exploit lazy evaluation
-    if len(env['SAMPLES'].keys()) > 1:        
+    if len(env['SAMPLES'].keys()) > 1:
         cuffquant_annotation = env['ANNOTATION']
         cuffquant_alignments = env['LINEAR_ALIGNMENTS']
         cuffquant_genome_fasta = env['GENOME_FASTA']
@@ -114,16 +114,13 @@ if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
                                variant_dir = cuffquant_dir, duplicate = 0,
                                exports = '''env cuffquant_alignments cuffquant_annotation '''
                                '''cuffquant_genome_fasta cuffquant_cpus cuffquant_extra_params''')
-        
-        env.Replace(EXPRESSION_FILES = get_matching_nodes(cuffquant, '.*\.cxb'))
-        
         Depends(cuffquant, [env['ANNOTATION'], env['LINEAR_ALIGNMENTS']])
         
         ## Normalize expression values: CUFFNORM
         env_cuffnorm = env.Clone()
         env_cuffnorm['QUANT_FILES']= get_matching_nodes(cuffquant, '.*\.cxb')
         env_cuffnorm['EXTRA_PARAMS']= env['CUFFNORM_EXTRA_PARAMS'] #TODO: set strandness when required
-        env_cuffnorm['LABELS'] = conditions
+        env_cuffnorm['LABELS'] = env['CONDITIONS']
         
         cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffnorm.scons'),
                               src_dir = env['SCONSCRIPT_HOME'],
@@ -134,13 +131,21 @@ if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
         
         gene_exp = get_matching_nodes(cuffnorm, ".*genes.read_group_tracking")
         gene_meta = File(get_matching_nodes(cuffnorm, ".*read_groups.info")[0]).abspath
-        
+        trx_exp = get_matching_nodes(cuffnorm, ".*isoforms.read_group_tracking")
+        gene_raw_counts_list = gene_exp
+        trx_raw_counts_list = trx_exp
+
     else:
         ## case of only one sample
         gene_exp = get_matching_nodes(env['RUNS'], '.*genes.fpkm_tracking')
-        gene_meta = ''
-        #link_cufflinks_dir = env.Command(cuffdiff_dir, gene_exp[0].dir, SymLink)
-        sample = str(env['SAMPLES'].keys()[0])
+        gene_meta = env['META']
+        #sample = str(env['SAMPLES'].keys()[0])
+
+        trx_exp = get_matching_nodes(env['RUNS'], ".*isoforms.fpkm_tracking")
+        gene_raw_counts_list = gene_exp
+        trx_raw_counts_list = trx_exp
+
+    env.Replace(EXPRESSION_FILES = gene_exp)
 
 if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
     ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION

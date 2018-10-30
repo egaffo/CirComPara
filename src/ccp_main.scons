@@ -234,6 +234,8 @@ with open(env['META']) as csvfile:
             #print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
             pass
 
+env['CONDITIONS'] = conditions
+
 if len(conditions.keys()) < 2:
     print "WARNING: " + str(conditions.keys()) + " is the only "\
           "condition set for the samples. Differential "\
