@@ -43,66 +43,111 @@ library(scales)
 library(DESeq2)
 ```
 
+```{r}
+##prepare meta file
+if(basename(meta.file) == "read_groups.info"){
+    gene_meta <- fread(meta.file, colClasses = c("character", "factor", "character", 
+                                                 "numeric", "numeric", "numeric", 
+                                                 "numeric"))
+    gene_meta[, sample_id := sub(".*cuffquant/(.*)_hisat2.*", "\\1", file)]
+}else{
+    ## prepare meta file and sample colors for plots
+    gene_meta <- unique(fread(file = meta.file)[, .(sample_id = sample, condition)])
+}
+intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
+intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
+intgroup.dt <- merge(intgroup.dt, 
+                     intgroup.dt[, .(samples_per_condition = .N), 
+                                 by = condition][, hue := brewer.pal(8, 
+                                                                     "Set2")[1:length(condition)]][], 
+                     by = "condition")[, color := muted(hue, l = color_luminance)][]
+```
+
+
 ```{r load data, include=FALSE}
 ## use only the first method in the list
 method <- strsplit(linear.method, ",")[[1]][1]
-
 if(method == "cufflinks"){
-    if(meta.file != ""){
-        gene_meta <- fread(meta.file, colClasses = c("character", "factor", "character", 
-                                                     "numeric", "numeric", "numeric", 
-                                                     "numeric"))
-        gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
-        
-        intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
-        intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
-        intgroup.dt <- merge(intgroup.dt, 
-                             intgroup.dt[, .(samples_per_condition = .N), 
-                                         by = condition][, hue := brewer.pal(8, 
-                                                                             "Set2")[1:length(condition)]][], 
-                             by = "condition")[, color := muted(hue, l = color_luminance)][]
-    }
+    trx_raw_counts <- fread(trx_raw_counts_list)
     
-    if(meta.file != ""){
-        genes.read_group_tracking <- fread(gene.xpr.file, 
-                                           colClasses = c("character", "factor", "character", 
-                                                          "integer", "numeric", "numeric", 
-                                                          "numeric", "character", "character"))[
-                                                              , .(tracking_id, condition, replicate, raw_frags, FPKM)]
+    if(basename(meta.file) == "read_groups.info"){
+        genes.read_group_tracking <- 
+            fread(gene.xpr.file, 
+                  colClasses = c("character", "factor", "character", 
+                                 "integer", "numeric", "numeric", 
+                                 "numeric", "character", "character"))[
+                                     , .(tracking_id, condition, replicate, raw_frags, internal_scaled_frags, FPKM)]
+        
         setkey(gene_meta, condition, replicate_num)
         setkey(genes.read_group_tracking, condition, replicate)
-        gene.raw.frags.dt <- dcast(genes.read_group_tracking[gene_meta[, .(sample_id, condition, 
-                                                                           replicate_num)]][, .(gene_id = tracking_id, 
-                                                                                                sample_id, raw_frags)], 
-                                   formula = gene_id ~ sample_id, value.var = "raw_frags", fill = 0)
+        gene.raw.frags.dt <- 
+            dcast(genes.read_group_tracking[gene_meta[, .(sample_id, condition, 
+                                                          replicate_num)]][, .(gene_id = tracking_id, 
+                                                                               sample_id, raw_frags)], 
+                  formula = gene_id ~ sample_id, value.var = "raw_frags", fill = 0)
+        
+        ## save gene_raw_counts
+        ## https://github.com/cole-trapnell-lab/cufflinks/issues/12
+        ## simply multiply each samples count table by the library size factors to "de-normalize" the counts
+        gene_raw_counts <- genes.read_group_tracking
+        gene_raw_counts <- gene_raw_counts[, `:=`(raw.reads = ceiling(raw_frags),
+                                                  gene_id = tracking_id)]
+        gene_raw_counts <- merge(gene_raw_counts, 
+                                gene_meta[, .(condition, replicate_num, sample_id)], 
+                                by.x = c("condition", "replicate"), 
+                                by.y = c("condition", "replicate_num"))
+        
+        message("Will use 'raw_frags' from genes/isoforms.read_group_tracking files as raw counts")
+        write.csv(x = dcast(gene_raw_counts,
+                        formula = gene_id ~ sample_id,
+                        value.var = "raw.reads", fill = 0),
+                  file = file.path(results.dir, "gene_expression_rawcounts_table.csv"),
+                  row.names = F)
+
+        ## save trx_raw_counts
+        trx_raw_counts$replicate <- as.character(trx_raw_counts$replicate)
+        trx_raw_counts[, raw.reads := ceiling(raw_frags)]
+        trx_raw_counts <- merge(trx_raw_counts, 
+                                gene_meta[, .(condition, replicate_num, sample_id)], 
+                                by.x = c("condition", "replicate"), 
+                                by.y = c("condition", "replicate_num"))
+        
+        trx_raw_counts.dt <- dcast(trx_raw_counts[, .(transcript_id = tracking_id, sample_id, raw.reads)],
+                            formula = transcript_id ~ sample_id,
+                            value.var = "raw.reads", fill = 0)
+        write.csv(x = trx_raw_counts.dt,
+                  file = file.path(results.dir, "transcript_expression_rawcounts_table.csv"), 
+                  row.names = F)
         
     }else{
         # tracking_id, class_code, nearest_ref_id, 
         # gene_id, gene_short_name, tss_id, 
         # locus, length, coverage, 
-        # FPKM, FPKM_conf_lo, FPKM_conf_hi, 
-        # FPKM_status
+        # FPKM, FPKM_conf_lo, FPKM_conf_hi, FPKM_status
         genes.read_group_tracking <- fread(gene.xpr.file, 
                                            colClasses = c("character", "character", "character", 
                                                           "character", "character", "character",
-                                                          "character", "character", "character",
+                                                          "character", "character", "numeric",
                                                           "numeric", "numeric", "numeric", "character"))[
-                                                              , .(tracking_id, FPKM)]
-        genes.read_group_tracking$sample_id <- sample
+                                                              , .(tracking_id, FPKM, coverage)]
+        genes.read_group_tracking$sample_id <- unique(gene_meta$sample_id)
+        
+        message("Will use 'coverage' from genes/isoforms.read_group_tracking files as raw counts")
+        ## TODO: should coverage be multiplied by gene/transcript length and divided by 
+        ## average read length to get raw counts? (as for StringTie)
+        
+        ## save trx_raw_counts
+        write.csv(x = trx_raw_counts[, .(transcript_id = tracking_id, raw.reads = ceiling(coverage))],
+                  file = file.path(results.dir, "transcript_expression_rawcounts_table.csv"), 
+                  row.names = F)
+        
+        ## save gene_raw_counts: gene coverage as the sum of transcript coverage
+        write.csv(x = trx_raw_counts[, .(raw.reads = ceiling(sum(coverage))), by = gene_id],
+                  file = file.path(results.dir, "gene_expression_rawcounts_table.csv"),
+                  row.names = F)
     }
 }
 if(method == "stringtie"){
-    ## prepare meta file and sample colors for plots
-    gene_meta <- unique(fread(file = meta.file)[, .(sample_id = sample, condition)])
-    
-    intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
-    intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
-    intgroup.dt <- merge(intgroup.dt, 
-                         intgroup.dt[, .(samples_per_condition = .N), 
-                                     by = condition][, hue := brewer.pal(8, 
-                                                                         "Set2")[1:length(condition)]][], 
-                         by = "condition")[, color := muted(hue, l = color_luminance)][]
-    
     gene.xpr.file.paths <- strsplit(gene.xpr.file, ",")[[1]]
     gene.xpr.list <- lapply(gene.xpr.file.paths, fread)
     names(gene.xpr.list) <- sub("_gene_abund.tab", "", 
@@ -163,11 +208,15 @@ if(method == "stringtie"){
 expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
 if(meta.file != ""){
     if(method == "cufflinks"){
-        setkey(gene_meta, condition, replicate_num)
-        setkey(expressed_genes, condition, replicate)
-        expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+        if(basename(meta.file) == "read_groups.info"){
+            setkey(gene_meta, condition, replicate_num)
+            setkey(expressed_genes, condition, replicate)
+            expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+        }
         gene.xpr.fpkm <- dcast(expressed_genes[, .(gene = tracking_id, sample_id, FPKM)], 
-                               formula = gene ~ sample_id, value.var = "FPKM", fill = 0)
+                               formula = gene ~ sample_id, 
+                               value.var = "FPKM", 
+                               fill = 0)
     }
     if(method == "stringtie"){
         gene.xpr.fpkm <- dcast(data = gene.xpr,
@@ -179,13 +228,14 @@ if(meta.file != ""){
 expressed_genes_table.file <- file.path(results.dir, "gene_expression_FPKM_table.csv")
 write.csv(x = gene.xpr.fpkm, file = expressed_genes_table.file, row.names = F)
 ```
+
 Expression of genes was saved in tabular format in file <a href="`r basename(expressed_genes_table.file)`">`r basename(expressed_genes_table.file)`</a>.  
 
 # Principal component analysis (PCA) considering gene expression
 
 ```{r compute pca, echo=FALSE}
 
-if(meta.file != ""){
+if(meta.file != "" & length(gene_meta$sample_id)>1){
     non.value.columns <- c("gene")
     
     genes.per.sample.matrix <- as.matrix(gene.xpr.fpkm[, -non.value.columns, with = FALSE])
@@ -251,7 +301,7 @@ if(meta.file != ""){
 ```
 
 ```{r plot pca, echo=FALSE}
-if(meta.file != ""){
+if(meta.file != "" & length(gene_meta$sample_id)>1){
     
     if(!is.null(pca.plot)){
         print(pca.plot$pc.var.explained.plot)
