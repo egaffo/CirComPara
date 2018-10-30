@@ -254,7 +254,7 @@ if(nrow(circrnas.gtf) > 0){
 #                    character = c(5, 11))
 #colToDrop <- c("V3", "V8", "V11", "V12", "V15", "V17")
 #combined_gtf <- fread(paste0('zcat ', combined_gtf_file), data.table = T, colClasses = colClasses, drop = colToDrop)
-combined_gtf <- fread(paste0('zcat ', combined_gtf_file), data.table = T, 
+combined_gtf <- fread(cmd = paste0('zcat ', combined_gtf_file), data.table = T, 
                       # colClasses = colClasses, 
                       drop = c(2,3,6,8,11,15,17))
 exists_gene_overlaps <- FALSE
