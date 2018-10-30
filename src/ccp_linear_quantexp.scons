@@ -145,28 +145,30 @@ if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
 
 if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
     ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
-    htseq_count_annotation = env['ANNOTATION']
     htseq_counts = []
-    for algn in get_matching_nodes(env['RUNS'], alignment_matching_regexp):
-        sample_name = os.path.splitext(File(algn).name)[0]
-        mapping_file = algn
-        htseq_count_cpus = env['CPUS']
-        htseq_count_stranded = 'no'
+    env_htseq_count = env.Copy()
+    #for algn in get_matching_nodes(env['RUNS'], alignment_matching_regexp):
+    for algn in env['LINEAR_ALIGNMENTS']:
+        env_htseq_count['SAMPLE'] = os.path.splitext(File(algn).name)[0]
+        env_htseq_count['ALIGNMENTS'] = algn
+        env_htseq_count['STRANDED'] = 'no'
+
         if '--rna-strandness FR' in env['HISAT2_EXTRA_PARAMS']: 
-            htseq_count_stranded = 'yes'
+            env_htseq_count['STRANDED'] = 'yes'
+
         ## GET READ COUNTS
         htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.scons'), 
                                  src_dir = env['SCONSCRIPT_HOME'], 
                                  variant_dir = htseq_counts_dir, duplicate = 0, 
-                                 exports = '''env mapping_file sample_name '''
-                                           '''htseq_count_annotation htseq_count_cpus '''
-                                           '''htseq_count_stranded ''')
+                                 exports = '''env_htseq_count''')
+
         htseq_counts.append(htseq_count)
 
     env.Replace(EXPRESSION_FILES = htseq_counts)
+
     ## TODO: fix gene expression report for htseq_count. 
-    gene_meta = env['META'] # 
-    gene_exp = htseq_counts #
+    gene_meta = env['META']  
+    gene_exp = Flatten(htseq_counts) 
 
 ## REPORT GENE EXPRESSION
 gene_exp_analysis_template = os.path.join("$SCONSCRIPT_HOME", "gene_expression_analysis.Rmd")
