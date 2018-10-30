@@ -27,7 +27,7 @@ import os
 Import('*')
 
 try:
-    env = env_htseq_count.Copy()
+    env = env_htseq_count.Clone()
 except NameError as ne:
     print 'ccp_htseq_count.scons: cannot import', ne, '. Assume command line script call.'
     varfile = ARGUMENTS.get('VARS', 'vars.py')

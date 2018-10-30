@@ -203,11 +203,38 @@ if(method == "stringtie"){
 }
 ```
 
+```{r}
+if(method == "htseq_count"){
+    gene.xpr.file.paths <- strsplit(gene.xpr.file, ",")[[1]]
+    
+    sampleTable <- gene_meta
+    sampleTable$file <- sapply(sampleTable$sample_id, grep, 
+                               x = gene.xpr.file.paths, value = T, fixed = T)
+    
+    dds <- DESeqDataSetFromHTSeqCount(sampleTable = as.data.frame(sampleTable[, .(sample_id, file, condition)]),
+                                      directory = "",
+                                      design = ~ 1)
+    dds <- estimateSizeFactors(dds)
+    
+    ## write gene raw counts
+    write.csv(x = as.data.table(counts(dds), keep.rownames = "gene_id"),
+              file = file.path(results.dir, "gene_expression_rawcounts_table.csv"),
+              row.names = F)
+
+    ## TODO: transcript raw counts 
+    message("Transcript raw counts yet to be implemented with htseq-count")
+    trx_raw_counts <- matrix()
+    write.csv(x = trx_raw_counts,
+              file = file.path(results.dir, "transcript_expression_rawcounts_table.csv"), 
+              row.names = F)
+}
+```
+
+
 ```{r save gene expression in table format}
-# get gene expressions
-expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
 if(meta.file != ""){
     if(method == "cufflinks"){
+        expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
         if(basename(meta.file) == "read_groups.info"){
             setkey(gene_meta, condition, replicate_num)
             setkey(expressed_genes, condition, replicate)
@@ -219,10 +246,26 @@ if(meta.file != ""){
                                fill = 0)
     }
     if(method == "stringtie"){
+        expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+        
         gene.xpr.fpkm <- dcast(data = gene.xpr,
                                formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample,
-                               value.var = "FPKM", fill = 0)[, gene := `Gene ID`][, c("gene", gene_meta$sample_id), with = F]
+                               value.var = "FPKM", 
+                               fill = 0)[, gene := `Gene ID`][, c("gene", gene_meta$sample_id), with = F]
+        
         expressed_genes <- merge(expressed_genes, gene_meta, by = "sample_id")
+    }
+    if(method == "htseq_count"){
+        ## normalized expression
+        gene.xpr.fpkm <- as.data.table(counts(dds, normalized = T), keep.rownames = "gene")
+        warning("Using DESeq2 normalized values instead of FPKM since htseq-count was selected.")
+        
+        expressed_genes <- merge(melt(gene.xpr.fpkm, 
+                                      id.vars = "gene", 
+                                      variable.name = "sample_id", 
+                                      value.name = "FPKM")[
+                                          FPKM > 0, .(sample_id, tracking_id = gene, FPKM)], 
+                                 gene_meta, by = "sample_id")
     }
 }
 expressed_genes_table.file <- file.path(results.dir, "gene_expression_FPKM_table.csv")
@@ -234,7 +277,6 @@ Expression of genes was saved in tabular format in file <a href="`r basename(exp
 # Principal component analysis (PCA) considering gene expression
 
 ```{r compute pca, echo=FALSE}
-
 if(meta.file != "" & length(gene_meta$sample_id)>1){
     non.value.columns <- c("gene")
     
