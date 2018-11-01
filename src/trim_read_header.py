@@ -9,7 +9,8 @@ usage = """
 
   %prog <reads.fastq.gz> > trimmed_header_reads.fastq
 
-Reduce read name to ID only, discard description if present. Can handle gzipped files.
+Reduce read name to ID only, discard description if present. 
+Can handle gzipped files. Set '-' to process stdin input stream.
 """
 
 parser = OptionParser(usage = usage)
@@ -39,6 +40,8 @@ def fq_blocks(lines):
 ## handle compressed files 
 if args[0].endswith('.gz'):
     f = gzip.open(args[0], 'rb')
+elif args[0] == "-":
+    f = sys.stdin
 else:
     f = open(args[0], 'r')
 
