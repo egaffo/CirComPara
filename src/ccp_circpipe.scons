@@ -193,7 +193,10 @@ if not env['BYPASS'] == 'linear':
         results.append(expression[1]['CUFFLINKS'])
 
 else:
-	expression = env.Command('mock_expression.txt', mappings, 'touch $TARGET')
+	expression = [None, 
+                  env.Command('mock_expression.txt', 
+                              mappings, 
+                              'touch $TARGET')]
 
 ## CIRCRNA DETECTION
 unmapped_dir = os.path.join(build_dir, 'unmapped_reads')
