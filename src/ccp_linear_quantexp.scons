@@ -202,7 +202,8 @@ gene_exp_analysis_targets = [os.path.join(geneexp_dir,
                                          "transcript_expression_rawcounts_table.csv")]
                             # Figs_geneexp
 
-gene_exp_analysis_sources = [gene_meta, gene_exp, trx_exp]
+gene_exp_analysis_sources = [gene_meta, gene_exp, trx_exp,
+                             gene_raw_counts_list, trx_raw_counts_list]
 gene_exp_analysis = env.Command(gene_exp_analysis_targets, 
                                 gene_exp_analysis_sources, 
                                 gene_exp_analysis_cmd)
