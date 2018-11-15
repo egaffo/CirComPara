@@ -336,7 +336,22 @@ if not env['BYPASS'] == 'circular':
                              exports = '''env_circular_expression '''
                                        '''SymLink '''
                                        '''get_matching_nodes''')
-    
+
+    ## COMPUTE BACKSPLICES' LINEAR COUNTS FOR CLR (CIRCULAR TO LINEAR RATIO)
+    btmcovstrand = '' ## check if stranded read alignment
+    strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+    if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
+        btmcovstrand = '-s'
+
+    btmcov_sources = [circexp['SNP_UNIQUE_CIRC'], 
+                      [runs_dict[s]['LINEAR_ALIGNMENTS'] for 
+                                 s in sorted(runs_dict.keys())]]
+    btmcov_target = os.path.join(circexp_dir, 'bks_linear_counts.tab.gz')
+    btmcov_cmd = '''bedtools multicov ''' + btmcovstrand + \
+                 ''' -bed ${SOURCES[0]} -bams ${SOURCES[1:]} | gzip -c > ${TARGET}'''
+    btmcov = env.Command(btmcov_target, 
+                         btmcov_sources, 
+                         btmcov_cmd)
 
 ## COLLECT AND REPORT READ PROCESSING STATISTICS
 collect_read_stats_dir = 'read_statistics'
