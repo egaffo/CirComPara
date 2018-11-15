@@ -322,22 +322,6 @@ else:
     			'', 'touch $TARGET')
     linexp = {'GENE_EXP_ANALYSIS': ['', gene_exp]}
 
-### COLLECT AND REPORT CIRCRNA RESULTS
-circexp_dir = 'circular_expression'
-if not env['BYPASS'] == 'circular':
-    env_circular_expression = env.Clone()
-    env_circular_expression['SAMPLES'] = samples
-    env_circular_expression['RUNS'] = runs
-    env_circular_expression['RUNS_DICT'] = runs_dict
-    env_circular_expression['LINEXP'] = linexp
-    circexp = env.SConscript(os.path.join(circexp_dir,
-                                          'ccp_circular_expression.scons'),
-                             src_dir = env['SCONSCRIPT_HOME'],
-                             variant_dir = circexp_dir, duplicate = 0,
-                             exports = '''env_circular_expression '''
-                                       '''SymLink '''
-                                       '''get_matching_nodes''')
-
 ## COLLECT AND REPORT READ PROCESSING STATISTICS
 collect_read_stats_dir = 'read_statistics'
 env_collect_read_stats = env.Clone()
@@ -350,6 +334,23 @@ collect_read_stats = env.SConscript(os.path.join(collect_read_stats_dir,
                                     exports = '''env_collect_read_stats '''
                                               '''SymLink '''
                                               '''get_matching_nodes''')
+
+### COLLECT AND REPORT CIRCRNA RESULTS
+circexp_dir = 'circular_expression'
+if not env['BYPASS'] == 'circular':
+    env_circular_expression = env.Clone()
+    env_circular_expression['SAMPLES'] = samples
+    env_circular_expression['RUNS'] = runs
+    env_circular_expression['RUNS_DICT'] = runs_dict
+    env_circular_expression['LINEXP'] = linexp
+    env_circular_expression['PROCESSING_READ_STATS'] = collect_read_stats['PROCESSING_READ_STATS']
+    circexp = env.SConscript(os.path.join(circexp_dir,
+                                          'ccp_circular_expression.scons'),
+                             src_dir = env['SCONSCRIPT_HOME'],
+                             variant_dir = circexp_dir, duplicate = 0,
+                             exports = '''env_circular_expression '''
+                                       '''SymLink '''
+                                       '''get_matching_nodes''')
 
 ## ADDITIONAL ANALYSIS
 qre_dir = 'qre'
