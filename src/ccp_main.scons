@@ -343,6 +343,31 @@ if not env['BYPASS'] == 'circular':
     if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
         btmcovstrand = '-s'
 
+    ## TODO: improve the counting by considering only linear spliced reads
+    ## and linear reads spanning the splice site, while not counting reads
+    ## exactly matching splice site bound (for which we cannot decide 
+    ## whether they belong to the circular or the linear transcript)
+    #for s in sorted(runs_dict.keys()):
+    #    ## keep only spliced reads
+    #    target_1 = "lin_spliced_reads_in_bks.tab"
+    #    sources_1 = [runs_dict[s]['LINEAR_ALIGNMENTS'], 
+    #                 circexp['SNP_UNIQUE_CIRC']]
+    #    cmd_1 = '''samtools view ${SOURCES[0]} | grep "N" | bedtools '''\
+    #            '''coverage -counts -sorted ''' + btmcovstrand + \
+    #            ''' -a ${SOURCES[1]} -b stdin > $TARGET '''
+    #    lin_spliced_reads_in_bks = env.Command(target_1, sources_1, cmd_1)
+
+    #    ## keep only linear reads spanning backsplice
+    #    ## Hint: use bedtools slop to consider bases outside the 
+    #    ## backsplice start/end sites
+    #    target_2 = "lin_reads_spanning_bks.tab"
+    #    sources_2 = sources_1.append(genome_file)
+    #    cmd_2 = '''samtools view ${SOURCES[0]} | grep -v "N" | '''\
+    #            '''bedtools coverage -counts -sorted ''' + btmcovstrand + \
+    #            ''' -a <( bedtools slop -b 1 -i ${SOURCES[1]} ) '''\
+    #            '''-b stdin > $TARGET '''
+    #    lin_reads_spanning_bks = env.Command(target_2, sources_2, cmd_2)
+
     btmcov_sources = [circexp['SNP_UNIQUE_CIRC'], 
                       [runs_dict[s]['LINEAR_ALIGNMENTS'] for 
                                  s in sorted(runs_dict.keys())]]
