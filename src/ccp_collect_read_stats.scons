@@ -102,16 +102,19 @@ read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
-read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_statistics.html'),
+read_stats_report = env.Command([os.path.join(read_stats_collect_dir, f) for 
+                                  f in ['read_statistics.html', 
+                                        'processing_and_mapped_read_counts.csv']],
                                 [reads_stats_collect, collect_circrna_maps_counts, 
-                                File(env['META']).abspath, 
-				collect_circrna_maps_counts_sources],
+                                 File(env['META']).abspath, 
+                                 collect_circrna_maps_counts_sources],
                                 read_stats_report_cmd)
 
 
 Clean('.', read_stats_collect_dir)
 
 results = {'READ_MAPS_COUNTS': collect_circrna_maps_counts, 
-           'READS_STATS_REPORT': read_stats_report}
+           'READS_STATS_REPORT': read_stats_report[0],
+           'PROCESSING_READ_STATS': read_stats_report[1]}
 
 Return('results')
