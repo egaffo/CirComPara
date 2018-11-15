@@ -282,7 +282,8 @@ if not env['BYPASS'] == 'circular':
     results.append(circrnas)
 
 results_dict = {'LINEAR_EXPRESSION' : expression[1],
-                'CIRCULAR_EXPRESSION' : circrnas}
+                'CIRCULAR_EXPRESSION' : circrnas,
+                'LINEAR_ALIGNMENTS' : env['ALIGNMENTS']}
 #Depends(circrnas, unmapped_reads)
 
 ## CLEAN COMMANDS
