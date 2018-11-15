@@ -63,6 +63,6 @@ Clean('.', circRNA_collect_dir)
 Clean('.', circrna_analyze_dir)
 
 
-results = {}
+results = {'SNP_UNIQUE_CIRC': circrna_collect[2]}
 
 Return('results')
