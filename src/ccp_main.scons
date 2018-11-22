@@ -1,0 +1,368 @@
+'''
+This SConscript performs RNA-seq analysis for each sample specified in the metadata file.
+In addition, it merges transcript annotation derived from each samples and assess differential
+gene and transcript expression among the samples.
+The metadata file given as input must be comma separated and must have the following columns:
+
+file        :the path to the reads file. If paired-end use one row per read file,
+             setting the same sample name
+sample      :the sample name/ID
+condition   :biological condition, used for differential gene expression.
+adapter     :read adapter to trim (optional. leave empty string if not applicable)
+translocation:sharp (#) separted list of the coordinates involving fusion genes/translocations,
+             defined as coords1&coords2 elements (optional)
+
+meta.csv example:
+
+file,sample,condition,adapter,translocation
+/home/user/data/reads/SRR445566.fastq.gz,SRR445566,TUMOR,
+/home/user/data/reads/SRR534325_1.fastq.gz,SRR534325,CONTROL,/trimmomatic/adapters/TruSeq3-PE-2.fa
+/home/user/data/reads/SRR534325_2.fastq.gz,SRR534325,CONTROL,/trimmomatic/adapters/TruSeq3-PE-2.fa
+/home/user/data/reads/SRR534326_1.fastq.gz,SRR534325,t(4;1)t(1;X),,4:90000-120000:+&11:20-30000:-#1:20-400:+&X:1000-2045:+
+/home/user/data/reads/SRR534326_2.fastq.gz,SRR534325,CONTROL,t(4;1)t(1;X),4:90000-120000:+&11:20-30000:-#1:20-400:+&X:1000-2045:+
+
+'''
+
+import os, csv, itertools, collections, re, errno
+from collections import defaultdict
+
+def SymLink(target, source, env):
+    try:
+        os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+    except OSError, e:
+        if e.errno == errno.EEXIST:
+            os.unlink(os.path.abspath(str(target[0])))
+            os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
+
+
+
+def get_matching_nodes(nodelist, rexpression, abspath = False):
+    files = []        
+    for node in Flatten(nodelist):
+        path = node.path
+        if abspath:
+            path = node.abspath
+        if re.match(rexpression, path):
+            files.append(node)
+    return files
+
+
+
+## GET PROGRAM ARGUMENTS
+vars = Variables('vars.py')
+
+# basic parameters
+vars.Add('META', 'The metadata table file where you specify the project samples, etc.', 'meta.csv')
+vars.Add('ANNOTATION', 'Gene annotation file (like Ensembl GTF/GFF)', '')
+vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', '')
+vars.Add('CIRCRNA_METHODS', 
+	 'Comma separated list of circRNA detection methods to use. '\
+	 'Repeated values will be collapsed. Currently supported: ciri, find_circ, '\
+	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, testrealign ('\
+	 'circexplorer2_segemehl is actually a filtering of testrealign predictions). '\
+	 'Set an empty string to use all methods available (including deprecated methods). ', 
+     '')
+
+# non-basic parameters
+vars.Add('CPUS', 'Set number of CPUs', '4')
+vars.Add('GENEPRED', 'The genome annotation in GenePred format', '')
+## aligners indexes
+vars.Add('GENOME_INDEX', '''The index of the reference genome for HISAT2''', '')
+vars.Add('SEGEMEHL_INDEX', '''The .idx index for segemehl''', '')
+vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','')
+vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','')
+vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', '')
+vars.Add('BOWTIE_INDEX', '''The index of the reference genome for BOWTIE '''\
+			 '''when using CIRCexplorer2_tophat''','')
+
+## aligners extra parameters
+vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner fixed '''\
+         '''parameters '--dta --dta-cufflinks --rg-id <SAMPLE> --no-discordant '''\
+         '''--no-mixed --no-overlap'. For instance, '--rna-strandness FR' if stranded reads'''\
+         ''' are used.''', '')
+vars.Add('BWA_PARAMS','Extra parameters for BWA','')
+vars.Add('SEGEMEHL_PARAMS', 'SEGEMEHL extra parameters', '')
+vars.Add('TOPHAT_PARAMS', 'Extra parameters to pass to TopHat', '')
+vars.Add('STAR_PARAMS', 'Extra parameters to pass to STAR', '')
+
+## linear transcriptome extra parameters
+vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
+        '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
+        '''for the sequencing''', '')
+vars.Add('CUFFQUANT_EXTRA_PARAMS',
+         'Cuffquant parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
+         ' --multi-read-correct --max-bundle-frags 9999999', '')
+vars.Add('CUFFDIFF_EXTRA_PARAMS',
+         'Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
+         ' --multi-read-correct', '')
+vars.Add('CUFFNORM_EXTRA_PARAMS', 'Extra parameters to use if using Cuffnorm',
+	'--output-format cuffdiff')
+vars.Add('STRINGTIE_PARAMS', '''Stringtie extra parameters. '''\
+         '''F.i. '--rf' assumes a stranded library fr-firststrand, to be '''\
+         '''used if dUTPs stranded library were sequenced''', '')
+
+## circRNA methods' extra parameters
+vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
+
+## alternative workflow parameters
+vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
+vars.Add('PREPROCESSOR_PARAMS',
+        'Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string '\
+        'defaults to '\
+        'MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ',
+        '')
+vars.Add('LINEAR_EXPRESSION_METHODS', 'The method to be used for the linear expression estimates'\
+	 '/transcriptome reconstruction. To run more methods use a comma separated list. '\
+	 'However, only the first method in the list will be used in downstream processing. '\
+	 'Currently supported methods: stringtie,cufflinks,htseq.', 'stringtie')
+vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
+         'reconstruction. Default only quantifies genes and transcripts from the given '\
+         'annotation GTF file', 'False')
+vars.Add('DIFF_EXP', 'Set the method to and enable differential expression '\
+         'computation for linear genes/transcripts. Current methods '\
+         'supported: cufflinks, ballgown, DESeq2.'\
+     	 'Only available if more than one sample and more than one condition are given. '\
+         'N.B: differential expression tests for circRNAs is not yet '\
+         'implemented', '')
+vars.Add('DESEQ', '(Experimental) Set True to enable differential gene expression computation '\
+         'also with DESeq2. Only available if more than one sample and more than one condition are given', 
+         'False')
+vars.Add('QRE_FIND', '(Experimental) Set True to toggle analysis of QKI response elements sequences', 
+         'False')
+vars.Add('READSTAT_METHODS', 'Comma separated list of methods to use for read statistics. '\
+         'Currently supported: fastqc,fastx', 'fastqc')
+vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
+                        'define the circRNA as reliable. If this value exceeds the number '\
+                        'of methods specified, it will be set to the number of methods.', 2)
+vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
+vars.Add('BYPASS', 'Skip analysis of linear/circular transcripts. This will also skip '\
+			       'the analysis of linear-to-circular expression correlation.'\
+                   '{linear,circular}',
+                   'False')
+vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
+        'collapsed into single-end reads to search for circRNA backsplices. Set'\
+        'this option to "True" to force circRNA method aligners to'\
+        'maintain paired-end read alignment', 'False')
+
+## deprecated parameters (legacy)
+vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
+	'By default the symlink in CirComPara bin/ directory will be used', '')
+
+
+env = Environment(ENV=os.environ, SHELL = '/bin/bash',
+                  variables=vars)
+Help(vars.GenerateHelpText(env))
+unknown = vars.UnknownVariables()
+if unknown:
+    print "Run sample: unknown variables", unknown.keys()
+    Exit(1)
+
+env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
+
+env.SetDefault(TOPHAT_PARAMS = '')
+
+env.SetDefault(CIRC_PE_MAPPING = False)
+if env['CIRC_PE_MAPPING'].lower() == 'true':
+    env.Replace(CIRC_PE_MAPPING = True)
+else:
+    env.Replace(CIRC_PE_MAPPING = False)
+
+#env.SetDefault(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
+if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].lower() == 'true':
+	env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True)
+else:
+    env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
+
+if not env['BYPASS'] == 'circular':
+    if env['CIRCRNA_METHODS'] == ['']:
+        env.Replace(CIRCRNA_METHODS = ['ciri', 'circexplorer2_bwa', 
+                                       'circexplorer2_segemehl',
+                                       'circexplorer2_star', 'circexplorer2_tophat', 
+                                       'findcirc', 'testrealign'])
+    env.Replace(CIRCRNA_METHODS = sorted(set([m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')])))
+else:
+    env['CIRCRNA_METHODS'] == ['']
+
+env.Replace(LINEAR_EXPRESSION_METHODS = env['LINEAR_EXPRESSION_METHODS'].strip().split(','))
+
+#if 'circexplorer2_tophat' in CIRCRNA_METHODS:
+#	env.AppendUnique(TOPHAT_PARAMS = ['--bowtie1'])
+
+env.SetDefault(DIFF_EXP = False)
+if env['DIFF_EXP'].strip() == '':
+    env.Replace(DIFF_EXP = False)
+
+env.SetDefault(DESEQ = False)
+if env['DESEQ'].lower() == 'true':
+    env.Replace(DESEQ = True)
+
+env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
+
+if not env['ANNOTATION'] == '':
+    env.Replace(ANNOTATION = File(env['ANNOTATION']).abspath)
+
+if not env['GENOME_FASTA'] == '':
+    env.Replace(GENOME_FASTA = File(env['GENOME_FASTA']).abspath)
+
+
+samples_dir = 'samples'
+
+## GRUB METADATA
+env.Replace(META = File(env['META']).abspath)
+samples     = defaultdict(list)
+adapters    = defaultdict(str)
+conditions  = defaultdict(set)
+translocations  = set()
+
+with open(env['META']) as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        samples[row['sample']].append(os.path.abspath(row['file']))
+        conditions[row['condition']].add(row['sample'])
+	try:
+	        adapters[row['sample']] = row['adapter'] ##NB:last sample adapter row overwrites the previous
+	except KeyError as ke:
+		#adapters[row['sample']] = ''
+		print str(ke) + ' not defined for file' + row['file'] + ', sample ' +\
+		       row['sample'] + '. Skipping.'
+		pass
+        try:
+            for tr in row['translocation'].split('#'):
+                if tr: translocations.add(tr)
+        except KeyError as ke:
+            #print str(ke) + ' not defined for sample ' + row['sample'] + '. Skipping.'
+            pass
+
+if len(conditions.keys()) < 2:
+    print "WARNING: " + str(conditions.keys()) + " is the only "\
+          "condition set for the samples. Differential "\
+          "expression analysis will not be performed."
+    env.Replace(DIFF_EXP = False)
+
+## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
+#TODO in F-CirComPara
+
+## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
+indexes_dir = 'ccp_dbs'
+env_check_indexes = env.Clone()
+indexes = SConscript(os.path.join(indexes_dir, 'ccp_check_indexes.scons'),
+                        src_dir = env['SCONSCRIPT_HOME'],
+                        variant_dir = indexes_dir, duplicate = 0,
+                        exports = '''env_check_indexes''')
+
+env.Replace(GENOME_INDEX   = indexes['ENV']['GENOME_INDEX'])
+env.Replace(SEGEMEHL_INDEX = indexes['ENV']['SEGEMEHL_INDEX'])
+env.Replace(BWA_INDEX      = indexes['ENV']['BWA_INDEX'])
+env.Replace(BOWTIE2_INDEX  = indexes['ENV']['BOWTIE2_INDEX'])
+env.Replace(BOWTIE_INDEX   = indexes['ENV']['BOWTIE_INDEX'])
+env.Replace(STAR_INDEX     = indexes['ENV']['STAR_INDEX'])
+env.Replace(GENEPRED       = indexes['ENV']['GENEPRED'])
+
+## PROCESS SAMPLES
+runs = []
+for sample in sorted(samples.keys()):
+    
+    env_circpipe = env.Clone()
+    env_circpipe['SAMPLE'] = sample
+    env_circpipe['READS'] = samples[sample]
+    env_circpipe['ADAPTER_FILE'] = adapters[sample]
+    if len(env_circpipe['READS']) > 1:
+        env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
+                                                        'circexplorer2_tophat_pe', m) for \
+                                                        m in env_circpipe['CIRCRNA_METHODS']])
+        
+    sample_dir = os.path.join(samples_dir, sample)
+    run_sample = SConscript(os.path.join(sample_dir, 'ccp_circpipe.scons'),
+                            src_dir = env['SCONSCRIPT_HOME'],
+                            variant_dir = sample_dir, duplicate = 0,
+                            exports = '''env_circpipe''')
+    runs.append(run_sample)
+
+    for k in indexes['INDEXES'].keys():
+        if indexes['INDEXES'][k]: 
+            Depends(run_sample, indexes['INDEXES'][k])
+
+    if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_bwa', 
+                                                  'circexplorer2_star', 
+                                                  'circexplorer2_segemehl', 
+                                                  'circexplorer2_tophat']]):
+	Depends(run_sample, env['GENEPRED']) 
+
+## LINEAR EXPRESSION: 
+## - TRANSCRIPTOME RECONSTRUCTION, 
+## - NORMALIZED QUANTIFICATION
+## - DIFFERENTIAL EXPRESSION
+linexp_dir = 'linear_expression'
+if not env['BYPASS'] == 'linear':
+    env_linear_expression = env.Clone()
+    env_linear_expression['SAMPLES'] = samples
+    env_linear_expression['RUNS'] = runs
+    linexp = env.SConscript(os.path.join(linexp_dir,
+                                         'ccp_linear_expression.scons'),
+                            src_dir = env['SCONSCRIPT_HOME'],
+                            variant_dir = linexp_dir, duplicate = 0,
+                            exports = '''env_linear_expression '''
+                                      '''SymLink '''
+                                      '''get_matching_nodes''')
+
+    env.Replace(ANNOTATION = linexp['ANNOTATION'])
+else:
+    ## DO NOT ANALYZE GENE EXPRESSION: USE MOCK EMPTY FILES
+    print "BYPASS = " + env['BYPASS'] +\
+          ": skipping linear transcript analysis"
+    
+    gene_exp = env.Command(os.path.join(linexp_dir, 'empty_geneexp.csv'), 
+    			'', 'touch $TARGET')
+    linexp = {'GENE_EXP_ANALYSIS': ['', gene_exp]}
+
+### COLLECT AND REPORT CIRCRNA RESULTS
+circexp_dir = 'circular_expression'
+if not env['BYPASS'] == 'circular':
+    env_circular_expression = env.Clone()
+    env_circular_expression['SAMPLES'] = samples
+    env_circular_expression['RUNS'] = runs
+    env_circular_expression['LINEXP'] = linexp
+    circexp = env.SConscript(os.path.join(circexp_dir,
+                                          'ccp_circular_expression.scons'),
+                             src_dir = env['SCONSCRIPT_HOME'],
+                             variant_dir = circexp_dir, duplicate = 0,
+                             exports = '''env_circular_expression '''
+                                       '''SymLink '''
+                                       '''get_matching_nodes''')
+    
+
+## COLLECT AND REPORT READ PROCESSING STATISTICS
+collect_read_stats_dir = 'read_statistics'
+env_collect_read_stats = env.Clone()
+env_collect_read_stats['RUNS'] = runs
+collect_read_stats = env.SConscript(os.path.join(collect_read_stats_dir, 
+                                                'ccp_collect_read_stats.scons'),
+                                    src_dir = env['SCONSCRIPT_HOME'],
+                                    variant_dir = collect_read_stats_dir,
+                                    duplicate = 0, 
+                                    exports = '''env_collect_read_stats '''
+                                              '''SymLink '''
+                                              '''get_matching_nodes''')
+
+## ADDITIONAL ANALYSIS
+qre_dir = 'qre'
+if env['QRE_FIND'] == 'True':
+    ## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
+    qre_GTF = env['ANNOTATION'] #cuffmerge
+    qre_GENOME = env['GENOME_FASTA']
+    qre = SConscript(os.path.join(qre_dir, 'ccp_QRE_finder.scons'),
+                     src_dir = env['SCONSCRIPT_HOME'],
+                     variant_dir = qre_dir, duplicate = 0,
+                     exports = '''env qre_GTF qre_GENOME''')
+    
+    Depends(qre, [cuffmerge, alignments])
+
+
+## CLEAN DIRS WHEN CLEANING TARGETS
+Clean('.', indexes_dir)
+Clean('.', samples_dir)
+Clean('.', linexp_dir)
+Clean('.', circexp_dir)
+Clean('.', collect_read_stats_dir)
+Clean('.', qre_dir)

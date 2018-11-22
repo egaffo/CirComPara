@@ -1,0 +1,82 @@
+'''
+This SConscript performs htseq-count [1] on a single sample.
+
+[1] Anders, S., Pyl, P. T. & Huber, W. 
+    
+    HTSeq - A Python framework to work with high-throughput sequencing data. 
+    
+    bioRxiv (2014). doi:10.1101/002824
+
+Software requirements inherited from the called SConscripts:
+ * htseq-count
+ * Samtools v1.1
+ * awk
+
+Variables to export when calling from a SConscript:
+ * env
+ * mapping_file
+ * sample_name
+ * htseq_count_annotation
+ * htseq_count_cpus
+ * htseq_count_stranded
+
+'''
+
+import os
+
+Import('*')
+
+try:
+    env = env
+    mapfile          = mapping_file
+    mapfile_basename = sample_name
+    annotation       = htseq_count_annotation
+    CPUS             = htseq_count_cpus
+    STRANDED         = htseq_count_stranded
+except NameError as ne:
+    print 'ccp_htseq_count.scons: cannot import', ne, '. Assume command line script call.'
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('ANNOTATION', 'The GFF/GTF file with gene annotation (e.g. from Ensembl)', 
+             'exons.gtf') 
+    vars.Add('ALIGNMENTS', 'The read alignment file in SAM/BAM format', 'sample.bam')
+    vars.Add('SAMPLE', 'The sample name', 'sample')
+    vars.Add('STRANDED', '''Tells whether strand orientation should be considedred in '''\
+             '''expression read count. ['no', 'yes'] ''', 'no')
+
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
+
+    mapfile_basename = env['SAMPLE']
+    mapfile          = env['ALIGNMENTS']
+    annotation       = env['ANNOTATION']
+    CPUS             = env['CPUS']
+    STRANDED         = env['STRANDED']
+
+if STRANDED.lower() not in ['yes', 'no']:
+    print "WARNING: unrecognized option \'" + STRANDED + "\' for htseq-count strand parameter."\
+          "Use either \'yes\' or \'no\'. Will continue setting \'no\'"
+    STRANDED = 'no'
+
+## SORT SAM/BAM AND PIPE TO HTSEQ-COUNT
+## WE PREFER TO SORT BY READ NAME TO REDUCE THE BUFFER USED BY HTSEQ-COUNT (RIGTH?)
+#htseq_count_cmd = "samtools sort -n $(-@{}$) ".format(CPUS) + \
+#                  "-O 'sam' -T $({}$) ".format(mapfile_basename) + \
+#                  "${SOURCES[0]} | samtools fixmate -r -O 'sam' - - | awk '!/\\t\*\\t/' - | "\
+#                  "htseq-count -f sam -r name -s no - ${SOURCES[1]} > $TARGET"
+htseq_count_cmd = "samtools sort -n $(-@{}$) ".format(CPUS) + \
+                  "-O 'sam' -T $({}$) ".format(mapfile_basename) + \
+                  "${SOURCES[0]} |"\
+                  "htseq-count -f sam -r name -s " + STRANDED + " - ${SOURCES[1]} > $TARGET"
+
+htseq_count = env.Command(["{}.htseq_count.txt".format(mapfile_basename)], 
+                           [mapfile, annotation], 
+                           htseq_count_cmd)
+
+Return('htseq_count')

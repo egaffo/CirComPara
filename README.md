@@ -37,15 +37,16 @@ cd CirComPara
 NB: in the `sed` string change the `/full/circompara/dir/path` path with your installation directory 
 
 ```bash
-cd test_circompara
-mkdir analysis
-sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" vars.py > analysis/vars.py
-sed "s@\$CIRCOMPARA@/full/circompara/dir/path@g" meta.csv > analysis/meta.csv
-cd analysis
+cd test_circompara/analysis
 ../../circompara
 ```
 
-If you plan to use single-end reads, test with `meta_se.csv` file instead of `meta.csv`.  
+If you plan to use single-end reads, test with:  
+
+```bash
+cd test_circompara/analysis_se
+../../circompara
+```
 
 If you receive some error messages try to follow instructions in **Installation troubleshooting** section.
 
@@ -61,7 +62,7 @@ Another way is to link CirComPara's main script in your local `bin` directory
 
 ```bash
 cd /home/user/bin
-ln -s /path/to/circompara/install/dir/circompara_CirComPara
+ln -s /path/to/circompara/install/dir/circompara
 ```
 
 ## CirComPara Docker image
@@ -134,7 +135,7 @@ GENOME_FASTA = '/home/user/genomes/Homo_sapiens.GRCh38.dna.primary_assembly.fa'
 
 ### Specify options in vars.py
 
-Although parameters can be set from command line (sorrounded by quotes), you can set them in a local `vars.py` file, which must be placed in the analysis directory. Parameters not specified by the user will take defaulkt values.  
+Although parameters can be set from command line (sorrounded by quotes), you can set them in the `vars.py` file, which must be placed into the directory where CirComPara is called.  
 Below there is the full list of the parameters:
 
 ```
@@ -199,7 +200,10 @@ CUFFDIFF_EXTRA_PARAMS: Cuffdiff parameter options to specify. E.g. --frag-bias-c
     default: 
 
 CUFFNORM_EXTRA_PARAMS: Extra parameters to use if using Cuffnorm
-    default: --output-format cuffdiff
+    default: --output-format cuffdiff  
+
+STRINGTIE_PARAMS: Stringtie extra parameters. F.i. '--rf' assumes a stranded library fr-firststrand, to be used if dUTPs stranded library were sequenced  
+    default:  
 
 CIRI_EXTRA_PARAMS: CIRI additional parameters
     default: 
@@ -210,11 +214,14 @@ PREPROCESSOR: The preprocessing method
 PREPROCESSOR_PARAMS: Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string defaults to MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 
     default: 
 
+LINEAR_EXPRESSION_METHODS: The method to be used for the linear expression estimates/transcriptome reconstruction. To run more methods use a comma separated list. However, only the first method in the list will be used in downstream processing. Currently supported methods: stringtie,cufflinks,htseq.  
+    default: stringtie  
+
 TOGGLE_TRANSCRIPTOME_RECONSTRUCTION: Set True to enable transcriptome reconstruction. Default only quantifies genes and transcripts from the given annotation GTF file
     default: False
 
-DIFF_EXP: Set True to enable differential expression computation for linear genes/transcripts. Only available if more than one sample and more than one condition are given. N.B: differential expression tests for circRNAs is not yet implemented
-    default: False
+DIFF_EXP: Set the method to and enable differential expression computation for linear genes/transcripts. Current methods supported: cufflinks, ballgown, DESeq2. Only available if more than one sample and more than one condition are given. N.B: differential expression tests for circRNAs is not yet implemented
+    default: 
 
 READSTAT_METHODS: Comma separated list of methods to use for read statistics. Currently supported: fastqc,fastx
     default: fastqc
@@ -227,10 +234,15 @@ MIN_READS: Number of reads to consider a circRNA as expressed
 
 BYPASS_LINEAR: Skip analysis of linear transcripts. This will also skip the analysis of linear-to-circular expression correlation
     default: False
-```
+
+CIRC_PE_MAPPING: By default, linearly unmapped reads are collapsed into single-end reads to search for circRNA backsplices. Set this option to "True" to force circRNA method aligners to maintain paired-end read alignment
+   default: False  
+```  
 
 ## Run the analysis
-To trigger the analyses you simply have to call the `./circompara` script in the analysis directory. Remember that if you used the `vars.py` option file, this has to be in the analysis directory. 
+
+To trigger the analyses you simply have to call the `./circompara` script in the analysis directory. Remember that if you used the `vars.py` option file, this has to be in the analysis directory.  
+
 
 ```bash
 cd /home/user/circrna_analysis
@@ -240,6 +252,7 @@ cd /home/user/circrna_analysis
 ### Additional options from the Scons engine:
 
 * *Basic execution*: run the analysis as a linear pipeline, i.e. no parallel task execution, and stop on errors
+
 ```bash
 /path/to/circompara/dir/circompara
 ```
@@ -271,10 +284,10 @@ cd /home/user/circrna_analysis
 
 ## Output files
 
-* Statistics on the read quality, read filtering steps and alignments can be found into `read_stats_collect` directory. A report is saved in `read_statistics.html` file into the same directory.  
-* Results regarding circRNAs are reported in `circrna_analyze` directory with a summary reported in `circRNAs_analysis.html` file.  
-* Gene expression tables (as output by [Cufflinks/Cuffdiff](http://cole-trapnell-lab.github.io/cufflinks/cuffdiff/)), plus an gene expression table with FPKM values for each gene and sample (`gene_expression_FPKM_table.csv`), and the `gene_expression_analysis.html` report file are saved in `cuffdiff` directory.
-* Linear transcript sequences are saved as a multi-FASTA file into the `transcript_sequences` directory.
+* Statistics on the read quality, read filtering steps and alignments can be found into `read_statistics` directory. A report is saved in `read_statistics.html` file.  
+* Results regarding circRNAs (expression matrices, etc.) will be saved into the `circular_expression/circrna_analyze` directory, as well as a summary report in `circRNAs_analysis.html` file.  
+* Gene expression values for each gene and sample will be saved in the `linear_expression/linear_quantexp/geneexp/` directory: `gene_expression_FPKM_table.csv` file reports FPKMs and `gene_expression_analysis.html` file reports summary analysis.  
+* Linear transcript sequences are saved as a multi-FASTA file into the `linear_expression/transcript_sequences` directory.
 
 # Advanced features
 
@@ -401,6 +414,9 @@ ggplot2|http://ggplot2.org/|2.2.0
 data.table|https://cran.r-project.org/web/packages/data.table/index.html|1.10.0
 knitr|http://yihui.name/knitr/|1.14.0
 
+### Errors with R packages
+
+If you get error messages from R packages of your already installed CirComPara, maybe some update occurred in your R system. Try to re-install all CirComPara R package dependencies by using the `reinstall_R_pkgs` command.  
 
 
 <!-- ## Details on CirComPara architecture and implementation

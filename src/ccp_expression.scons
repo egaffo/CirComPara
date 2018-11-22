@@ -1,0 +1,124 @@
+'''
+This script functions as a dispatcher to the desired gene expression analysis methods.
+It sets the necessary variables and launch the expression analyses.
+Currently it performs:
+ * gene expression estimation via HTSeq-count (ccp_htseq_count.scons);
+ * gene/transcript expression estimation and detection via Cufflinks (ccp_cufflinks.scons).
+
+Software requirements inherited from the called SConscripts:
+ * ccp_htseq_count.scons
+ * ccp_cufflinks.scons
+
+Variables to export when calling from a SConscript:
+ * expression_cpus
+ * expression_annotation
+ * mapping_file
+ * sample_name
+ * expression_cufflinks_params
+
+'''
+
+import os
+
+Import('*')
+
+try:
+    env = env.Clone()
+    CPUS        = expression_cpus
+    ANNOTATION  = expression_annotation
+    ALIGNMENTS  = mapping_file
+    SAMPLE      = sample_name
+    CUFFLINKS_PARAMS = expression_cufflinks_params
+    TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = expression_toggle_transcriptome_reconstruction
+except NameError:
+    varfile = ARGUMENTS.get('VARS', 'vars.py')
+    vars = Variables(varfile)
+    vars.Add('CPUS', 'Set number of CPUs', '4')
+    vars.Add('ANNOTATION', 'The GFF/GTF file with gene annotation (e.g. from Ensembl)', 'exons.gtf') 
+    vars.Add('ALIGNMENTS', 'The read alignment file in SAM/BAM format', 'sample.bam')
+    vars.Add('SAMPLE', 'The sample name', 'sample')
+    vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
+             '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
+             '''for the sequencing''', '')
+    vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
+	         'reconstruction. Default only quantifies genes and transcripts from the given '\
+	         'annotation GTF file', 
+             'False')
+    vars.Add('METHODS', 'Name or comma separated list of the method(s) to use. '\
+                        'Currently suppported: stringtie,cufflinks,htseq',
+             'stringtie')
+
+    env = Environment(variables = vars,
+                      ENV = os.environ)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Unknown variables:", unknown.keys()
+        Exit(1)
+
+    CPUS         = env['CPUS']
+    ANNOTATION   = env['ANNOTATION']
+    ALIGNMENTS   = env['ALIGNMENTS']
+    SAMPLE       = env['SAMPLE']
+    CUFFLINKS_PARAMS = env['CUFFLINKS_PARAMS']
+    TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False
+    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'] == 'True':
+    	TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True
+    
+    env.Replace(METHODS = env['METHODS'].split(','))
+
+expression_results = []
+expression = {'HTSEQ': None, 'CUFFLINKS': None, 'STRINGTIE': None}
+
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+
+mapping_file = ALIGNMENTS
+sample_name  = SAMPLE
+
+htseq_count_dir = 'htseq'
+cufflinks_dir = 'cufflinks'
+stringtie_dir = 'stringtie'
+
+if 'htseq' in env['METHODS'] and not ANNOTATION == '':
+    ## RUN HTSEQ-COUNT
+    htseq_count_annotation = ANNOTATION
+    htseq_count_cpus = CPUS
+    htseq_count_stranded = 'yes' if 'fr-firststrand' in CUFFLINKS_PARAMS else 'no'
+    htseq = SConscript(os.path.join(htseq_count_dir, 'ccp_htseq_count.scons'), 
+                       variant_dir = htseq_count_dir, src_dir = SRC_DIR, 
+                       duplicate = 0, exports = '''env mapping_file sample_name '''
+                       '''htseq_count_annotation htseq_count_cpus htseq_count_stranded''')
+    expression_results.append(htseq)
+    expression['HTSEQ'] = htseq
+
+if 'cufflinks' in env['METHODS']:
+    ## RUN CUFFLINKS
+    cufflinks_annotation = ANNOTATION
+    cufflinks_cpus = CPUS
+    cufflinks_params = CUFFLINKS_PARAMS
+    cufflinks_toggle_transcriptome_reconstruction = TOGGLE_TRANSCRIPTOME_RECONSTRUCTION
+    cufflinks = SConscript(os.path.join(cufflinks_dir, 'ccp_cufflinks.scons'),
+                           variant_dir = cufflinks_dir, src_dir = SRC_DIR, 
+                           duplicate = 0, exports = '''env mapping_file sample_name '''
+                           '''cufflinks_annotation cufflinks_cpus cufflinks_params '''
+			   '''cufflinks_toggle_transcriptome_reconstruction''')
+    expression_results.append(cufflinks)
+    expression['CUFFLINKS'] = cufflinks
+
+if 'stringtie' in env['METHODS']:
+    ## RUN STRINGTIE
+    env_stringtie = env.Clone()
+    stringtie = SConscript(os.path.join(stringtie_dir, 'ccp_stringtie.scons'), 
+                            variant_dir = stringtie_dir, src_dir = SRC_DIR,
+                            duplicate = 0, exports = 'env_stringtie')
+
+    expression_results.append(stringtie)
+    expression['STRINGTIE'] = stringtie
+
+
+Clean('.', htseq_count_dir)
+Clean('.', cufflinks_dir)
+Clean('.', stringtie_dir)
+
+Return('expression_results expression')
+

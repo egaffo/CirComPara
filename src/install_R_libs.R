@@ -7,7 +7,8 @@
 packs <- c("BH", "svglite", "optparse", "plyr", 
 	   "scales", "reshape2", "DT",
            "ggplot2", "ggthemes",
-           "RSvgDevice", "rmarkdown", "knitr", "VennDiagram")
+           "RSvgDevice", "rmarkdown", "knitr", "VennDiagram",
+	   "tidyr")
 
 install.packages(packs, repos="http://cran.r-project.org", dependencies = T)
 
@@ -16,4 +17,4 @@ install.packages(packs, repos="http://cran.r-project.org", dependencies = T)
 #}
 
 source("http://bioconductor.org/biocLite.R")
-biocLite(pkgs = c("DESeq2", "ReportingTools"))
+biocLite(pkgs = c("DESeq2", "ReportingTools", "ballgown"))

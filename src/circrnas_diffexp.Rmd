@@ -54,7 +54,13 @@ countData <- circrnas.per.sample.matrix
 ddsHTSeq <- DESeqDataSetFromMatrix(countData = countData[, row.names(sampleTable)],
                                    colData = sampleTable,
                                    design = ~ condition)
-dds <- DESeq(ddsHTSeq)
+dds <- tryCatch(
+    {dds <- DESeq(ddsHTSeq)},
+    error = function(e){
+        dds <- DESeq(ddsHTSeq, fitType = "mean")
+        return(dds)
+    }
+)
 ## add additional feature data
 # featureData <- data.frame(gene=rownames(countData))
 # (mcols(dds) <- DataFrame(mcols(dds), featureData))
@@ -86,7 +92,12 @@ datatable(data = as.data.table(sampleTable)[, .(samples = .N), by = condition],
 ```{r pca, echo=FALSE}
 ## PCA plot
 #rld <- rlog(dds, blind = T)
-vsl <- vst(dds, blind = T)
+vsl <- tryCatch(
+    {vsl <- vst(dds, blind = T)}, 
+    error = function(e){
+        vsl <- varianceStabilizingTransformation(dds, fitType = "mean")
+    }
+)
 pca <- prcomp(t(assay(vsl)))
 
 suppressPackageStartupMessages(library(ggplot2))
@@ -233,35 +244,42 @@ if(n.contrasts > 1){
 
 ```{r up DECs venn}
 ## up tab 
-up.shared.counts.table <- dcast(test.results.dt[significant == "yes" & log2FoldChange >= 0, ],
-                             formula = circ_id ~ contrast,
-                             value.var = "significant")[, -c("circ_id"),
-                                                        with = F]
-
-datatable(data = crossprod(!is.na(up.shared.counts.table)), 
-          rownames = T,
-          style = "bootstrap", class = "compact display", 
-          caption = "Number of over expressed circRNAs shared among contrasts",
-          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
-
-## up venn
-n.contrasts <- length(unique(test.results.dt[, contrast]))
-if(n.contrasts > 1){
-    fill.colors <- 1:n.contrasts
-    if(n.contrasts < 5){fill.colors <- fill.colors +1}
-    if(n.contrasts < 6){
-    dec.lists.by.contrast <- split(test.results.dt[significant == "yes" & log2FoldChange >= 0, circ_id],
-                                   f = test.results.dt[significant == "yes" & log2FoldChange >= 0, contrast])
-    #venn(deg.lists.by.contrast) ## venn using gplots
-    vp <- venn.diagram(dec.lists.by.contrast,
-                       fill = fill.colors,
-                       alpha = 0.3, filename = NULL,
-                       main = "Over-expressed circRNAs shared by the contrasts",
-                       cex = 3, main.cex = 2, cat.cex = 1.5)
-    grid.draw(vp)
+sign.up <- test.results.dt[significant == "yes" & log2FoldChange >= 0, ]
+if(nrow(sign.up) > 0 ){
+    up.shared.counts.table <- dcast(sign.up,
+                                    formula = circ_id ~ contrast,
+                                    value.var = "significant")[, -c("circ_id"),
+                                                               with = F]
+    
+    datatable(data = crossprod(!is.na(up.shared.counts.table)), 
+              rownames = T,
+              style = "bootstrap", class = "compact display", 
+              caption = "Number of over expressed circRNAs shared among contrasts",
+              fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+    
+    ## up venn
+    n.contrasts <- length(unique(test.results.dt[, contrast]))
+    if(n.contrasts > 1){
+        fill.colors <- 1:n.contrasts
+        if(n.contrasts < 5){fill.colors <- fill.colors +1}
+        if(n.contrasts < 6){
+            dec.lists.by.contrast <- split(sign.up[, circ_id],
+                                           f = sign.up[, contrast])
+            #venn(deg.lists.by.contrast) ## venn using gplots
+            vp <- venn.diagram(dec.lists.by.contrast,
+                               fill = fill.colors,
+                               alpha = 0.3, filename = NULL,
+                               main = "Over-expressed circRNAs shared by the contrasts",
+                               cex = 3, main.cex = 2, cat.cex = 1.5)
+            grid.draw(vp)
+        }else{
+            print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+        }
     }else{
-        print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+        print("Only one contrast")
     }
+}else{
+    print("No circRNA overexpressed")
 }
 ```
 
@@ -269,35 +287,42 @@ if(n.contrasts > 1){
 
 ```{r down DECs venn}
 ## down tab
-down.shared.counts.table <- dcast(test.results.dt[significant == "yes" & log2FoldChange < 0, ],
-                             formula = circ_id ~ contrast,
-                             value.var = "significant")[, -c("circ_id"),
-                                                        with = F]
-
-datatable(data = crossprod(!is.na(down.shared.counts.table)), 
-          rownames = T,
-          style = "bootstrap", class = "compact display", 
-          caption = "Number of lower expressed circRNAs shared among contrasts",
-          fillContainer = F, autoHideNavigation = T, options = list(searching = F))
-
-## down venn
-n.contrasts <- length(unique(test.results.dt[, contrast]))
-if(n.contrasts > 1){
-    fill.colors <- 1:n.contrasts
-    if(n.contrasts < 5){fill.colors <- fill.colors +1}
-    if(n.contrasts < 6){
-    dec.lists.by.contrast <- split(test.results.dt[significant == "yes" & log2FoldChange < 0, circ_id],
-                                   f = test.results.dt[significant == "yes" & log2FoldChange < 0, contrast])
-    #venn(deg.lists.by.contrast) ## venn using gplots
-    vp <- venn.diagram(dec.lists.by.contrast,
-                       fill = fill.colors,
-                       alpha = 0.3, filename = NULL,
-                       main = "Lower-expressed circRNAs shared by the contrasts",
-                       cex = 3, main.cex = 2, cat.cex = 1.5)
-    grid.draw(vp)
+sign.down <- test.results.dt[significant == "yes" & log2FoldChange < 0, ]
+if(nrow(sign.down) > 0 ){
+    down.shared.counts.table <- dcast(sign.down,
+                                      formula = circ_id ~ contrast,
+                                      value.var = "significant")[, -c("circ_id"),
+                                                                 with = F]
+    
+    datatable(data = crossprod(!is.na(down.shared.counts.table)), 
+              rownames = T,
+              style = "bootstrap", class = "compact display", 
+              caption = "Number of lower expressed circRNAs shared among contrasts",
+              fillContainer = F, autoHideNavigation = T, options = list(searching = F))
+    
+    ## down venn
+    n.contrasts <- length(unique(test.results.dt[, contrast]))
+    if(n.contrasts > 1){
+        fill.colors <- 1:n.contrasts
+        if(n.contrasts < 5){fill.colors <- fill.colors +1}
+        if(n.contrasts < 6){
+            dec.lists.by.contrast <- split(sign.down[, circ_id],
+                                           f = sign.down[, contrast])
+            #venn(deg.lists.by.contrast) ## venn using gplots
+            vp <- venn.diagram(dec.lists.by.contrast,
+                               fill = fill.colors,
+                               alpha = 0.3, filename = NULL,
+                               main = "Lower-expressed circRNAs shared by the contrasts",
+                               cex = 3, main.cex = 2, cat.cex = 1.5)
+            grid.draw(vp)
+        }else{
+            print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+        }
     }else{
-        print("Too many contrasts to be plotted by a Venn diagram. Skipped.")
+        print("Only one contrast")
     }
+}else{
+    print("No genes lower expressed")
 }
 ```
 

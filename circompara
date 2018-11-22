@@ -3,7 +3,7 @@
 export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))
 
 TOOLS_DIR=$CIRCOMPARA_HOME/tools
-export TRIMMOMATIC=$TOOLS_DIR/Trimmomatic-0.36/trimmomatic-0.36.jar
+export TRIMMOMATIC=$TOOLS_DIR/Trimmomatic-0.38/trimmomatic-0.38.jar
 
 export PATH=$CIRCOMPARA_HOME/bin:$PATH
 
@@ -11,5 +11,5 @@ export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/CIRCexplorer2/lib/python2.7/site-packa
 
 export R_LIBS="$CIRCOMPARA_HOME/tools/R_libs"
 
-scons -f $CIRCOMPARA_HOME/src/junk2_circpipe_multisample $1 
+scons -f $CIRCOMPARA_HOME/src/ccp_main.scons $1 
 

@@ -1,0 +1,75 @@
+'''
+Analyze circRNA predictions and set up a report
+'''
+
+import os
+Import('*')
+
+try:
+    env = env_circrna_analyze.Clone()
+except NameError, ne:
+    vars = Variables('vars.py')
+    vars.Add('CIRCRNAS', 'A GTF file with circRNA predictions', '')
+    vars.Add('CIRCGENES', 'A 18 fields GTF file with genes intersections with '\
+            'circRNAs', '')
+    vars.Add('GENEEXP', 'The file with gene expression: '\
+                        'genes.read_group_tracking when multisample; '\
+                        'genes.fpkm_tracking when sigle sample', '')
+    vars.Add('GENEMETA', 'A meta file of gene expression results: '\
+                        'genes.fpkm_tracking when multisample; '\
+                        'leave empty when single sample', '')
+    vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
+                            ' define the circRNA as reliable', 2)
+    vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
+    vars.Add('DIFF_EXP', 'Enable circRNA differential expression reporting', 'False')
+    vars.Add('META', 'Table specifying sample condition', 'meta.csv')
+
+
+    env = Environment(ENV=os.environ, SHELL = '/bin/bash',
+                      variables=vars)
+    Help(vars.GenerateHelpText(env))
+    unknown = vars.UnknownVariables()
+    if unknown:
+        print "Run sample: unknown variables", unknown.keys()
+        Exit(1)
+
+env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
+
+if not env['GENEMETA'] == "":
+    env['GENEMETA'] = File(env['GENEMETA']).abspath
+
+circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
+                        '''circrnas.gtf.file <- "${SOURCES[0].abspath}"; '''\
+                        '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
+                        '''gene_meta_file <- "$GENEMETA"; '''\
+                        '''gene_fpkm_file <- "${SOURCES[2].abspath}"; '''\
+                        '''min_methods <- ${MIN_METHODS}; '''\
+                        '''min_reads <- ${MIN_READS}; '''\
+                        '''meta_file <- "$META"; '''\
+                        '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
+                        '''output_file = "$TARGET.abspath", '''\
+                        '''intermediates_dir = dirname("$TARGET.abspath") )' '''
+
+circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
+circrnas_analysis_sources = [env['CIRCRNAS'], env['CIRCGENES'], env['GENEEXP']]
+circrnas_analysis = env.Command(circrnas_analysis_targets, 
+                                circrnas_analysis_sources, 
+                                circrnas_analysis_cmd)
+
+if env['DIFF_EXP']:
+    circrnas_diffexp_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
+                           '''meta.file <- "${SOURCES[0].abspath}"; '''\
+                           '''circrnas.per.sample.file <- "${SOURCES[1].abspath}"; '''\
+                           '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circrnas_diffexp.Rmd",'''\
+                           '''output_file = "$TARGET.abspath", '''\
+                           '''intermediates_dir = dirname("$TARGET.abspath") )' '''
+    
+    circrnas_diffexp_targets = "circrnas_diffexp.html"
+    circrnas_diffexp_sources = [File(env['META']).abspath, circrnas_analysis[1]]
+    circrnas_diffexp = env.Command(circrnas_diffexp_targets, 
+                                   circrnas_diffexp_sources, 
+                                   circrnas_diffexp_cmd)
+      
+
+
+Return('circrnas_analysis')

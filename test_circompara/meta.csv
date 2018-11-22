@@ -1,5 +1,0 @@
-file,sample,condition,adapter
-$CIRCOMPARA/test_circompara/reads/readsA_1.fastq.gz,sample_A,A,$CIRCOMPARA/tools/Trimmomatic-0.36/adapters/TruSeq3-PE-2.fa
-$CIRCOMPARA/test_circompara/reads/readsA_2.fastq.gz,sample_A,A,$CIRCOMPARA/tools/Trimmomatic-0.36/adapters/TruSeq3-PE-2.fa
-$CIRCOMPARA/test_circompara/reads/readsB_1.fastq.gz,sample_B,B,$CIRCOMPARA/tools/Trimmomatic-0.36/adapters/TruSeq3-PE-2.fa
-$CIRCOMPARA/test_circompara/reads/readsB_2.fastq.gz,sample_B,B,$CIRCOMPARA/tools/Trimmomatic-0.36/adapters/TruSeq3-PE-2.fa

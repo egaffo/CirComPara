@@ -17,8 +17,9 @@ output:
 ## variables to be defined in parent frame
 # results.dir <- "analysis/cuffdiff"
 # meta.file <- "analysis/cuffdiff/read_groups.info"
-# gene.xpr.file <- "analysis/cuffdiff/genes.read_group_tracking"
-# sample #empty if multisample, set != '' if single sample
+# gene.xpr.file <- "analysis/cuffdiff/genes.read_group_tracking" # if cufflinks. Comma separated list of *gene_abund.tab files if stringtie
+# sample # comma separated list if multisample
+# linear.method # comma separated list if more than one method. Currently use only the first in the list
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 12, 
@@ -41,11 +42,56 @@ library(DESeq2)
 ```
 
 ```{r load data, include=FALSE}
-if(meta.file != ""){
-    gene_meta <- fread(meta.file, colClasses = c("character", "factor", "character", 
-                                                  "numeric", "numeric", "numeric", 
-                                                  "numeric"))
-    gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
+## use only the first method in the list
+method <- strsplit(linear.method, ",")[[1]][1]
+
+if(method == "cufflinks"){
+    if(meta.file != ""){
+        gene_meta <- fread(meta.file, colClasses = c("character", "factor", "character", 
+                                                     "numeric", "numeric", "numeric", 
+                                                     "numeric"))
+        gene_meta[, sample_id := sub("cuffquant/(.*)_hisat2.*", "\\1", file)]
+        
+        intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
+        intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
+        intgroup.dt <- merge(intgroup.dt, 
+                             intgroup.dt[, .(samples_per_condition = .N), 
+                                         by = condition][, hue := brewer.pal(8, 
+                                                                             "Set2")[1:length(condition)]][], 
+                             by = "condition")[, color := muted(hue, l = color_luminance)][]
+    }
+    
+    if(meta.file != ""){
+        genes.read_group_tracking <- fread(gene.xpr.file, 
+                                           colClasses = c("character", "factor", "character", 
+                                                          "integer", "numeric", "numeric", 
+                                                          "numeric", "character", "character"))[
+                                                              , .(tracking_id, condition, replicate, raw_frags, FPKM)]
+        setkey(gene_meta, condition, replicate_num)
+        setkey(genes.read_group_tracking, condition, replicate)
+        gene.raw.frags.dt <- dcast(genes.read_group_tracking[gene_meta[, .(sample_id, condition, 
+                                                                           replicate_num)]][, .(gene_id = tracking_id, 
+                                                                                                sample_id, raw_frags)], 
+                                   formula = gene_id ~ sample_id, value.var = "raw_frags", fill = 0)
+        
+    }else{
+        # tracking_id, class_code, nearest_ref_id, 
+        # gene_id, gene_short_name, tss_id, 
+        # locus, length, coverage, 
+        # FPKM, FPKM_conf_lo, FPKM_conf_hi, 
+        # FPKM_status
+        genes.read_group_tracking <- fread(gene.xpr.file, 
+                                           colClasses = c("character", "character", "character", 
+                                                          "character", "character", "character",
+                                                          "character", "character", "character",
+                                                          "numeric", "numeric", "numeric", "character"))[
+                                                              , .(tracking_id, FPKM)]
+        genes.read_group_tracking$sample_id <- sample
+    }
+}
+if(method == "stringtie"){
+    ## prepare meta file and sample colors for plots
+    gene_meta <- unique(fread(file = meta.file)[, .(sample_id = sample, condition)])
     
     intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
     intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
@@ -54,46 +100,64 @@ if(meta.file != ""){
                                      by = condition][, hue := brewer.pal(8, 
                                                                          "Set2")[1:length(condition)]][], 
                          by = "condition")[, color := muted(hue, l = color_luminance)][]
-}
-
-if(meta.file != ""){
-    genes.read_group_tracking <- fread(gene.xpr.file, 
-                                   colClasses = c("character", "factor", "character", 
-                                                  "integer", "numeric", "numeric", 
-                                                  "numeric", "character", "character"))[
-                                                      , .(tracking_id, condition, replicate, raw_frags, FPKM)]
-    setkey(gene_meta, condition, replicate_num)
-    setkey(genes.read_group_tracking, condition, replicate)
-    gene.raw.frags.dt <- dcast(genes.read_group_tracking[gene_meta[, .(sample_id, condition, 
-                                                                       replicate_num)]][, .(gene_id = tracking_id, 
-                                                                                            sample_id, raw_frags)], 
-                               formula = gene_id ~ sample_id, value.var = "raw_frags")
     
-}else{
-    # tracking_id, class_code, nearest_ref_id, 
-    # gene_id, gene_short_name, tss_id, 
-    # locus, length, coverage, 
-    # FPKM, FPKM_conf_lo, FPKM_conf_hi, 
-    # FPKM_status
-    genes.read_group_tracking <- fread(gene.xpr.file, 
-                                   colClasses = c("character", "character", "character", 
-                                                  "character", "character", "character",
-                                                  "character", "character", "character",
-                                                  "numeric", "numeric", "numeric", "character"))[
-                                                      , .(tracking_id, FPKM)]
-    genes.read_group_tracking$sample_id <- sample
-}
+    gene.xpr.file.paths <- strsplit(gene.xpr.file, ",")[[1]]
+    gene.xpr.list <- lapply(gene.xpr.file.paths, fread)
+    names(gene.xpr.list) <- sub("_gene_abund.tab", "", 
+                                sapply(gene.xpr.file.paths, basename, 
+                                       USE.NAMES = F))
+    gene.xpr <- rbindlist(gene.xpr.list, use.names = T, idcol = "sample")
 
+    gene.xpr.tpm <- dcast(data = gene.xpr,
+                          formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample,
+                          value.var = "TPM", fill = 0)
+    write.csv(x = gene.xpr.tpm, 
+              file = file.path(results.dir, "gene_expression_TPM_table.csv"), 
+              row.names = F)
+    gene.xpr.nreads <- dcast(data = gene.xpr, 
+                             formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample, 
+                             value.var = "Coverage", fill = 0)
+    write.csv(x = gene.xpr.nreads, 
+              file = file.path(results.dir, "gene_expression_Nreads_table.csv"), 
+              row.names = F)
+    
+    gene.raw.frags.dt <- gene.xpr.nreads[, c("Gene ID", gene_meta$sample_id), with = F][, `:=`(gene_id = `Gene ID`, `Gene ID` = NULL)][]
+    genes.read_group_tracking <- gene.xpr[, .(sample_id = sample, tracking_id = `Gene ID`, FPKM)]
+}
 ```
+
+```{r save gene expression in table format}
+# get gene expressions
+expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
+if(meta.file != ""){
+    if(method == "cufflinks"){
+        setkey(gene_meta, condition, replicate_num)
+        setkey(expressed_genes, condition, replicate)
+        expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
+        gene.xpr.fpkm <- dcast(expressed_genes[, .(gene = tracking_id, sample_id, FPKM)], 
+                               formula = gene ~ sample_id, value.var = "FPKM", fill = 0)
+    }
+    if(method == "stringtie"){
+        gene.xpr.fpkm <- dcast(data = gene.xpr,
+                               formula = `Gene ID` + `Gene Name` + Reference + Strand + Start + End ~ sample,
+                               value.var = "FPKM", fill = 0)[, gene := `Gene ID`][, c("gene", gene_meta$sample_id), with = F]
+        expressed_genes <- merge(expressed_genes, gene_meta, by = "sample_id")
+    }
+}
+expressed_genes_table.file <- file.path(results.dir, "gene_expression_FPKM_table.csv")
+write.csv(x = gene.xpr.fpkm, file = expressed_genes_table.file, row.names = F)
+```
+Expression of genes was saved in tabular format in file <a href="`r basename(expressed_genes_table.file)`">`r basename(expressed_genes_table.file)`</a>.  
 
 # Principal component analysis (PCA) considering gene expression
 
 ```{r compute pca, echo=FALSE}
 
 if(meta.file != ""){
-    non.value.columns <- c("gene_id")
-    genes.per.sample.matrix <- as.matrix(round(gene.raw.frags.dt[, -non.value.columns, with = FALSE]))
-    rownames(genes.per.sample.matrix) <- gene.raw.frags.dt$gene_id
+    non.value.columns <- c("gene")
+    
+    genes.per.sample.matrix <- as.matrix(gene.xpr.fpkm[, -non.value.columns, with = FALSE])
+    rownames(genes.per.sample.matrix) <- gene.xpr.fpkm$gene
     
     sampleTable <- as.data.frame(gene_meta[, .(sample = sample_id, condition)])
     rownames(sampleTable) <- as.character(sampleTable[, "sample"])
@@ -101,77 +165,76 @@ if(meta.file != ""){
     # remove not expressed genes
     countData <- genes.per.sample.matrix[rowSums(genes.per.sample.matrix) > 0, ]
     
-    pca <- tryCatch({        
-        ddsHTSeq <- DESeqDataSetFromMatrix(countData = countData[, row.names(sampleTable)],
-                                           colData = sampleTable,
-                                           design = ~ condition)
-        dds <- DESeq(ddsHTSeq)
+    pca.plot <- tryCatch({
         
-        #rld <- rlog(dds, blind = T)
-        #rld <- vst(dds, blind = T)
-        rld <- varianceStabilizingTransformation(dds)
-        pca <- prcomp(t(assay(rld)), scale. = T)
-    },
-    error=function(cond) {
-        message(paste("Some error occurred while computing PCA:\n", cond))
-        message("Will use raw expression values with no further normalization.\n")
-        pca <- prcomp(t(countData), scale. = F)
-        return(pca)
-    })
-    
-    intgroup <- c("condition")
-    percentVar <- pca$sdev^2/sum(pca$sdev^2)
-    ## compute PC variance explained % and plot
-    percentVar.df <- data.frame(PCs = paste0("PC", 1:length(percentVar)), 
-                                Variation_percentage = percentVar*100)
-    percentVar.df$PCs <- factor(percentVar.df$PCs, levels = percentVar.df$PCs, ordered = T)
-    pc.var.explained.plot <- ggplot(data = percentVar.df, aes(x = PCs, y = Variation_percentage)) + 
-        geom_bar(stat = "identity") + 
-        geom_text(aes(label = round(Variation_percentage, 2)), vjust = -.5) + 
-        ylab("Variation explained %") + theme_bw() + 
-        ggtitle("Amount of variation explained by the principal components") + 
-        theme(plot.title = element_text(hjust = 0.5))
-    
-    ## compute and plot PCs
-    intgroup.df <- as.data.frame(colData(rld)[, intgroup, drop = FALSE])
-    group <- if (length(intgroup) > 1) {
-        factor(apply(intgroup.df, 1, paste, collapse = " : "))
-    } else {
-        colData(rld)[[intgroup]]
+        do.scale <- ifelse(ncol(countData) > 2, T, F)
+        
+        pca <- prcomp(t(countData), scale. = do.scale)
+        
+        intgroup <- c("condition")
+        percentVar <- pca$sdev^2/sum(pca$sdev^2)
+        ## compute PC variance explained % and plot
+        percentVar.df <- data.frame(PCs = paste0("PC", 1:length(percentVar)), 
+                                    Variation_percentage = percentVar*100)
+        percentVar.df$PCs <- factor(percentVar.df$PCs, levels = percentVar.df$PCs, ordered = T)
+        pc.var.explained.plot <- ggplot(data = percentVar.df, aes(x = PCs, y = Variation_percentage)) + 
+            geom_bar(stat = "identity") + 
+            geom_text(aes(label = round(Variation_percentage, 2)), vjust = -.5) + 
+            ylab("Variation explained %") + theme_bw() + 
+            ggtitle("Amount of variation explained by the principal components") + 
+            theme(plot.title = element_text(hjust = 0.5))
+        
+        ## compute and plot PCs
+        # intgroup.df <- as.data.frame(colData(rld)[, intgroup, drop = FALSE])
+        intgroup.df <- data.frame(intgroup.dt[, c("sample_id", intgroup), with = F], row.names = "sample_id")
+        group <- if (length(intgroup) > 1) {
+            factor(apply(intgroup.df, 1, paste, collapse = " : "))
+        } else {
+            #colData(rld)[[intgroup]]
+            intgroup
+        }
+        
+        d <- data.frame(pca$x, group = group, 
+                        condition = intgroup.df[colnames(countData), ], 
+                        name = colnames(countData))
+        pca.plot <- ggplot(data = d, aes(PC1, PC2, color=condition, shape=condition, label=name)) + 
+            geom_point(size = 4, color = "black") + geom_point(size = 3, alpha = 1) + coord_fixed() + 
+            geom_text(position="jitter", hjust=0.2, vjust=-0.2, size=6, show.legend = F) +
+            xlab(paste0("PC1: ", round(percentVar[1] * 100), "% variance")) + 
+            ylab(paste0("PC2: ", round(percentVar[2] * 100), "% variance"))+ 
+            scale_color_brewer(palette = "Set2") + scale_x_continuous(expand = c(0.3,0)) +
+            scale_y_continuous(expand = c(0.3,0)) + theme_bw() + 
+            theme(legend.position="bottom") + 
+            ggtitle("Samples plotted according to the first two principal components") + 
+            theme(plot.title = element_text(hjust = 0.5))
+        
+        list(pca.plot = pca.plot, pc.var.explained.plot = pc.var.explained.plot)
+    }, 
+    error = function(cond){
+        return(NULL)
     }
-    d <- data.frame(pca$x, group = group, intgroup.df, name = colnames(rld))
-    pca.plot <- ggplot(data = d, aes(PC1, PC2, color=condition, shape=condition, label=name)) + 
-        geom_point(size = 4, color = "black") + geom_point(size = 3, alpha = 1) + coord_fixed() + 
-        geom_text(position="jitter", hjust=0.2, vjust=-0.2, size=6, show.legend = F) +
-        xlab(paste0("PC1: ", round(percentVar[1] * 100), "% variance")) + 
-        ylab(paste0("PC2: ", round(percentVar[2] * 100), "% variance"))+ 
-        scale_color_brewer(palette = "Set2") + scale_x_continuous(expand = c(0.3,0)) +
-        scale_y_continuous(expand = c(0.3,0)) + theme_bw() + 
-        theme(legend.position="bottom") + 
-        ggtitle("Samples plotted according to the first two principal components") + 
-        theme(plot.title = element_text(hjust = 0.5))
-    
+    )
 }
+
 ```
 
 ```{r plot pca, echo=FALSE}
 if(meta.file != ""){
-    print(pc.var.explained.plot)
-    print(pca.plot)
+    
+    if(!is.null(pca.plot)){
+        print(pca.plot$pc.var.explained.plot)
+        print(pca.plot$pca.plot)
+    }else{
+        print("Failed to compute principal components")
+    }
 }else{
     print("PCA not applicable to single sample")
 }
 ```
 
 # Gene expressed by sample
+
 ```{r show_gene_expressed_by_sample}
-# get gene expressions
-expressed_genes <- genes.read_group_tracking[, FPKM := round(FPKM, digits = 8)][FPKM > 0]
-if(meta.file != ""){
-    setkey(gene_meta, condition, replicate_num)
-    setkey(expressed_genes, condition, replicate)
-    expressed_genes <- expressed_genes[gene_meta[, .(sample_id, condition, replicate_num)]]
-}
 expressed_genes.by.sample <- expressed_genes[, .N, 
                                              by = .(sample_id, 
                                                     tracking_id)][, .("Tot. gene expressed" = .N), 
@@ -182,6 +245,9 @@ knitr::kable(rbind(expressed_genes.by.sample[order(sample_id),], list("Non-redun
 
 ```{r plot_gene_expressed_by_sample}
 default.font.size <- 12
+expressed_genes.by.sample$sample_id <- factor(expressed_genes.by.sample$sample_id, 
+                                                 levels = gene_meta[order(condition, sample_id), sample_id], 
+                                                 ordered = T)
 expressed_genes.by.sample.plot <- ggplot(data = expressed_genes.by.sample, 
                                          mapping = aes(x = sample_id, y = `Tot. gene expressed`,
                                                        fill = sample_id)) + 
@@ -204,14 +270,6 @@ if(meta.file != ""){
 }
 ```
 
-```{r save gene expression in table format}
-expressed_genes_table.file <- file.path(results.dir, "gene_expression_FPKM_table.csv")
-write.csv(x = dcast(expressed_genes[, .(gene = tracking_id, sample_id, FPKM)], 
-                    formula = gene ~ sample_id, value.var = "FPKM"), 
-          file = expressed_genes_table.file, row.names = F)
-```
-Expression of genes was saved in tabular format in file `r expressed_genes_table.file`.  
-
 # Gene expression distribution by sample
 
 ```{r show_gene_expression}
@@ -221,6 +279,10 @@ knitr::kable(sapply(X = split(expressed_genes, expressed_genes$sample_id),
 
 ```{r plot_gene_expression}
 ## boxplot expression per sample: genes
+expressed_genes$sample_id <- factor(expressed_genes$sample_id, 
+                                                 levels = gene_meta[order(condition, sample_id), sample_id], 
+                                                 ordered = T)
+
 gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes, 
                                       mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
   geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
