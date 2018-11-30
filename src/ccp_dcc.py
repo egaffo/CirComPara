@@ -33,6 +33,8 @@ except NameError:
         Exit(1)
 
 out_dir = 'dcc'
+#env['TMP_DIR'] = os.path.join(out_dir, "_tmp_DCC")
+env['TMP_DIR'] = '_tmp_DCC'
 
 bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
                 '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
@@ -49,7 +51,9 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
 
 bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
 
-dcc_cmd = 'DCC -D -O $TARGET.dir $SOURCE'
+## TODO: implement paired-end reads DCC
+dcc_cmd = 'DCC $EXTRA_PARAMS $( -T $CPUS $) -D -O ${TARGETS[0].dir} '\
+          '$( -t ${TARGETS[0].dir}' + os.path.sep +'$TMP_DIR $) $SOURCE'
 dcc_targets = [os.path.join(out_dir, f) for f in ['CircRNACount',
                                                   'CircCoordinates']]
 dcc_sources = [File(env['FUSION_FILE'])]

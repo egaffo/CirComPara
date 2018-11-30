@@ -103,6 +103,8 @@ vars.Add('STRINGTIE_PARAMS', '''Stringtie extra parameters. '''\
 
 ## circRNA methods' extra parameters
 vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
+## DCC extra parameters
+vars.Add('DCC_EXTRA_PARAMS', 'DCC additional parameters', '')
 
 ## alternative workflow parameters
 vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')

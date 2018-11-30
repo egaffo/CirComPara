@@ -82,6 +82,7 @@ except NameError:
              '/path/to/Star/index/dir')
     vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
     vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
+    vars.Add('DCC_EXTRA_PARAMS', 'DCC additional parameters', '')
 
     vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods to use. '\
 	     'Use all methods available as default', '')
@@ -264,6 +265,8 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
         dcc_env['FUSION_FILE'] = Chimeric_out_junction
         #dcc_env['ALIGNER'] = 'star'
         dcc_env['ALIGNMENTS'] = star[0][0]
+        dcc_env.AppendUnique(EXTRA_PARAMS = env['DCC_EXTRA_PARAMS'])
+
         dcc = env.SConscript(os.path.join(build_dir, 
         						'ccp_dcc.py'),
         			variant_dir = build_dir, src_dir = SRC_DIR,

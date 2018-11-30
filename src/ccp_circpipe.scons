@@ -265,6 +265,10 @@ if not env['BYPASS'] == 'circular':
     if strandness_pattern.search(hisat2_extra_params):
         ## Environment is propagated to the Sconscript
         env['FINDCIRC_EXTRA_PARAMS'] = ' --strandpref --stranded '
+        #env.AppendUnique(DCC_EXTRA_PARAMS = ['-ss']) ## default DCC is stranded
+    else:
+        ## assume non-stranded library
+        env.AppendUnique(DCC_EXTRA_PARAMS = ['-N'])
     
     ## select which circRNA methods have to be performed
     circrna_methods = env['CIRCRNA_METHODS']
