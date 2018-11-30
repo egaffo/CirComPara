@@ -33,7 +33,6 @@ except NameError:
         Exit(1)
 
 out_dir = 'dcc'
-results = []
 
 bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
                 '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
@@ -62,13 +61,13 @@ dcc = env.Command(dcc_targets,
 ## to collect backsplice reads
 circ_bed = dcc[1] ## CircCoordinates file is in BED format
 
-results.append(dcc)
+#results.append(dcc)
 
 bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
                   [circ_bed],
                   bed_cmd)
 
-results.append(bed)
+#results.append(bed)
 
 bks_reads_cmd = bks_reads_cmd + \
                     '''cut -f 4 | sort | uniq -c | '''\
@@ -80,7 +79,12 @@ bks_reads = env.Command([os.path.join(out_dir,
                         [env['ALIGNMENTS'], bed], 
                         bks_reads_cmd)
 
-results.append(bks_reads)
+#results.append(bks_reads)
+
+results = {'CIRCRNA_COUNT': dcc[0],
+           'CIRC_COORDINATES': dcc[1],
+           'CIRC_SN_BED': bed,
+           'BKS_READS': bks_reads}
 
 Return('results')
 

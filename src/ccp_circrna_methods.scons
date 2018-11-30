@@ -270,8 +270,8 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
                                   duplicate = 0,
         			exports = '''dcc_env''')
         
-        results.append(dcc)	
-        Depends(dcc, star)
+        results.append([File(f) for f in dcc.items()])	
+        Depends(dcc.items(), star)
 
 
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
