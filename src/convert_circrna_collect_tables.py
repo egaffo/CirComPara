@@ -87,6 +87,27 @@ def format_testrealign(line, outformat):
         outline = 'BED6 formatting not yet immplemented'
     return outline
 
+def format_dcc(line, outformat):
+    fields = line
+    if outformat == 'gtf':
+        sample = fields[0]
+        chrom   = fields[1]
+        #start   = str(int(float(fields[2])) + 1) # DCC gives BED coordinates
+        # DCC gives BED coordinates, but seems it does not respect the 0 based position counting
+        start   = str(int(float(fields[2]))) 
+        end     = fields[3]
+        strand  = fields[4]
+        score   = fields[5]
+        gene_id = chrom + ':' + start + '-' + end + ':' + strand
+        transcript_id = gene_id + '.' + sample
+        
+        outline = format_gtf_line(chrom, 'dcc', 'backsplice', 
+                                  start, end, score, strand, '.', 
+                                  gene_id, transcript_id, 'sample_id "' + sample + '";')
+
+    elif outformat == 'bed6':
+        outline = 'BED6 formatting not yet immplemented'
+    return outline
 
 if __name__ == '__main__':
     
@@ -96,12 +117,13 @@ if __name__ == '__main__':
     parser.add_argument('input', default = '-', help = 'A csv file or piped stream (default -)')
     parser.add_argument('-p', '--program', type = str, 
                         choices = ['ciri', 'circexplorer', 'findcirc', 'testrealign', 
-                                    'circexplorer2_star', 
-                                    'circexplorer2_bwa', 
-                                    'circexplorer2_segemehl',
-                                    'circexplorer2_tophat_pe',
-                                    'circexplorer2_tophat',
-                                    'circexplorer2_mapsplice'], 
+                                   'circexplorer2_star', 
+                                   'circexplorer2_bwa', 
+                                   'circexplorer2_segemehl',
+                                   'circexplorer2_tophat_pe',
+                                   'circexplorer2_tophat',
+                                   'circexplorer2_mapsplice',
+                                   'dcc'], 
                         required = True, dest = 'program', 
                         help = 'The program that generated the input file')
     parser.add_argument('-f', '--format', type = str, 
@@ -132,6 +154,8 @@ if __name__ == '__main__':
             outline = format_findcirc(line, args.outformat)
         elif args.program == 'testrealign':
             outline = format_testrealign(line, args.outformat)
+        elif args.program == 'dcc':
+            outline = format_dcc(line, args.outformat)
 
         print outline
 
