@@ -40,9 +40,10 @@ ciri_nodes         = []
 CIRCexplorer_nodes = []
 CIRCexplorer2_star_nodes    = []
 CIRCexplorer2_bwa_nodes     = []
-CIRCexplorer2_segemehl_nodes= []
-CIRCexplorer2_tophat_pe_nodes= []
-CIRCexplorer2_tophat_nodes= []
+CIRCexplorer2_segemehl_nodes = []
+CIRCexplorer2_tophat_pe_nodes = []
+CIRCexplorer2_tophat_nodes = []
+dcc_nodes = []
 
 for sample in samples:
     testrealign_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
@@ -76,6 +77,9 @@ for sample in samples:
                                              os.path.join('CIRCexplorer2_tophat', 
                                                            'annotate', 
                                                            'circ_fusion.txt')))
+    dcc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+                                        os.path.sep +
+                                        'CircRNACount'))
 
 
 ## collect testrealign
@@ -88,6 +92,7 @@ CIRCexplorer2_bwa_compared = None
 CIRCexplorer2_segemehl_compared = None
 CIRCexplorer2_tophat_pe_compared = None
 CIRCexplorer2_tophat_compared = None
+dcc_compared = None
 
 if not ''.join([str(f) for f in Flatten(testrealign_nodes)]) == '':
 
@@ -189,17 +194,31 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_nodes)]) == '':
                                     CIRCexplorer2_tophat_comapared_cmd)
     Depends(CIRCexplorer2_tophat_compared, CIRCexplorer2_tophat_nodes)
 
+if not ''.join([str(f) for f in Flatten(dcc_nodes)]) == '':
+
+    dcc_files = ','.join([f.path for f in Flatten(dcc_nodes)])
+    dcc_labels = ','.join(samples)
+    dcc_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                             '''dcc_compare.R -l ''' + dcc_labels +\
+                             ''' -i ''' + dcc_files + ''' -o $TARGET''')
+    dcc_comapared_target = os.path.join(circRNA_collect_dir, 'dcc_compared.csv')
+    dcc_compared = env.Command(dcc_comapared_target, 
+                                    dcc_nodes, 
+                                    dcc_comapared_cmd)
+    Depends(dcc_compared, dcc_nodes)
+
 
 
 ## compose a dict with the results
 sample_results = {'CIRI': ciri_compared,
-                'FINDCIRC': find_circ_compared,
-                'TESTREALIGN': testrealign_compared,
-                'CIRCEXPLORER2_STAR': CIRCexplorer2_star_compared,
-                'CIRCEXPLORER2_BWA': CIRCexplorer2_bwa_compared,
-                'CIRCEXPLORER2_SEGEMEHL': CIRCexplorer2_segemehl_compared,
-                'CIRCEXPLORER2_TOPHAT': CIRCexplorer2_tophat_compared
-                }
+                  'FINDCIRC': find_circ_compared,
+                  'TESTREALIGN': testrealign_compared,
+                  'CIRCEXPLORER2_STAR': CIRCexplorer2_star_compared,
+                  'CIRCEXPLORER2_BWA': CIRCexplorer2_bwa_compared,
+                  'CIRCEXPLORER2_SEGEMEHL': CIRCexplorer2_segemehl_compared,
+                  'CIRCEXPLORER2_TOPHAT': CIRCexplorer2_tophat_compared,
+                  'DCC': dcc_compared
+                  }
 
 Return('sample_results')
 Clean('.', circRNA_collect_dir)
