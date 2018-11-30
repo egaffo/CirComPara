@@ -229,7 +229,7 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
     ## ALIGN WITH STAR, WITH FUSION SEARCH ENABLED
     star_env = env.Clone()
     ## set Star parameters to enable fusion search
-    star_env.Append(STAR_PARAMS = ['--chimSegmentMin', '10', 
+    star_env.AppendUnique(STAR_PARAMS = ['--chimSegmentMin', '10', 
     			       '--chimOutType', 'WithinBAM'])
     
     star = env.SConscript(os.path.join(build_dir, 'ccp_star.scons'),
