@@ -125,4 +125,4 @@ circ_gene_combine = env.Command(circ_gene_combine_target,
                                 circ_gene_combine_sources, 
                                 circ_gene_combine_cmd)
 
-Return('circ_gene_combine circ_gtf snp_unique_circ')
+Return('circ_gene_combine circ_gtf snp_unique_circ unique_circ')
