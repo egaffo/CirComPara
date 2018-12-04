@@ -330,25 +330,31 @@ stringtie_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), string
 #
 #gffcompare_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), gffcompare[1], SymLink)
 
-# DCC
-
+## DCC
+env_dcc = env.Clone()
 dcc_dir = os.path.join(tools_dir, 'DCC-0.4.6')
+dcc_python_sitepkg = os.path.join(dcc_dir, "lib", "python2.7", "site-packages")
+env_dcc.PrependENVPath('PYTHONPATH', dcc_python_sitepkg)
+
+### PANDAS (DCC dependency)
+env_dcc.PrependENVPath('PYTHONUSERBASE', dcc_dir)
+pandas = env_dcc.Command([os.path.join(dcc_python_sitepkg, 'pandas', '__init__.py')], 
+                         [], 
+                         "pip install --ignore-installed --user pandas")
+
 dcc_tar = 'v0.4.6.tar.gz'
 dcc_url = 'https://github.com/dieterich-lab/DCC/archive/' + dcc_tar
-dcc_python_sitepkg = os.path.join(dcc_dir, "lib", "python2.7", "site-packages")
 dcc_target = [os.path.join(tools_dir, dcc_tar),
 		      os.path.join(dcc_dir, 'bin', 'DCC'),
               os.path.join(dcc_python_sitepkg, "site.py")]
-env_dcc = env.Clone()
-env_dcc.PrependENVPath('PYTHONPATH', dcc_python_sitepkg)
 dcc = env_dcc.Command(dcc_target, 
-			[], 
-			['wget -O ${TARGETS[0]} ' + dcc_url,
-			 'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}',
-             'cd ' + dcc_dir +\
-             ' && python setup.py install --prefix ' + dcc_dir,
-             'cd ' + Dir('#').abspath]
-			)
+			         [pandas], 
+          	         ['wget -O ${TARGETS[0]} ' + dcc_url,
+			          'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                      'cd ' + dcc_dir +\
+                      ' && python setup.py install --prefix ' + dcc_dir,
+                      'cd ' + Dir('#').abspath]
+			         )
 
 dcc_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), dcc[1], SymLink)
 
