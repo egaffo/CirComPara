@@ -35,19 +35,19 @@ env.SetDefault(LIN_COUNTER = 'dcc')
 
 strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
 
-## convert circRNA GTF to BED
-circ_coords_cmd = '''zcat ${SOURCES[0]} | '''\
-                  '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
-                            '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
-                            '''([^\\t]+)\\t([^\\t]+)\\tgene_id "([^"]+)";'''\
-                            '''/echo -e "\\1\\t\\$$((\\4-1))\\t\\5\\t'''\
-                                      '''@\\9@\\t\\6\\t\\7"/e' | '''\
-                   '''sed -r 's/@/"/g' >$TARGET '''
-circ_coords = env.Command('circrnas.bed', 
-                          env['CIRCRNAS'], 
-                          circ_coords_cmd)
-
 if 'dcc' in env['LIN_COUNTER']:
+    ## convert circRNA GTF to BED
+    circ_coords_cmd = '''zcat ${SOURCES[0]} | '''\
+                      '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                                '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                                '''([^\\t]+)\\t([^\\t]+)\\tgene_id "([^"]+)";'''\
+                                '''/echo -e "\\1\\t\\$$((\\4-1))\\t\\5\\t'''\
+                                          '''@\\9@\\t\\6\\t\\7"/e' | '''\
+                       '''sed -r 's/@/"/g' >$TARGET '''
+    circ_coords = env.Command('circrnas.bed', 
+                              env['CIRCRNAS'], 
+                              circ_coords_cmd)
+
     ## use DCC to compute circRNA host gene linear expression
     btmcovstrand = '-N' ## check if stranded read alignment
     if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
@@ -74,7 +74,7 @@ if 'dcc' in env['LIN_COUNTER']:
                  ''' -A $GENOME_FASTA -O $TARGET.dir '''\
                  '''-B @${SOURCES[0].abspath} -C ${SOURCES[2].abspath} '''\
                  '''@${SOURCES[1].abspath} && '''\
-                 '''sed -i '1s/.*/Chr\\tStart\\tEnd\\t''' +\
+                 '''sed -i '1s/.*/chr\\tstart\\tend\\t''' +\
                  '\\t'.join([s for s in sorted(env['RUNS_DICT'].keys())]) +\
                  '''/' $TARGET'''
     dcclinexp = env.Command(dcclinexp_target, 
@@ -88,6 +88,8 @@ if 'ccp' in env['LIN_COUNTER']:
     strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
     if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
         btmcovstrand = '-s'
+    
+    circ_coords = env['CIRCRNAS']
     
     ## TODO: improve the counting by considering only linear spliced reads
     ## and linear reads spanning the splice site, while not counting reads
@@ -119,7 +121,11 @@ if 'ccp' in env['LIN_COUNTER']:
                                  s in sorted(env['RUNS_DICT'].keys())]]
     btmcov_target = 'bks_linear_counts.tab'
     btmcov_cmd = '''bedtools multicov ''' + btmcovstrand + \
-                 ''' -bed ${SOURCES[0]} -bams ${SOURCES[1:]} | gzip -c > ${TARGET}'''
+                 ''' -bed ${SOURCES[0]} -bams ${SOURCES[1:]} > ${TARGET} '''\
+                 '''&&  sed -i '1ichr\\tstart\\tend\\tcirc_id'''\
+                 '''\\tscore\\tstrand\\t''' +\
+                 '\\t'.join([s for s in sorted(env['RUNS_DICT'].keys())]) +\
+                 '''' $TARGET'''
     btmcov = env.Command(btmcov_target, 
                          btmcov_sources, 
                          btmcov_cmd)
