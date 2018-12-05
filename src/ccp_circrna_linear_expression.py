@@ -43,7 +43,10 @@ if 'dcc' in env['LIN_COUNTER']:
                                 '''([^\\t]+)\\t([^\\t]+)\\tgene_id "([^"]+)";'''\
                                 '''/echo -e "\\1\\t\\$$((\\4-1))\\t\\5\\t'''\
                                           '''@\\9@\\t\\6\\t\\7"/e' | '''\
-                       '''sed -r 's/@/"/g' >$TARGET '''
+                      '''sed -r 's/@/"/g' > $TARGET && '''\
+                      '''sed -i '1ichr\\tstart\\tend\\tname\\tscore'''\
+                      '''\\tstrand' $TARGET'''
+
     circ_coords = env.Command('circrnas.bed', 
                               env['CIRCRNAS'], 
                               circ_coords_cmd)
