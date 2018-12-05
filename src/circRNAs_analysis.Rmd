@@ -1064,7 +1064,7 @@ circ.scales <-
 bks_linear_counts.tab.gz <- 
     fread(bks_linear_counts.tab.gz.file, 
           drop = 1:8)[, lapply(.SD, sum), 
-                      by = .(circ_id = sub('gene_id "([^"]+)".*', "\\1", V9))]
+                      by = .(circ_id = sub('gene_id "([^"]+)".*', "\\1", name))]
 colnames(bks_linear_counts.tab.gz)[2:length(colnames(bks_linear_counts.tab.gz))] <- 
     sort(unique(meta$sample_id))
 ```
