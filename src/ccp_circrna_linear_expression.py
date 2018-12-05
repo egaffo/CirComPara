@@ -122,8 +122,8 @@ if 'ccp' in env['LIN_COUNTER']:
     btmcov_target = 'bks_linear_counts.tab'
     btmcov_cmd = '''bedtools multicov ''' + btmcovstrand + \
                  ''' -bed ${SOURCES[0]} -bams ${SOURCES[1:]} > ${TARGET} '''\
-                 '''&&  sed -i '1ichr\\tstart\\tend\\tcirc_id'''\
-                 '''\\tscore\\tstrand\\t''' +\
+                 '''&& sed -i '1ichr\\tsource\\tfeature\\tstart\\tend'''\
+                 '''\\tscore\\tstrand\\tframe\\tname\\t''' +\
                  '\\t'.join([s for s in sorted(env['RUNS_DICT'].keys())]) +\
                  '''' $TARGET'''
     btmcov = env.Command(btmcov_target, 
