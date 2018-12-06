@@ -256,7 +256,9 @@ if(nrow(circrnas.gtf) > 0){
 #combined_gtf <- fread(paste0('zcat ', combined_gtf_file), data.table = T, colClasses = colClasses, drop = colToDrop)
 combined_gtf <- fread(paste0('zcat ', combined_gtf_file), data.table = T, 
                       # colClasses = colClasses, 
-                      drop = c(2,3,6,8,11,15,17))
+                      drop = c(2,3,
+                               4,5,
+                               6,8,11,15,17))
 exists_gene_overlaps <- FALSE
 if(nrow(combined_gtf) > 0){
   exists_gene_overlaps <- TRUE
@@ -271,14 +273,16 @@ if(nrow(combined_gtf) > 0){
                                              V18), "."),
                       # sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9),
                       chr = V1, 
-                      circ_start = as.integer(V4), 
-                      circ_end = as.integer(V5), 
+                      # circ_start = as.integer(V4), 
+                      # circ_end = as.integer(V5), 
                       strand = V7,
                       gene_chr = V10, 
                       exon_start = as.integer(V13), 
                       exon_end = as.integer(V14), 
                       exon_strand = V16)
-               ][, `:=`(V1 = NULL, V4 = NULL, V5 = NULL, V7 = NULL, V9 = NULL, 
+               ][, `:=`(V1 = NULL, 
+                        # V4 = NULL, V5 = NULL, 
+                        V7 = NULL, V9 = NULL, 
                         V10 = NULL, V13 = NULL, V14 = NULL, V16 = NULL, V18 = NULL)]
   # combined_gtf[, `:=`(gene_start = min(exon_start), 
   #                     gene_end = max(exon_end)), 
@@ -307,12 +311,13 @@ if(nrow(combined_gtf) > 0){
   #                                           gene_names = paste0(unique(gene_name), collapse = "|"),
   #                                           label = paste0(unique(label), collapse = "|")), 
   #                                       by = circ_id]
-  circ_to_gene <- combined_gtf[, .(features = paste(unique(V12), collapse = ",")), 
+  
+  circ_to_gene <- combined_gtf[, .(features = paste(sort(unique(V12)), collapse = ",")),
                                 by = .(circ_id, gene_id, gene_name)]
-  circ_to_genes <- circ_to_gene[, .(label = paste0(features, collapse = "|"),
-                                     gene_ids = paste0(gene_id, collapse = "|"),
-                                     gene_names = paste0(gene_name, collapse = "|")), 
-                                 by = .(circ_id)]
+  circ_to_genes <- circ_to_gene[, .(label = paste0(sort(unique(features)), collapse = "|"),
+                                    gene_ids = paste0(gene_id, collapse = "|"),
+                                    gene_names = paste0(gene_name, collapse = "|")), 
+                                by = .(circ_id)]
 }
 
 if(exists_circrnas & exists_gene_overlaps){
@@ -634,12 +639,11 @@ reliable.circ.barplot +
 
 ```
 
-## Categories of detected circRNAs 
+## Reliable circRNAs gene annotation overlap
 
-The following analysis regards the subset of `r circrnas.morethan2methods.medrpm.table[, .N]` detected with at least `r min_reads` reads and by at least `r min_methods` methods (__reliable circRNAs__). 
+The following analysis considers the __reliable circRNAs__, which are the `r circrnas.morethan2methods.medrpm.table[, .N]` circRNAs detected with at least `r min_reads` reads and by at least `r min_methods` methods. 
 
-Considering the reliable circRNAs, the table below indicate the mumber of circRNAs falling in each annotation class according to backsplice start and end positions in relation to annotated exon or introns from overlapping genes.   
-NB: circRNA backsplice positions may intersect exon/introns of several genes if multiple genes overlap.
+The table below indicates the amount of circRNAs overlapping gene annotation according to backsplice start/end coordinates: _exon_ ( _intron_, _intergenic_ ) if both start and end overlap exon (intron, not annotated region); _exon,intron_ if the start overlaps an exon and the end overlaps an intron (and viceversa, the order is not respected in the notation); _exon|intergenic_ or _intergenic|intron_ similarly to the previous case (bar instead of the comma). Other labels occur when circRNAs overlap multiple genes: for instance, _exon,intron|intron_ means that for (at least) one gene the backsplice is mixed (left of the bar) and for another gene the backsplice overlaps only intron(s) (right part of the bar).   
 
 ```{r show circrnas categories tab, echo=FALSE, include=TRUE}
 # circrnas.morethan2methods.medrpm$sorted_label <- sapply(circrnas.morethan2methods.medrpm$label, 
@@ -685,7 +689,7 @@ if(nrow(circrnas.morethan2methods.medrpm) > 0){
 }
 ```
 
-In the following, circRNA categories are grouped into three main classes: _exonic_, _intronic_, and _intergenic_. We assigned the class _exonic_ when _exon_ appears in the category. For instance, _exon|intergenic_ class is grouped into _exonic_. If not _exonic_, the class is grouped into _intronic_ when _intron_ appears among the categories (and none _exon_): for instance, _intergenic|intron_ is grouped into _intronic_; _exon|intron_ is NOT grouped into _intronic_ since it is grouped into _exonic_. The _intergenic_ class groups only _intergenic_ categories.  
+In the following, circRNA categories are grouped into three main classes: _exonic_, _intronic_, and _intergenic_. We assigned the class _exonic_ when _exon_ appears in the category. For instance, _exon|intergenic_ class is grouped into _exonic_. If not _exonic_, the class is grouped into _intronic_ when _intron_ appears among the categories (and none _exon_): for instance, _intergenic,intron_ is grouped into _intronic_; _exon,intron_ is NOT grouped into _intronic_ since it is grouped into _exonic_. The _intergenic_ class groups only _intergenic_ categories.  
 
 ```{r show circrnas classes tab, echo=FALSE, include=TRUE}
 circ.cat.cond.xpr <- merge(circrnas.morethan2methods.medrpm[
