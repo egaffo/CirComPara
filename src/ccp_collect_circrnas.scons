@@ -102,14 +102,14 @@ snp_unique_circ_cmd = '''zcat ${SOURCES[0]} | '''\
                                 '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                                 '''([^\\t]+)\\t([^\\t]+)\\tgene_id "([^"]+)";'''\
                                 '''/echo -e "\\1\\t\\2\\tstart\\t'''\
-                                       '''\\4\\t$$((\\4+1))\\t\\6\\t'''\
+                                       '''\\4\\t$$((\\4))\\t\\6\\t'''\
                                        '''\\7\\t\\8\\tgene_id @\\9@;\\n'''\
                                        '''\\1\\t\\2\\tstop\\t'''\
-                                       '''$$((\\5-1))\\t\\5\\t\\6\\t'''\
+                                       '''$$((\\5))\\t\\5\\t\\6\\t'''\
                                        '''\\7\\t\\8\\tgene_id @\\9@;"/e' | '''\
                                        '''sed -r 's/@/"/g' | '''\
                                        '''sort -k1,1 -k4,4n -k5,5n | gzip -c > $TARGET '''
-snp_unique_circ = env.Command('snp_unique_circ.gtf.gz',
+snp_unique_circ = env.Command('sn_unique_circ.gtf.gz',
                               [unique_circ], 
                               snp_unique_circ_cmd)
 
