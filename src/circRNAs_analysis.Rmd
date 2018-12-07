@@ -22,8 +22,6 @@ CirComPara analysis results are presented in this page. Different sections displ
 # results.dir
 # circrnas.gtf.file
 # combined_gtf_file# 
-# gene_meta_file
-# gene_fpkm_file
 # min_methods ## minimum number of methods detecting a circRNA to define it "reliable"
 # min_reads
 # meta_file
