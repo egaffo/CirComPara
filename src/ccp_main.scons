@@ -204,11 +204,33 @@ if env['DESEQ'].lower() == 'true':
 
 env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
 
+## convert relative paths to absolute
 if not env['ANNOTATION'] == '':
     env.Replace(ANNOTATION = File(env['ANNOTATION']).abspath)
 
 if not env['GENOME_FASTA'] == '':
     env.Replace(GENOME_FASTA = File(env['GENOME_FASTA']).abspath)
+
+if not env['GENOME_INDEX'] == '':
+    env.Replace(GENOME_INDEX = File(env['GENOME_INDEX']).abspath)
+
+if not env['SEGEMEHL_INDEX'] == '':
+    env.Replace(SEGEMEHL_INDEX = File(env['SEGEMEHL_INDEX']).abspath)
+
+if not env['BWA_INDEX'] == '':
+    env.Replace(BWA_INDEX = File(env['BWA_INDEX']).abspath)
+
+if not env['BOWTIE2_INDEX'] == '':
+    env.Replace(BOWTIE2_INDEX = File(env['BOWTIE2_INDEX']).abspath)
+
+if not env['STAR_INDEX'] == '':
+    env.Replace(STAR_INDEX = Dir(env['STAR_INDEX']).abspath)
+
+if not env['BOWTIE_INDEX'] == '':
+    env.Replace(BOWTIE_INDEX = File(env['BOWTIE_INDEX']).abspath)
+
+if not env['GENEPRED'] == '':
+    env.Replace(GENEPRED = File(env['GENEPRED']).abspath)
 
 
 samples_dir = 'samples'
