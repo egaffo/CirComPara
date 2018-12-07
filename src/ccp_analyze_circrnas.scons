@@ -37,8 +37,8 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''min_methods <- ${MIN_METHODS}; '''\
                         '''min_reads <- ${MIN_READS}; '''\
                         '''meta_file <- "$META"; '''\
-                        '''bks_linear_counts.tab.gz.file <- "${SOURCES[3].abspath}"; '''\
-                        '''read_stats_collect.file <- "${SOURCES[4].abspath}"; '''\
+                        '''bks_linear_counts.tab.gz.file <- "${SOURCES[2].abspath}"; '''\
+                        '''read_stats_collect.file <- "${SOURCES[3].abspath}"; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
