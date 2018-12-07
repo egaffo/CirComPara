@@ -1059,12 +1059,27 @@ circ.scales <-
 ```
 
 ```{r}
-bks_linear_counts.tab.gz <- 
-    fread(bks_linear_counts.tab.gz.file, 
-          drop = 1:8)[, lapply(.SD, sum), 
-                      by = .(circ_id = sub('gene_id "([^"]+)".*', "\\1", name))]
-colnames(bks_linear_counts.tab.gz)[2:length(colnames(bks_linear_counts.tab.gz))] <- 
-    sort(unique(meta$sample_id))
+bks_linear_counts.tab.gz <- fread(bks_linear_counts.tab.gz.file)
+
+if("name" %in% colnames(bks_linear_counts.tab.gz)){
+    bks_linear_counts.tab.gz <- 
+        bks_linear_counts.tab.gz[, c("name", sort(meta$sample_id)), 
+                                 with = F][, lapply(.SD, sum), 
+                                           by = .(circ_id = sub('gene_id "([^"]+)".*', 
+                                                                "\\1", name))]
+}else{
+    ## DCC uses BED coordinates, we need to convert
+    bks_linear_counts.tab.gz[, circ_id := paste0(chr, ":", start+1, "-", end)]
+    if("strand" %in% colnames(bks_linear_counts.tab.gz)){
+        bks_linear_counts.tab.gz[, circ_id := paste0(circ_id, ":", strand)]
+    }else{
+        bks_linear_counts.tab.gz[, circ_id := paste0(circ_id, ":", c("+", "-"))]
+        bks_linear_counts.tab.gz <- 
+            bks_linear_counts.tab.gz[circ_id %in% circrnas.gtf[, unique(gene_id)],
+                                     c("circ_id", sort(meta$sample_id)), 
+                                     with = F]
+    }
+}
 ```
 
 ```{r}
