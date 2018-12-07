@@ -45,7 +45,7 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
 
 circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
 circrnas_analysis_sources = [env['CIRCRNAS'], env['CIRCGENES'], 
-                             env['GENEEXP'], env['BKS_LIN_COUNTS'],
+                             env['BKS_LIN_COUNTS'],
                              env['PROCESSING_READ_STATS']]
 circrnas_analysis = env.Command(circrnas_analysis_targets, 
                                 circrnas_analysis_sources, 
