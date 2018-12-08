@@ -271,6 +271,34 @@ if len(conditions.keys()) < 2:
 
 ## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
 #TODO in F-CirComPara
+#if translocations:
+#    
+#    env['ENABLE_FCIRCRNA'] = 'TRUE'
+#
+#    ## RESET GENOME INDEXES TO BUILD TRANSLOCATED GENOME ONES
+#    GENOME_INDEX = ''
+#    SEGEMEHL_INDEX = ''
+#    BWA_INDEX == ''
+#    BOWTIE2_INDEX = ''
+#    STAR_INDEX = ''
+#    GENEPRED = ''
+#
+#    ## COMPUTE TRANSLOCATED GENOME SEQUENCE AND GENE ANNOTATION
+#    env_translocate_genome = env.Clone()
+#    env_translocate_genome.Append(TRANSLOCATIONS = list(translocations))
+#    env_translocate_genome['GENOME'] = GENOME_FASTA
+#    #env_translocated_genome.Append(ANNOTATION = ANNOTATION)
+#    translocated_genome = env.SConscript(os.path.join(annotation_dir, 'junk2_translocate_genome'),
+#                                         src_dir = SCONSCRIPT_HOME,
+#                                         variant_dir = annotation_dir, duplicate = 0,
+#                                         exports = '''env_translocate_genome ''')
+#    GENOME_FASTA = File(translocated_genome[0][0]).abspath
+#    env['GENOME_FASTA'] = GENOME_FASTA
+#    ANNOTATION = File(translocated_genome[1][0]).abspath
+#else:
+#    #print "No translocations defined"
+#    translocated_genome = [[File(GENOME_FASTA)], [ANNOTATION]]
+
 
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
 indexes_dir = 'ccp_dbs'
@@ -287,6 +315,16 @@ env.Replace(BOWTIE2_INDEX  = indexes['ENV']['BOWTIE2_INDEX'])
 env.Replace(BOWTIE_INDEX   = indexes['ENV']['BOWTIE_INDEX'])
 env.Replace(STAR_INDEX     = indexes['ENV']['STAR_INDEX'])
 env.Replace(GENEPRED       = indexes['ENV']['GENEPRED'])
+
+#    for k in indexes.keys():
+#	Depends(indexes[k], translocated_genome[0][0])
+#
+##    Depends(indexes['HISAT2'], translocated_genome[0][0])
+##    Depends(indexes['SEGEMEHL'], translocated_genome[0][0])
+##    Depends(indexes['BWA'], translocated_genome[0][0])
+##    Depends(indexes['BOWTIE2'], translocated_genome[0][0])
+##    Depends(indexes['STAR'], translocated_genome[0][0])
+
 
 ## PROCESS SAMPLES
 runs = []
@@ -319,6 +357,10 @@ for sample in sorted(samples.keys()):
                                                   'circexplorer2_segemehl', 
                                                   'circexplorer2_tophat']]):
 	Depends(run_sample[0], env['GENEPRED']) 
+
+    #if translocations:
+    #    Depends(run_sample, translocated_genome)
+
 
 env['RUNS_DICT'] = runs_dict
 
