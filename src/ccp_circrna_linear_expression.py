@@ -87,12 +87,16 @@ if 'dcc' in env['LIN_COUNTER']:
     linexp = dcclinexp
     
 if 'ccp' in env['LIN_COUNTER']:
+    
+    genome_file_cmd = '''fasta_len.py $SOURCE > $TARGET'''
+    genome_file = env.Command('chr_len.genome', 
+                              env['GENOME_FASTA'],
+                              genome_file_cmd)
+    
     btmcovstrand = '' ## check if stranded read alignment
     strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
     if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
         btmcovstrand = '-s'
-    
-    circ_coords = env['CIRCRNAS']
     
     ## TODO: improve the counting by considering only linear spliced reads
     ## and linear reads spanning the splice site, while not counting reads
@@ -119,12 +123,20 @@ if 'ccp' in env['LIN_COUNTER']:
     #            '''-b stdin > $TARGET '''
     #    lin_reads_spanning_bks = env.Command(target_2, sources_2, cmd_2)
     
-    btmcov_sources = [circ_coords, 
+    ## TODO: preliminary select read aligned to circRNAs
+    # bedtools intesect sn_unique_circ.gtf f1.bam f2.bam
+     
+    ## count alignments (also) on circRNA outer positions.
+    ## The -s in bedtools flank is not necessary since the flanking 
+    ## regions are the same size in this case. Yet, it maybe useful 
+    ## for chromosome terminal postions....   
+    btmcov_sources = [[env['CIRCRNAS'], genome_file], 
                       [env['RUNS_DICT'][s]['LINEAR_ALIGNMENTS'] for 
                                  s in sorted(env['RUNS_DICT'].keys())]]
     btmcov_target = 'bks_linear_counts.tab'
-    btmcov_cmd = '''bedtools multicov ''' + btmcovstrand + \
-                 ''' -bed ${SOURCES[0]} -bams ${SOURCES[1:]} > ${TARGET} '''\
+    btmcov_cmd = '''bedtools flank -i ${SOURCES[0]} -g ${SOURCES[1]} -s -b 1 | '''\
+                 '''bedtools multicov ''' + btmcovstrand + \
+                 ''' -bed stdin -bams ${SOURCES[2:]} > ${TARGET} '''\
                  '''&& sed -i '1ichr\\tsource\\tfeature\\tstart\\tend'''\
                  '''\\tscore\\tstrand\\tframe\\tname\\t''' +\
                  '\\t'.join([s for s in sorted(env['RUNS_DICT'].keys())]) +\

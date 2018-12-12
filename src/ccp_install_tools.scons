@@ -338,8 +338,14 @@ env_dcc.PrependENVPath('PYTHONPATH', dcc_python_sitepkg)
 
 ### PANDAS (DCC dependency)
 env_dcc.PrependENVPath('PYTHONUSERBASE', dcc_dir)
+
+pip_cmd = '''wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py --user'''
+pip = env_dcc.Command(os.path.join(dcc_dir, 'bin', 'pip'), 
+                      [], 
+                      pip_cmd)
+
 pandas = env_dcc.Command([os.path.join(dcc_python_sitepkg, 'pandas', '__init__.py')], 
-                         [], 
+                         [pip], 
                          "pip install --ignore-installed --user pandas")
 
 dcc_tar = 'v0.4.6.tar.gz'
