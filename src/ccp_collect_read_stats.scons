@@ -19,11 +19,23 @@ except NameError, ne:
 runs = env['RUNS']
 
 ## COLLECT AND REPORT READ PROCESSING STATISTICS
+## case: Trimmomatic preprocessing
 clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
+if len(clean_reads_stats_files) > 0:
+    reads_stats_collect_cmd = '''grep --with-filename Input ''' +\
+                              ' '.join(f.path for f in clean_reads_stats_files)
+
+else:
+    ## case: no read preprocessing
+    clean_reads_stats_files = get_matching_nodes(runs,
+                                                 '.*read_statistics.*fastqc_data\.txt')
+    reads_stats_collect_cmd = '''grep --with-filename "Total Sequences" ''' +\
+                              ' '.join(f.path for f in clean_reads_stats_files)
+
 mapped_reads_linear_stats_files = get_matching_nodes(runs, '.*processings.*hisat2\.log')
+
 read_stats_collect_dir = 'read_stats_collect'
-reads_stats_collect_cmd = '''grep --with-filename Input ''' +\
-                          ' '.join(f.path for f in clean_reads_stats_files) +\
+reads_stats_collect_cmd = reads_stats_collect_cmd +\
                           ''' > $TARGET && grep --with-filename "." ''' +\
                           ' '.join(f.path for f in mapped_reads_linear_stats_files) +\
                           ''' >> $TARGET'''
