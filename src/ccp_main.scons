@@ -147,7 +147,7 @@ vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
         'maintain paired-end read alignment', 'False')
 vars.Add('LIN_COUNTER', 'The method to estimate circRNA-host gene '\
                         'linear expression. Available are using the DCC '\
-                        '[dcc], or the CirComPara [ccp] method', 'dcc')
+                        '[dcc], or the CirComPara [ccp] method', 'ccp')
 
 ## deprecated parameters (legacy)
 vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
