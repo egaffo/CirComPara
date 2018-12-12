@@ -116,16 +116,11 @@ results.append(raw_read_stats)
 build_dir = 'processings'
 ## EXECUTE SCRIPTS: 
 ## READ PREPROCESSING
-preprocess_raw_reads    = raw_reads
-preprocess_adapter_file = env['ADAPTER_FILE']
-preprocess_preprocessor = env['PREPROCESSOR'] 
-preprocess_cpus         = env['CPUS']
-preprocess_params = env['PREPROCESSOR_PARAMS']
+env_preprocess = env.Clone()
 preprocess  = env.SConscript(os.path.join(build_dir, ccp_preprocess), 
                              variant_dir = build_dir, src_dir = SRC_DIR, 
-                             duplicate = 0, exports='env preprocess_raw_reads '''
-                             '''preprocess_adapter_file preprocess_preprocessor '''
-                             '''preprocess_cpus preprocess_params''')
+                             duplicate = 0, exports='env_preprocess')
+
 #results.append([preprocess['READS'], preprocess['STATS']]) ##TODO:fix:adding stats makes stats dependency on genome index files
 results.append([preprocess['READS']])
 ## set the clean read file paths, relative to the calling SConstruct (not the calling SConscript).
@@ -135,12 +130,13 @@ results.append([preprocess['READS']])
 ## reads with mate read). Instead, if no preprocessing was performed, the clean reads are the raw
 ## reads and the list is only two elements (for paired-end reads)
 
-## get first in pair or the single end preprocessed read file
+## get first-in-pair or the single-end preprocessed read file
 clean_reads = [preprocess['READS'][0][0]]
-## paired end case: add the second in pair clean read file
-if len(preprocess['READS'][0]) > 2:
-    ## case: Trimmomatic paired-end
-    if env['PREPROCESSOR']=='trimmomatic':
+
+## case: Trimmomatic paired-end
+if env['PREPROCESSOR'] == 'trimmomatic':
+    ## paired end case: add the second-in-pair clean read file
+    if len(preprocess['READS'][0]) > 2:
         clean_reads.append(preprocess['READS'][0][2])
         fastqc_data = []
         if('fastqc' in env['READSTAT_METHODS'].split(',')):
@@ -150,9 +146,11 @@ if len(preprocess['READS'][0]) > 2:
                 fastqc_data.append(get_matching_nodes(preprocess['STATS'], 
                                    os.path.join('.*' + read_filename + '_fastqc',
                                    'fastqc_data\.txt'))[0])
-    ## case: no preprocessing was performed
-    else:
-        clean_reads.append(preprocess['READS'][0][1])
+## case: no preprocessing was performed
+elif env['PREPROCESSOR'] == '':
+    clean_reads.append(preprocess['READS'][0][1])
+else:
+    clean_reads.append(preprocess['READS'][0][1])
 
 sample_name = env['SAMPLE']
 

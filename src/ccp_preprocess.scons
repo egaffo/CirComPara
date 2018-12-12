@@ -15,13 +15,7 @@ import os, itertools
 Import('*')
 
 try:
-    env = env
-    CPUS         = preprocess_cpus
-    PREPROCESSOR = preprocess_preprocessor
-    ADAPTER_FILE = preprocess_adapter_file
-    READS        = preprocess_raw_reads
-    PREPROCESSOR_PARAMS = preprocess_params
-
+    env = env_preprocess.Clone()
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
@@ -43,12 +37,6 @@ except NameError:
         print "Unknown variables:", unknown.keys()
         Exit(1)
 
-    CPUS = env['CPUS']
-    PREPROCESSOR = env['PREPROCESSOR']
-    ADAPTER_FILE = env['ADAPTER_FILE']
-    READS = env['READS'].split(',')
-    PREPROCESSOR_PARAMS = env['PREPROCESSOR_PARAMS']
-
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 
 preprocess_dir = 'preprocess'
@@ -56,10 +44,10 @@ preprocessings = []
 preprocessing_stats = []
 if env['PREPROCESSOR'].lower() == 'trimmomatic':
 
-    trimmomatic_reads = [File(f).abspath for f in READS]
-    trimmomatic_cpus = CPUS
-    trimmomatic_adapter_file = ADAPTER_FILE
-    trimmomatic_extra_params = PREPROCESSOR_PARAMS
+    trimmomatic_reads = [File(f).abspath for f in env['READS']]
+    trimmomatic_cpus = env['CPUS']
+    trimmomatic_adapter_file = env['ADAPTER_FILE']
+    trimmomatic_extra_params = env['PREPROCESSOR_PARAMS']
 
     preps = SConscript(os.path.join(preprocess_dir, 'ccp_trimmomatic.scons'),
                        src_dir = SRC_DIR, 
@@ -89,11 +77,11 @@ if env['PREPROCESSOR'].lower() == 'trimmomatic':
 elif env['PREPROCESSOR'] == '':
     ## in case of no preprocessor specified, just return the raw reads
     print 'No read preprocessing specified'
-    preprocessings.append([File(f) for f in READS])
+    preprocessings = [[File(f) for f in env['READS']]]
 else:
     ## in case of preprocessor not supported, just return the raw reads
     print env['PREPROCESSOR'] + ' preprocessor not supported. Reads will not be preprocessed'
-    preprocessings.append([File(f) for f in READS])
+    preprocessings.append([File(f) for f in env['READS']])
 
 preprocessed_files = {'READS' : preprocessings,
                       'STATS' : preprocessing_stats}
