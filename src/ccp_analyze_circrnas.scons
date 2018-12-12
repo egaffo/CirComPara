@@ -17,6 +17,7 @@ except NameError, ne:
     vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
                             ' define the circRNA as reliable', 2)
     vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
+    vars.Add('ENABLE_FCIRCRNA', 'Enable analysis of fusion-circRNAs. {TRUE,FALSE}', 'FALSE')
     vars.Add('DIFF_EXP', 'Enable circRNA differential expression reporting', 'False')
     vars.Add('META', 'Table specifying sample condition', 'meta.csv')
     vars.Add('ENABLE_FCIRCRNA', 'Enable analysis of fusion-circRNAs. {TRUE,FALSE}', 'FALSE')
@@ -32,7 +33,6 @@ except NameError, ne:
 
 env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 env.SetDefault(ENABLE_FCIRCRNA = 'FALSE')
-
 circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                         '''circrnas.gtf.file <- "${SOURCES[0].abspath}"; '''\
                         '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
