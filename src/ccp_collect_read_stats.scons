@@ -32,42 +32,63 @@ reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_sta
                               reads_stats_collect_cmd)
 
 
-##COLLECT CIRCRNA ALIGNMENT NUMBER
-# testrealign mapped reads
-testrealign_mappings_pattern = '.*segemehl_mapped_reads_count\.txt'
-# find_circ mapped reads
-find_circ_mappings_pattern = '.*find_circ_mapped_reads_count\.txt'
-# CIRI mapped reads
-CIRI_mappings_pattern = '.*CIRI_mapped_reads_count\.txt'
-# CIRCexplorer mapped reads
-CIRCexplorer_mappings_pattern = '.*CIRCExplorer_mapped_reads_count\.txt'
-# BWA mapped reads
-BWA_mappings_pattern = '.*BWA_mapped_reads_count\.txt'
-# STAR mapped reads
-STAR_mappings_pattern = '.*STAR_mapped_reads_count\.txt'
-# TopHat mapped reads
-tophat_mappings_pattern = '.*tophat_mapped_reads_count\.txt'
+##COLLECT CIRCRNA READS
+# testrealign reads
+testrealign_pattern = '.*.testrealign.bks.reads' #'.*segemehl_mapped_reads_count\.txt'
+# find_circ reads
+find_circ_pattern = '.*.fc.bks.reads' #'.*find_circ_mapped_reads_count\.txt'
+# CIRI reads
+CIRI_pattern = '.*.ciri.bks.reads' #'.*CIRI_mapped_reads_count\.txt'
+# CIRCexplorer2 bwa reads
+CIRCexplorerBWA_pattern = '.*.ce2bwa.bks.reads' #'.*CIRCExplorer_mapped_reads_count\.txt'
+# CIRCexplorer2 segemehl reads
+CIRCexplorerSEG_pattern = '.*.ce2seg.bks.reads'
+# CIRCexplorer2 star reads
+CIRCexplorerSTR_pattern = '.*.ce2star.bks.reads'
+# CIRCexplorer2 tophat reads
+CIRCexplorerTPH_pattern = '.*.ce2th.bks.reads'
 
-testrealign_mappings  = get_matching_nodes(runs, testrealign_mappings_pattern)
-find_circ_mappings    = get_matching_nodes(runs, find_circ_mappings_pattern)
-ciri_mappings         = get_matching_nodes(runs, CIRI_mappings_pattern)
-CIRCexplorer_mappings = get_matching_nodes(runs, CIRCexplorer_mappings_pattern)
-bwa_mappings          = get_matching_nodes(runs, BWA_mappings_pattern)
-star_mappings         = get_matching_nodes(runs, STAR_mappings_pattern)
-tophat_mappings       = get_matching_nodes(runs, tophat_mappings_pattern)
+## testrealign mapped reads
+#testrealign_mappings_pattern = '.*segemehl_mapped_reads_count\.txt'
+## BWA mapped reads
+#BWA_mappings_pattern = '.*BWA_mapped_reads_count\.txt'
+## STAR mapped reads
+#STAR_mappings_pattern = '.*STAR_mapped_reads_count\.txt'
+## TopHat mapped reads
+#tophat_mappings_pattern = '.*tophat_mapped_reads_count\.txt'
 
-collect_circrna_maps_counts_sources = [testrealign_mappings, find_circ_mappings, 
-                                       ciri_mappings, CIRCexplorer_mappings,
-				       bwa_mappings, star_mappings, 
-				       tophat_mappings]
+
+testrealign_reads  = get_matching_nodes(runs, testrealign_pattern)
+find_circ_reads    = get_matching_nodes(runs, find_circ_pattern)
+ciri_reads         = get_matching_nodes(runs, CIRI_pattern)
+CIRCexplorerBWA_reads = get_matching_nodes(runs, CIRCexplorerBWA_pattern)
+CIRCexplorerSEG_reads = get_matching_nodes(runs, CIRCexplorerSEG_pattern)
+CIRCexplorerSTR_reads = get_matching_nodes(runs, CIRCexplorerSTR_pattern)
+CIRCexplorerTPH_reads = get_matching_nodes(runs, CIRCexplorerTPH_pattern)
+
+#bwa_mappings          = get_matching_nodes(runs, BWA_mappings_pattern)
+#star_mappings         = get_matching_nodes(runs, STAR_mappings_pattern)
+#tophat_mappings       = get_matching_nodes(runs, tophat_mappings_pattern)
+
+collect_circrna_maps_counts_sources = [testrealign_reads, 
+                                       find_circ_reads, 
+                                       ciri_reads, 
+                                       CIRCexplorerBWA_reads,
+                                       CIRCexplorerSEG_reads,
+                                       CIRCexplorerSTR_reads,
+                                       CIRCexplorerTPH_reads]
+				       #bwa_mappings, star_mappings, 
+				       #tophat_mappings]
 
 if len(set(Flatten(collect_circrna_maps_counts_sources))) > 0:
-    collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
+    #collect_circrna_maps_counts_cmd = '''tail -n +1 ${SOURCES} > $TARGET '''
+    collect_circrna_maps_counts_cmd = '''grep -H "." ${SOURCES} | '''\
+                                      '''sed "s/.bks.reads:/\\t/" | gzip -c > $TARGET '''
 else:
     collect_circrna_maps_counts_cmd = '''touch $TARGET '''
 
 collect_circrna_maps_counts = env.Command(os.path.join(read_stats_collect_dir, 
-                                                       'circrna_maps_counts.txt'), 
+                                                       'circrna_maps_counts.txt.gz'), 
                                           collect_circrna_maps_counts_sources, 
                                           collect_circrna_maps_counts_cmd)
 
@@ -78,19 +99,22 @@ read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''circrna.reads.stats.file <- "${SOURCES[1].abspath}"; '''\
                         '''meta_file <- "${SOURCES[2].abspath}"; '''\
                         '''rmarkdown::render(input = "$SCONSCRIPT_HOME/read_statistics.Rmd",'''\
-                        '''output_file = "$TARGET.abspath", '''\
+                        '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
-read_stats_report = env.Command(os.path.join(read_stats_collect_dir, 'read_statistics.html'),
+read_stats_report = env.Command([os.path.join(read_stats_collect_dir, f) for 
+                                  f in ['read_statistics.html', 
+                                        'processing_and_mapped_read_counts.csv']],
                                 [reads_stats_collect, collect_circrna_maps_counts, 
-                                File(env['META']).abspath, 
-				collect_circrna_maps_counts_sources],
+                                 File(env['META']).abspath, 
+                                 collect_circrna_maps_counts_sources],
                                 read_stats_report_cmd)
 
 
 Clean('.', read_stats_collect_dir)
 
 results = {'READ_MAPS_COUNTS': collect_circrna_maps_counts, 
-           'READS_STATS_REPORT': read_stats_report}
+           'READS_STATS_REPORT': read_stats_report[0],
+           'PROCESSING_READ_STATS': read_stats_report[1]}
 
 Return('results')

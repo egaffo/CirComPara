@@ -28,10 +28,6 @@ Import('*')
 
 try:
     env = env_testrealign.Clone()
-    #mapfile = mapping_file
-    mapfile_basename = sample_name
-    CPUS = segemehlcirc_cpus
-    GENOME_FASTA = segemehlcirc_genome_fasta
 except NameError:
     vars = Variables('vars.py')
     vars.Add('CPUS', 'Number of parallel jobs', '4')
@@ -49,36 +45,45 @@ except NameError:
         print "Unknown variables:", unknown.keys()
         Exit(1)
 
-    #mapfile = env['ALIGNMENTS']
-    mapfile_basename = env['SAMPLE']
-    CPUS = env['CPUS']
-    GENOME_FASTA = env['GENOME_FASTA']
-
-## SORT SAM/BAM
-#sort_alignments_cmd = "samtools view -u $(-@{0}$) "\
-#                      "$SOURCE | samtools sort $(-@{0}$)".format(CPUS)+\
-#                      " -O 'sam' -T $(testrealign_{}$) | gzip > $TARGET".format(mapfile_basename)
-#sort_alignments = env.Command(["{}_sorted.sam.gz".format(mapfile_basename)], 
-#                            [mapfile], sort_alignments_cmd)
-
 ## COLLECT SPLICE JUNCTIONS
-collect_splice_cmd = "testrealign.x -d " + GENOME_FASTA + " -q $SOURCE -n "\
-                     "-U ${TARGETS[0]} -T ${TARGETS[1]} " + "$(-t {}$)".format(CPUS)
+collect_splice_cmd = "testrealign.x -d $GENOME_FASTA -q $SOURCE -n "\
+                     "-U ${TARGETS[0]} -T ${TARGETS[1]} " + "$(-t ${CPUS} $)"
 collect_splice_targets = ["splicesites.bed", "transrealigned.bed"]
 #collect_splice = env.Command(collect_splice_targets, sort_alignments[0], collect_splice_cmd)
-collect_splice = env.Command(collect_splice_targets, File(env['ALIGNMENTS']), collect_splice_cmd)
+collect_splice = env.Command(collect_splice_targets, 
+                             File(env['ALIGNMENTS']), 
+                             collect_splice_cmd)
 
 ## EXTRACT CIRCULAR SPLICE EVENTS
 extract_circular_cmd = "grep ':C:' ${SOURCES[0]} | cut -f 4 | cut -f 2 -d: |"\
                        "sort | uniq -c | sort -k1,1n -k2,2n > $TARGET"
-extract_circular = env.Command(["{}_circular.junction.stats.txt".format(mapfile_basename)], 
-                                [collect_splice], extract_circular_cmd)
+extract_circular = env.Command(["${SAMPLE}_circular.junction.stats.txt"], 
+                               [collect_splice], 
+                               extract_circular_cmd)
 
-### COUNT AND REPORT MAPPED READS
-#mapped_reads_target = 'segemehl_mapped_reads_count.txt'
-#mapped_reads_cmd    = '''zcat ${SOURCE} | samtools view -F 4 - '''\
-#                      '''| cut -f 1 | sort | uniq | wc -l > $TARGET'''
-#mapped_reads        = env.Command(mapped_reads_target, sort_alignments, mapped_reads_cmd) 
+## use sed to write a BED file with 'single nucleotide' intervals
+## NB: stop position is not included in BED format (intervals are 
+## 0-based and 'half-open'), so the stop position must be incremented by 1.
+## Only the first six tab-separated fields are considered.
+## Consider only circular splice sites.
+bed_cmd = '''grep ':C:' ${SOURCES[0]} | '''\
+          '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                    '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
+                    '''\\1\\t\\2\\t$$((\\2+1))\\t\\4\\t\\5\\t\\6\\n'''\
+                    '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\6"/e' | '''\
+                    '''sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
-#Return('sort_alignments', 'collect_splice', 'extract_circular', 'mapped_reads')
-Return('collect_splice', 'extract_circular')
+bed = env.Command(["${SAMPLE}.sn.circ.bed"],
+                  [collect_splice[0]],
+                  bed_cmd)
+bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
+                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''\
+                '''cut -f 4 | sort | uniq -c | '''\
+                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
+                '''sort -k1,1nr > ${TARGETS[0]} '''
+
+bks_reads = env.Command([env['SAMPLE'] + '.testrealign.bks.reads'], 
+                        [env['ALIGNMENTS'], bed], 
+                        bks_reads_cmd)
+
+Return('collect_splice', 'extract_circular', 'bed', 'bks_reads')

@@ -37,6 +37,7 @@ except NameError:
             'Chimeric.out.junction')
     vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
     vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
+    vars.Add('ALIGNMENTS', 'The alignment file', '')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -51,25 +52,56 @@ results = []
 
 env['OPTIONS'] = ''
 
+bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
+                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
+
+## use sed to write a BED file with 'single nucleotide' intervals
+## NB: stop position is not included in BED format (intervals are 
+## 0-based and 'half-open'), so the stop position must be incremented by 1.
+## Only the first six tab-separated fields are considered
+bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                    '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
+                    '''\\1\\t\\2\\t$$((\\2+1))\\t\\4\\t\\5\\t\\6\\n'''\
+                    '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\6"/e' '''\
+                    '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
+
 #TopHat-Fusion, STAR, MapSplice, BWA, segemel
 if env['ALIGNER'].lower() == 'star':
-    ALIGNER = 'STAR'
+    ALIGNER = 'STAR'    
+    bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+    bks_sfx = ".ce2star"
 
 if env['ALIGNER'].lower() == 'bwa':
     ALIGNER = 'BWA'
+    bks_sfx = ".ce2bwa"
 
 if env['ALIGNER'].lower() == 'segemehl':
     ALIGNER = 'segemehl'
+    bks_sfx = ".ce2seg"
+    ## segemehl coordinates seem to refer to the intron and not the
+    ## spliced exons. So, CE2 start position must be increased to 
+    ## comply with segemehl SAM.
+    ## Moreover, strand seems to be always +
+    bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+                        '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
+                        '''\\1\\t$$((\\2+1))\\t$$((\\2+2))\\t\\4\\t\\5\\t\\+\\n'''\
+                        '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\+"/e' '''\
+                        '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
 if env['ALIGNER'].lower() == 'tophat':
     ALIGNER = 'TopHat-Fusion'
+    bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+    bks_sfx = ".ce2th"
 
 if env['ALIGNER'].lower() == 'tophat_pe':
     ALIGNER = 'TopHat-Fusion'
     env.Replace(OPTIONS = '--pe')
+    bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+    bks_sfx = ".ce2th"
 
 if env['ALIGNER'].lower() == 'mapsplice':
     ALIGNER = 'MapSplice'
+    bks_sfx = ".ce2ms"
  
 CIRCexplorer2_cmd = 'CIRCexplorer2 parse $OPTIONS -o $TARGET.dir -t ' + \
                     ALIGNER + ' $SOURCE'
@@ -78,6 +110,10 @@ CIRCexplorer2_sources = [File(env['FUSION_FILE'])]
 CIRCexplorer2 = env.Command(CIRCexplorer2_targets, 
                             CIRCexplorer2_sources, 
                             CIRCexplorer2_cmd)
+
+## as default, use the fusion_junction.bed file 
+## to collect backsplice reads
+circ_bed = CIRCexplorer2[0]
 
 results.append(CIRCexplorer2)
 
@@ -94,8 +130,55 @@ if not env['GENEPRED'] == '':
                                         CIRCexplorer2_annotate_sources,
                                         CIRCexplorer2_annotate_cmd)
 
+    ## use the filtered annotate/circ_fusion.txt BED file
+    ## to collect backsplice reads
+    circ_bed = CIRCexplorer2_annotate[1]
+
     results.append(CIRCexplorer2_annotate)
 
+    ## NB: VCF are 1-based and BED are 0-based
+    #vcf_cmd = '''sed "s/\\t/,/g" ${SOURCES[0]} | sed "s/^/$SAMPLE,/" | '''\
+    #          '''convert_circrna_collect_tables.py -p circexplorer2_bwa -f gtf - | '''\
+    #          '''cut -f1,4 | sed -E "s/$$/\\t\.\\t\.\\t\.\\t\.\\t\.\\t\./" > ${TARGETS[0]} && '''\
+    #          '''sed "s/\\t/,/g" ${SOURCES[0]} | sed "s/^/$SAMPLE,/" | '''\
+    #          '''convert_circrna_collect_tables.py -p circexplorer2_bwa -f gtf - | '''\
+    #          '''cut -f1,5 | sed -E "s/$$/\\t\.\\t\.\\t\.\\t\.\\t\.\\t\./" >> ${TARGETS[0]} && '''\
+    #          '''sort -k1,1 -k2,2n -o ${TARGETS[0]} ${TARGETS[0]}  && '''\
+    #          '''sed -i "1i##fileformat=VCFv4.0" ${TARGETS[0]}'''
+
+    #vcf = env.Command([os.path.join(out_dir,
+    #                                "${SAMPLE}_circ.vcf")], 
+    #                  #[CIRCexplorer2[0]], 
+    #                  [CIRCexplorer2_annotate[1]], 
+    #                  vcf_cmd)
+    #
+    #bks_reads_cmd = bks_reads_cmd + \
+    #                '''cut -f 4 | sort | uniq -c | '''\
+    #                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
+    #                '''sort -k1,1nr > ${TARGETS[0]} '''
+    #
+    #bks_reads = env.Command([os.path.join(out_dir, 
+    #                                      env['SAMPLE'] + '.ce2.bks.reads')], 
+    #                        [env['ALIGNMENTS'], vcf], 
+    #                        bks_reads_cmd)
+
+bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
+                  [circ_bed],
+                  bed_cmd)
+
+results.append(bed)
+
+bks_reads_cmd = bks_reads_cmd + \
+                    '''cut -f 4 | sort | uniq -c | '''\
+                    '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
+                    '''sort -k1,1nr > ${TARGETS[0]} '''
+    
+bks_reads = env.Command([os.path.join(out_dir, 
+                                      env['SAMPLE'] + bks_sfx + '.bks.reads')], 
+                        [env['ALIGNMENTS'], bed], 
+                        bks_reads_cmd)
+
+results.append(bks_reads)
 
 Return('results')
 

@@ -107,7 +107,7 @@ if len(conditions.keys()) > 1:
                         '''gene.de.file <- "${SOURCES[0].abspath}"; '''\
                         '''rmarkdown::render(input = "''' + \
                         str(gene_diffexp_analysis_template) + '''", '''\
-    	                '''output_file = "${TARGETS[0].abspath}", '''\
+    	                '''output_file = "${TARGETS[0].abspath}", quiet=T,'''\
     	                '''intermediates_dir = "${TARGETS[0].dir}" )' '''
     report = env.Command(report_target, 
                                 [gene_diffexp, gene_meta],

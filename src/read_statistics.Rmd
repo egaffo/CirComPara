@@ -28,6 +28,7 @@ library(ggplot2)
 library(RColorBrewer)
 library(scales)
 library(DT)
+library(tools)
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 12, 
@@ -300,18 +301,27 @@ if(meta_file != ""){
 # Circular RNA methods' alignments
 
 ```{r Circular RNA methods alignments, echo=FALSE, include=FALSE}
-circrna.mappings <- as.data.table(data.frame(scan(file = circrna.reads.stats.file, 
-                              what = list("", ""), sep = "\n", blank.lines.skip = T), 
-                              stringsAsFactors = F))
-colnames(circrna.mappings) <- c("file", "Mapped reads")
+circrna.mappings <- fread(cmd = paste0("zcat ", circrna.reads.stats.file), 
+                          showProgress = F, fill = T)[, .(V1, V2, V3)]
+colnames(circrna.mappings) <- c("file", "alignments", "readname")
 
-circrna.mappings[, `:=`(Sample = sub(pattern = paste(".*samples", "([^", "]*)", ".*", 
-                                                     sep = .Platform$file.sep), 
-                                     replacement = "\\1", x = file),
-                        `CircRNA method` = sub("_out", "", sub(pattern = paste(".*circRNAs", "([^", "]*)", ".*", 
-                                                     sep = .Platform$file.sep), 
-                                     replacement = "\\1", x = file)),
-                        `Mapped reads` = as.integer(`Mapped reads`))]
+circrna.mappings[, `:=`(Sample = file_path_sans_ext(basename(file)), 
+                        `CircRNA method` = file_ext(file))]
+circrna.mappings <- circrna.mappings[, .(`Mapped reads` = .N) , 
+                                     by = .(Sample, `CircRNA method`)][order(`CircRNA method`, Sample)]
+
+# circrna.mappings <- as.data.table(data.frame(scan(file = circrna.reads.stats.file, 
+#                               what = list("", ""), sep = "\n", blank.lines.skip = T), 
+#                               stringsAsFactors = F))
+# colnames(circrna.mappings) <- c("file", "Mapped reads")
+# 
+# circrna.mappings[, `:=`(Sample = sub(pattern = paste(".*samples", "([^", "]*)", ".*", 
+#                                                      sep = .Platform$file.sep), 
+#                                      replacement = "\\1", x = file),
+#                         `CircRNA method` = sub("_out", "", sub(pattern = paste(".*circRNAs", "([^", "]*)", ".*", 
+#                                                      sep = .Platform$file.sep), 
+#                                      replacement = "\\1", x = file)),
+#                         `Mapped reads` = as.integer(`Mapped reads`))]
 
 circrna.mappings.table.m <- rbind(circrna.mappings[, .(Sample, `CircRNA method`, `Mapped reads`)], 
                                   read.processing.table.m[`Processing step` == "Linearly unmapped", 
@@ -336,7 +346,7 @@ DT::datatable(circrna.mappings.table,
 #knitr::kable(x = circrna.mappings.table, caption = "")
 
 if(nrow(circrna.mappings.table.perc.m) > 0){
-    circrna.mappings.perc.table <- dcast(data = circrna.mappings.table.perc.m[, `Linearly unmapped %` := round(`Linearly unmapped %`, 1)], 
+    circrna.mappings.perc.table <- dcast(data = circrna.mappings.table.perc.m[, `Linearly unmapped %` := round(`Linearly unmapped %`, 2)], 
                                          formula = Sample ~ `CircRNA method`, value.var = "Linearly unmapped %")
     DT::datatable(circrna.mappings.perc.table, 
                   rownames = F, 
@@ -350,7 +360,8 @@ if(nrow(circrna.mappings.table.perc.m) > 0){
 
 ```{r plot circrna methods, echo=FALSE}
 ## by read counts
-ggplot(data = circrna.mappings.table.m, aes(x = `CircRNA method`, y = `Mapped reads`)) + 
+ggplot(data = circrna.mappings.table.m[`CircRNA method` != "Linearly unmapped"], 
+       aes(x = `CircRNA method`, y = `Mapped reads`)) + 
     geom_bar(stat = "identity") + facet_wrap(facets = ~ Sample)  +
     theme(axis.text.x = element_text(angle=45, hjust=1)) + 
     ggtitle("CircRNA methods' alignment counts") + 
@@ -358,7 +369,8 @@ ggplot(data = circrna.mappings.table.m, aes(x = `CircRNA method`, y = `Mapped re
 
 if(nrow(circrna.mappings.table.perc.m) > 0){
     ## by percentages
-    ggplot(data = circrna.mappings.table.perc.m, aes(x = `CircRNA method`, y = `Linearly unmapped %`)) + 
+    ggplot(data = circrna.mappings.table.perc.m, 
+           aes(x = `CircRNA method`, y = `Linearly unmapped %`)) + 
         geom_bar(stat = "identity") + facet_wrap(facets = ~ Sample)  +
         theme(axis.text.x = element_text(angle=45, hjust=1)) + 
         ggtitle("Fraction of linearly unmapped reads") + 
@@ -370,7 +382,7 @@ if(nrow(circrna.mappings.table.perc.m) > 0){
 
 ```{r plot circrna methods compared, echo=FALSE}
 ## by read count boxplot
-circrna.mappings.boxplot <- ggplot(data = circrna.mappings.table.m,#[`CircRNA method` != "Linearly unmapped"], 
+circrna.mappings.boxplot <- ggplot(data = circrna.mappings.table.m[`CircRNA method` != "Linearly unmapped"], 
        aes(x = `CircRNA method`, y = `Mapped reads`)) + 
     geom_line(aes(group = Sample, color = Sample)) + 
     geom_boxplot(alpha = .8) + geom_point(aes(color = Sample)) +

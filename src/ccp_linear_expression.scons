@@ -27,14 +27,12 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
 
     if len(transcripts_gtf_files) > 1:        
         if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
-            cuffmerge_cpus = env['CPUS']
-            cuffmerge_annotation = env['ANNOTATION']
-            cuffmerge_genome_fasta = env['GENOME_FASTA']
+            env_cuffmerge = env.Clone()
+            env_cuffmerge['TRANSCRIPT_FILES'] = transcripts_gtf_files
             cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'ccp_cuffmerge.scons'),
                                     src_dir = env['SCONSCRIPT_HOME'],
                                     variant_dir = cuffmerge_dir, duplicate = 0,
-                                    exports = '''env transcripts_gtf_files cuffmerge_cpus '''
-                                    '''cuffmerge_annotation cuffmerge_genome_fasta''')
+                                    exports = '''env_cuffmerge''')
             
             env.Replace(ANNOTATION = cuffmerge)
 

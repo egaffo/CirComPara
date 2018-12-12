@@ -156,7 +156,6 @@ if not env['CIRC_PE_MAPPING'] and len(env['READS']) > 1:
 
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
    any([f in CIRCRNA_METHODS for f in ['testrealign', 'circexplorer2_segemehl']]):
-
     ## SEGEMEHL CIRCRNA
     env_segemehl = env.Clone()
     segemehl_cpus = CPUS
@@ -166,16 +165,21 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
     segemehl_index = SEGEMEHL_INDEX
     segemehl_extra_params = ''
     segemap = env.SConscript(os.path.join(build_dir, ccp_segemehl),
-                             variant_dir = build_dir, src_dir = SRC_DIR,
-                             duplicate = 0, exports='env_segemehl segemehl_cpus reads_to_map sample_id segemehl_genome_fasta segemehl_index segemehl_extra_params')
-
-    results.append(segemap)    
-
+                             variant_dir = build_dir, 
+                             src_dir = SRC_DIR,
+                             duplicate = 0, 
+                             exports='env_segemehl segemehl_cpus '\
+                                     'reads_to_map sample_id '\
+                                     'segemehl_genome_fasta segemehl_index '\
+                                     'segemehl_extra_params')    
+    results.append(segemap)
     env_testrealign = env.Clone()
     #mapping_file = segemap[0]
-    env_testrealign['ALIGNMENTS'] = segemap[0]
-    segemehlcirc_cpus = CPUS
-    segemehlcirc_genome_fasta = GENOME_FASTA
+    env_testrealign['ALIGNMENTS'] = segemap[0][0]
+    #env_testrealign['CPUS'] = CPUS
+    #segemehlcirc_cpus = CPUS
+    #segemehlcirc_genome_fasta = GENOME_FASTA
+    #env_testrealign['GENOME_FASTA'] = GENOME_FASTA
     testrealign_dir = 'testrealign'
     testrealign = env.SConscript(os.path.join(build_dir, testrealign_dir, 
 					      ccp_testrealign),
@@ -183,9 +187,10 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
 							testrealign_dir), 
 			      src_dir = SRC_DIR,
                               duplicate = 0, 
-			      exports = '''env_testrealign sample_name '''
-					'''segemehlcirc_cpus '''
-					'''segemehlcirc_genome_fasta''')
+			      exports = '''env_testrealign''')
+			      #exports = '''env_testrealign sample_name '''
+					#'''segemehlcirc_cpus '''
+					#'''segemehlcirc_genome_fasta''')
 
     if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'testrealign' in \
 	   CIRCRNA_METHODS:
@@ -193,18 +198,18 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
 	
     if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
 	   'circexplorer2_segemehl' in CIRCRNA_METHODS:
-		circexplorer2_env = env.Clone()
-		circexplorer2_env['ALIGNER'] = 'segemehl'
-		circexplorer2_env['FUSION_FILE'] = testrealign[0][0]
-		circexplorer2_segemehl = env.SConscript(os.path.join(build_dir,	
-							'ccp_circexplorer2.scons'),
-					variant_dir = build_dir, src_dir = SRC_DIR,
-	                                duplicate = 0,
-					exports = '''circexplorer2_env''')
-		
-		results.append(circexplorer2_segemehl)
+        circexplorer2_env = env.Clone()
+        circexplorer2_env['ALIGNER'] = 'segemehl'
+        circexplorer2_env['FUSION_FILE'] = testrealign[0][0]
+        circexplorer2_env['ALIGNMENTS'] = segemap[0][0]
+        circexplorer2_segemehl = env.SConscript(os.path.join(build_dir,	
+                                                             'ccp_circexplorer2.scons'),
+                                                variant_dir = build_dir, src_dir = SRC_DIR,
+                                                duplicate = 0,
+                                                exports = '''circexplorer2_env''')
+        results.append(circexplorer2_segemehl)
 
-		Depends(circexplorer2_segemehl, testrealign)
+        Depends(circexplorer2_segemehl, testrealign)
 
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'findcirc' in CIRCRNA_METHODS:
     ## FIND_CIRC
@@ -217,33 +222,34 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'findcirc' in CIRCRNA_MET
     results.append(find_circ)
 
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or 'circexplorer2_star' in CIRCRNA_METHODS:
-	## alignments with STAR
-	## ALIGN WITH STAR, WITH FUSION SEARCH ENABLED
-	star_env            = env.Clone()
-	## set Star parameters to enable fusion search
-	star_env.Append(STAR_PARAMS = ['--chimSegmentMin', '10', 
-				       '--chimOutType', 'WithinBAM'])
-	
-	star = env.SConscript(os.path.join(build_dir, 'ccp_star.scons'),
-	                      variant_dir = build_dir, src_dir = SRC_DIR,
-	                      duplicate = 0, 
-			      exports = '''star_env''')	
-	results.append(star)
-	
-	Chimeric_out_junction = star[0][1]
-
-	## parse STAR alignments with CIRCexplorer2
-	circexplorer2_env = env.Clone()
-	circexplorer2_env['FUSION_FILE'] = Chimeric_out_junction
-	circexplorer2_env['ALIGNER'] = 'star'
-	circexplorer2_star = env.SConscript(os.path.join(build_dir, 
-							'ccp_circexplorer2.scons'),
-				variant_dir = build_dir, src_dir = SRC_DIR,
+    ## alignments with STAR
+    ## ALIGN WITH STAR, WITH FUSION SEARCH ENABLED
+    star_env = env.Clone()
+    ## set Star parameters to enable fusion search
+    star_env.Append(STAR_PARAMS = ['--chimSegmentMin', '10', 
+    			       '--chimOutType', 'WithinBAM'])
+    
+    star = env.SConscript(os.path.join(build_dir, 'ccp_star.scons'),
+                          variant_dir = build_dir, src_dir = SRC_DIR,
+                          duplicate = 0, 
+    		      exports = '''star_env''')	
+    results.append(star)
+    
+    Chimeric_out_junction = star[0][1]
+    
+    ## parse STAR alignments with CIRCexplorer2
+    circexplorer2_env = env.Clone()
+    circexplorer2_env['FUSION_FILE'] = Chimeric_out_junction
+    circexplorer2_env['ALIGNER'] = 'star'
+    circexplorer2_env['ALIGNMENTS'] = star[0][0]
+    circexplorer2_star = env.SConscript(os.path.join(build_dir, 
+    						'ccp_circexplorer2.scons'),
+    			variant_dir = build_dir, src_dir = SRC_DIR,
                                 duplicate = 0,
-				exports = '''circexplorer2_env''')
-
-	results.append(circexplorer2_star)	
-	Depends(circexplorer2_star, star)
+    			exports = '''circexplorer2_env''')
+    
+    results.append(circexplorer2_star)	
+    Depends(circexplorer2_star, star)
 
 if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
 	any([f in CIRCRNA_METHODS for f in ['circexplorer2_bwa', 'ciri']]):
@@ -270,6 +276,7 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
         circexplorer2_env = env.Clone()
         circexplorer2_env['FUSION_FILE'] = RNA_seq_bwa_sam
         circexplorer2_env['ALIGNER'] = 'BWA'
+        circexplorer2_env['ALIGNMENTS'] = bwa[0]
         circexplorer2_bwa = env.SConscript(os.path.join(build_dir, 
         						'ccp_circexplorer2.scons'),
         			variant_dir = build_dir, src_dir = SRC_DIR,
@@ -301,7 +308,7 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
     env_tophat['TOPHAT_INDEX']  = env['BOWTIE_INDEX']
     env_tophat.AppendUnique(TOPHAT_PARAMS = ['--fusion-search', 
                                              '--keep-fasta-order',
-		       	                     '--no-coverage-search',
+		       	                             '--no-coverage-search',
                                              '--bowtie1'])
     if not env['ANNOTATION'] == '' and \
        not ('--GTF' in env_tophat['TOPHAT_PARAMS'] or '-G' in env_tophat['TOPHAT_PARAMS']):
@@ -318,8 +325,9 @@ if CIRCRNA_METHODS == [''] or CIRCRNA_METHODS == '' or \
     circexplorer2_env = env.Clone()
     circexplorer2_env['FUSION_FILE'] = tophat['ALIGNMENTS']
     circexplorer2_env['ALIGNER'] = 'tophat'
+    circexplorer2_env['ALIGNMENTS'] = tophat['ALIGNMENTS']
     if env['CIRC_PE_MAPPING'] and len(env['READS']) > 1:
-       circexplorer2_env.Replace(ALIGNER = 'tophat_pe')
+        circexplorer2_env.Replace(ALIGNER = 'tophat_pe')
     circexplorer2_tophat = env.SConscript(os.path.join(build_dir, 
     						'ccp_circexplorer2.scons'),
     			variant_dir = build_dir, src_dir = SRC_DIR,
