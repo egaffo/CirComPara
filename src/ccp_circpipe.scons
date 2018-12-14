@@ -264,18 +264,13 @@ if not env['BYPASS'] == 'circular':
         env.AppendUnique(DCC_EXTRA_PARAMS = ['-N'])
     
     ## select which circRNA methods have to be performed
-    circrna_methods = env['CIRCRNA_METHODS']
     env_sample_circrna_methods = env.Clone()
     env_sample_circrna_methods.Replace(READS = sample_raw_reads)
-    ciri_extra_parameters = env['CIRI_EXTRA_PARAMS']
+
     circrnas = env.SConscript(os.path.join(build_dir, ccp_circrna_methods), 
                             src_dir = SRC_DIR, 
                             variant_dir = build_dir, duplicate = 0,
-                            exports = '''env_sample_circrna_methods sample_cpus sample_genome_fasta '''
-                            '''sample_annotation sample_raw_reads sample_segemehl_index '''
-                            '''ciri_bwa_index ciri_bwa_extra_parameters '''
-                            '''ciri_script bowtie2_index star_index gene_pred '''
-                            '''ciri_extra_parameters circrna_methods''')
+                            exports = '''env_sample_circrna_methods''')
     results.append(circrnas)
 
 results_dict = {'LINEAR_EXPRESSION' : expression[1],
