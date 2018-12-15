@@ -101,7 +101,8 @@ segemehl_map = env.Command([os.path.join(segemehl_mapping_dir,
                            env['READS'], 
                            segemehl_map_cmd)
 
-env.Precious(segemehl_map[0]) # do not delete old alignment file untill the new one has been computed
+# do not delete old alignment file untill the new one has been computed
+env.Precious(segemehl_map[0]) 
 
 ## COUNT AND REPORT MAPPED READS
 mapped_reads_target = os.path.join(segemehl_mapping_dir, 
@@ -112,4 +113,11 @@ mapped_reads        = env.Command(mapped_reads_target, segemehl_map[0], mapped_r
 
 Clean('.', segemehl_mapping_dir)
 
-Return('segemehl_map mapped_reads')
+results = {'ALIGNMENTS':      segemehl_map[0],
+           'UNALIGNED_READS': segemehl_map[1],
+           'SINGLE_SPLITS':   segemehl_map[2],
+           'MULTI_SPLITS':    segemehl_map[3],
+           'TRANS_SPLIT':     segemehl_map[4],
+           'MAPPED_READS':    mapped_reads}
+
+Return('results')

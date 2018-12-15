@@ -119,10 +119,22 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                              duplicate = 0, 
                              exports='env_segemehl')
 
-    results.append(segemap)
+    ## segemehl Sconscript result keys:
+    #'ALIGNMENTS'
+    #'UNALIGNED_READS'
+    #'SINGLE_SPLITS'
+    #'MULTI_SPLITS'
+    #'TRANS_SPLIT'
+    #'MAPPED_READS' 
+    results.append([File(f) for f in segemap.iteritems()])
+
     env_testrealign = env.Clone()
-    env_testrealign['ALIGNMENTS'] = segemap[0][0]
+   
+    #env_testrealign['ALIGNMENTS'] = segemap['ALIGNMENTS']
+    env_testrealign['BED'] = segemap['SINGLE_SPLITS']
+    
     testrealign_dir = 'testrealign'
+    
     testrealign = env.SConscript(os.path.join(build_dir, testrealign_dir, 
                                               ccp_testrealign),
                                  variant_dir = os.path.join(build_dir, 
@@ -139,8 +151,10 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 	   'circexplorer2_segemehl' in env['CIRCRNA_METHODS']:
         circexplorer2_env = env.Clone()
         circexplorer2_env['ALIGNER'] = 'segemehl'
-        circexplorer2_env['FUSION_FILE'] = testrealign[0][0]
-        circexplorer2_env['ALIGNMENTS'] = segemap[0][0]
+        #circexplorer2_env['FUSION_FILE'] = testrealign[0][0]
+        circexplorer2_env['FUSION_FILE'] = segemap['SINGLE_SPLITS']
+        #circexplorer2_env['ALIGNMENTS'] = segemap[0][0]
+        circexplorer2_env['ALIGNMENTS'] = segemap['ALIGNMENTS']
         circexplorer2_segemehl = env.SConscript(os.path.join(build_dir,	
                                                              'ccp_circexplorer2.scons'),
                                                 variant_dir = build_dir, src_dir = SRC_DIR,
