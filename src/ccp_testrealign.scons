@@ -54,7 +54,7 @@ extract_circular = env.Command(["${SAMPLE}_circular.reads.bed"],
 ## COLLECT SPLICE JUNCTIONS
 collect_splice_cmd = "haarz.x split -f $SOURCE $HAARZ_PARAMS | "\
                      "sort -k1,1n -k2,2n > ${TARGETS[0]}"
-collect_splice_targets = ["circrnas_segemehl.bed"]
+collect_splice_targets = ["splicesites.bed"]
 collect_splice = env.Command(collect_splice_targets, 
                              extract_circular, 
                              collect_splice_cmd)
