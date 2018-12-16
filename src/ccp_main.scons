@@ -107,6 +107,8 @@ vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
 vars.Add('DCC_EXTRA_PARAMS', 'DCC additional parameters', '')
 ## CIRCexplorer2 (annotate) parameters
 vars.Add('CE2_PARAMS', 'Parameters to pass to CIRCexplorer2 annotate', '')
+## Segemehl/Haarz extra para,eters
+vars.Add('HAARZ_PARAMS', 'Segemehl/Haarz parameters', '')
 
 ## alternative workflow parameters
 vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
