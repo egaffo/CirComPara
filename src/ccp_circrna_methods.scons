@@ -162,7 +162,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                                 exports = '''circexplorer2_env''')
         results.append(circexplorer2_segemehl)
 
-        Depends(circexplorer2_segemehl, testrealign)
+        #Depends(circexplorer2_segemehl, testrealign)
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
    'findcirc' in env['CIRCRNA_METHODS']:
