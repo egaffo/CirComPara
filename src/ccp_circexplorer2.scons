@@ -79,6 +79,17 @@ if env['ALIGNER'].lower() == 'bwa':
 if env['ALIGNER'].lower() == 'segemehl':
     env.Replace(ALIGNER = 'segemehl')
     bks_sfx = ".ce2seg"
+
+    ## for segemehl >= v0.3.0 modify the input BED file
+    fixed_bed_cmd = '''grep ';B\\|C;' ${SOURCES} | cut -f1,2,3,6 | sort | '''\
+                    '''uniq -c | sed -r 's/.*([0-9]+) ([^\\t]+)\\t([^\\t]+)'''\
+                    '''\\t([^\\t]+)\\t([^\\t]+).*/\\2\\t\\3\\t\\4\\tsplits:'''\
+                    '''\\1:\\1:\\1:C:P\\t0\\t\\5/' > $TARGET'''
+    fixed_bed = env.Command(os.path.join(out_dir + '_tmp', 'fixed_splicesites.bed'),
+                            env['FUSION_FILE'],
+                            fixed_bed_cmd)
+    env.Replace(FUSION_FILE = fixed_bed)
+
     ## segemehl coordinates seem to refer to the intron and not the
     ## spliced exons. So, CE2 start position must be increased to 
     ## comply with segemehl SAM.
