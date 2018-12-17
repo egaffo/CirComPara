@@ -38,6 +38,7 @@ except NameError:
     vars.Add('GENEPRED', 'The genome annotation in GenePred format', 'genes.genePred')
     vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', 'genome.fa')
     vars.Add('ALIGNMENTS', 'The alignment file', '')
+    vars.Add('CE2_PARAMS', 'Parameters to pass to CIRCexplorer2 annotate', '')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -67,16 +68,16 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
 
 #TopHat-Fusion, STAR, MapSplice, BWA, segemel
 if env['ALIGNER'].lower() == 'star':
-    ALIGNER = 'STAR'    
+    env.Replace(ALIGNER = 'STAR')    
     bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
     bks_sfx = ".ce2star"
 
 if env['ALIGNER'].lower() == 'bwa':
-    ALIGNER = 'BWA'
+    env.Replace(ALIGNER = 'BWA')
     bks_sfx = ".ce2bwa"
 
 if env['ALIGNER'].lower() == 'segemehl':
-    ALIGNER = 'segemehl'
+    env.Replace(ALIGNER = 'segemehl')
     bks_sfx = ".ce2seg"
     ## segemehl coordinates seem to refer to the intron and not the
     ## spliced exons. So, CE2 start position must be increased to 
@@ -89,23 +90,22 @@ if env['ALIGNER'].lower() == 'segemehl':
                         '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
 if env['ALIGNER'].lower() == 'tophat':
-    ALIGNER = 'TopHat-Fusion'
+    env.Replace(ALIGNER = 'TopHat-Fusion')
     bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
     bks_sfx = ".ce2th"
 
 if env['ALIGNER'].lower() == 'tophat_pe':
-    ALIGNER = 'TopHat-Fusion'
+    env.Replace(ALIGNER = 'TopHat-Fusion')
     env.Replace(OPTIONS = '--pe')
     bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
     bks_sfx = ".ce2th"
 
 if env['ALIGNER'].lower() == 'mapsplice':
-    ALIGNER = 'MapSplice'
+    env.Replace(ALIGNER = 'MapSplice')
     bks_sfx = ".ce2ms"
  
-CIRCexplorer2_cmd = 'CIRCexplorer2 parse $OPTIONS -o $TARGET.dir -t ' + \
-                    ALIGNER + ' $SOURCE'
-CIRCexplorer2_targets = os.path.join(out_dir, 'fusion_junction.bed')
+CIRCexplorer2_cmd = 'CIRCexplorer2 parse $OPTIONS -b $TARGET -t $ALIGNER $SOURCE'
+CIRCexplorer2_targets = os.path.join(out_dir, 'back_spliced_junction.bed')
 CIRCexplorer2_sources = [File(env['FUSION_FILE'])]
 CIRCexplorer2 = env.Command(CIRCexplorer2_targets, 
                             CIRCexplorer2_sources, 
@@ -118,49 +118,22 @@ circ_bed = CIRCexplorer2[0]
 results.append(CIRCexplorer2)
 
 if not env['GENEPRED'] == '':
-    CIRCexplorer2_annotate_targets = [os.path.join(out_dir, 'annotate', f) 
-                                    for f in ['annotated_fusion.txt', 
-                                    'circ_fusion.txt']]
+    CIRCexplorer2_annotate_targets = os.path.join(out_dir, 'annotate',
+                                                  'circularRNA_known.txt')
     CIRCexplorer2_annotate_sources = [File(env['GENEPRED']),
                                       File(env['GENOME_FASTA']),
                                       CIRCexplorer2[0]]
-    CIRCexplorer2_annotate_cmd = 'CIRCexplorer2 annotate -r ${SOURCES[0]} '\
-                                '-g ${SOURCES[1]} ${SOURCES[2].dir}'
+    CIRCexplorer2_annotate_cmd = 'CIRCexplorer2 annotate $CE2_PARAMS -r ${SOURCES[0]} '\
+                                '-g ${SOURCES[1]} -b ${SOURCES[2]} -o $TARGET'
     CIRCexplorer2_annotate = env.Command(CIRCexplorer2_annotate_targets,
-                                        CIRCexplorer2_annotate_sources,
-                                        CIRCexplorer2_annotate_cmd)
+                                         CIRCexplorer2_annotate_sources,
+                                         CIRCexplorer2_annotate_cmd)
 
-    ## use the filtered annotate/circ_fusion.txt BED file
+    ## use the filtered annotate/circularRNA_known.txt BED file
     ## to collect backsplice reads
-    circ_bed = CIRCexplorer2_annotate[1]
+    circ_bed = CIRCexplorer2_annotate
 
     results.append(CIRCexplorer2_annotate)
-
-    ## NB: VCF are 1-based and BED are 0-based
-    #vcf_cmd = '''sed "s/\\t/,/g" ${SOURCES[0]} | sed "s/^/$SAMPLE,/" | '''\
-    #          '''convert_circrna_collect_tables.py -p circexplorer2_bwa -f gtf - | '''\
-    #          '''cut -f1,4 | sed -E "s/$$/\\t\.\\t\.\\t\.\\t\.\\t\.\\t\./" > ${TARGETS[0]} && '''\
-    #          '''sed "s/\\t/,/g" ${SOURCES[0]} | sed "s/^/$SAMPLE,/" | '''\
-    #          '''convert_circrna_collect_tables.py -p circexplorer2_bwa -f gtf - | '''\
-    #          '''cut -f1,5 | sed -E "s/$$/\\t\.\\t\.\\t\.\\t\.\\t\.\\t\./" >> ${TARGETS[0]} && '''\
-    #          '''sort -k1,1 -k2,2n -o ${TARGETS[0]} ${TARGETS[0]}  && '''\
-    #          '''sed -i "1i##fileformat=VCFv4.0" ${TARGETS[0]}'''
-
-    #vcf = env.Command([os.path.join(out_dir,
-    #                                "${SAMPLE}_circ.vcf")], 
-    #                  #[CIRCexplorer2[0]], 
-    #                  [CIRCexplorer2_annotate[1]], 
-    #                  vcf_cmd)
-    #
-    #bks_reads_cmd = bks_reads_cmd + \
-    #                '''cut -f 4 | sort | uniq -c | '''\
-    #                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
-    #                '''sort -k1,1nr > ${TARGETS[0]} '''
-    #
-    #bks_reads = env.Command([os.path.join(out_dir, 
-    #                                      env['SAMPLE'] + '.ce2.bks.reads')], 
-    #                        [env['ALIGNMENTS'], vcf], 
-    #                        bks_reads_cmd)
 
 bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
                   [circ_bed],
