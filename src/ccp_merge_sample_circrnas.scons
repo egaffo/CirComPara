@@ -56,27 +56,27 @@ for sample in samples:
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_star', 
                                                            'annotate', 
-                                                           'circ_fusion.txt')))
+                                                           'circularRNA_known.txt')))
     CIRCexplorer2_bwa_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_bwa', 
                                                            'annotate', 
-                                                           'circ_fusion.txt')))
+                                                           'circularRNA_known.txt')))
     CIRCexplorer2_segemehl_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_segemehl', 
                                                            'annotate', 
-                                                           'circ_fusion.txt')))
+                                                           'circularRNA_known.txt')))
     CIRCexplorer2_tophat_pe_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_tophat_pe', 
                                                            'annotate', 
-                                                           'circ_fusion.txt')))
+                                                           'circularRNA_known.txt')))
     CIRCexplorer2_tophat_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_tophat', 
                                                            'annotate', 
-                                                           'circ_fusion.txt')))
+                                                           'circularRNA_known.txt')))
     dcc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
                                         os.path.sep +
                                         'CircRNACount'))
