@@ -72,9 +72,12 @@ def format_testrealign(line, outformat):
     if outformat == 'gtf':
         sample = fields[0]
         chrom   = fields[1]
-        start   = str(int(float(fields[2])) + 1) # testrealign gives BED coordinates
+        ## testrealign gives BED coordinates and it considers 
+        ## intron coordinates
+        start   = str(int(float(fields[2])) + 2) 
         end     = fields[3]
-        strand  = fields[5]
+        ## set undefined strand to +
+        strand  = '+' if fields[5] == '.' else fields[5]
         score   = fields[6]
         gene_id = chrom + ':' + start + '-' + end + ':' + strand
         transcript_id = gene_id + '.' + sample
