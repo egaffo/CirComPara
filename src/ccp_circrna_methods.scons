@@ -183,7 +183,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     star_env = env.Clone()
     ## set Star parameters to enable fusion search
     star_env.AppendUnique(STAR_PARAMS = ['--chimSegmentMin', '10', 
-    			       '--chimOutType', 'WithinBAM'])
+                                         '--chimOutType', 'Junctions'])
     
     star = env.SConscript(os.path.join(build_dir, 'ccp_star.scons'),
                           variant_dir = build_dir, src_dir = SRC_DIR,
