@@ -152,6 +152,8 @@ vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
 vars.Add('LIN_COUNTER', 'The method to estimate circRNA-host gene '\
                         'linear expression. Available are using the DCC '\
                         '[dcc], or the CirComPara [ccp] method', 'ccp')
+vars.Add('FIX_READ_HEADER', 'Trim FASTQ headers to the read ids. '\
+                            'Recommended when processing SRA datasets', 'False')
 
 ## deprecated parameters (legacy)
 vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
@@ -182,6 +184,11 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].lower() == 'true':
 	env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True)
 else:
     env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
+
+if env['FIX_READ_HEADER'].lower() == 'true':
+    env.Replace(FIX_READ_HEADER = True)
+else:
+    env.Replace(FIX_READ_HEADER = False)
 
 if not env['BYPASS'] == 'circular':
     if env['CIRCRNA_METHODS'] == ['']:
