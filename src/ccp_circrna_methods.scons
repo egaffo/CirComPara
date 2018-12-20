@@ -95,20 +95,46 @@ results = []
 
 sample_name = env['SAMPLE']
 
+env.SetDefault(FIX_READ_HEADER = True)
+
 build_dir = 'circRNAs'
 
-## GET INPUT READ FILE FULL PATH
-if not env['CIRC_PE_MAPPING'] and len(env['READS']) > 1:
-    cat_reads_target = os.path.join(build_dir, 
-                                    env['SAMPLE'] + '.unmappedSE.fq')
-    if env['READS'][0].endswith('.gz'): 
-        cat_reads_target = cat_reads_target + '.gz'
+## PREPARE CIRCRNA METHODS' INPUT READS
+if env['CIRC_PE_MAPPING']:
+   ## TODO:
+   print 'CIRC_PE_MAPPING not yet implemented :('
+   exit(-1)
+else:
+    ## collapse paired reads into single file
+    ## indeed processing reads as they were single-ended
+    cat_reads_target = os.path.join(build_dir,  
+                                    env['SAMPLE'] + '.unmappedSE.fq.gz')
     
-    env['READS'] = env.Command(cat_reads_target, 
-                               env['READS'], 
-                               'cat ${SOURCES} > $TARGET')
-elif len(env['READS']) == 1:
-    env.Replace(READS = File(env['READS']))
+    ## we can concatenate gzipped files, no need to decompress
+    cat_cmd = 'cat '
+
+    fix_read_header_cmd = ''
+    if env['FIX_READ_HEADER']:
+        ## trim FASTQ header to the first white space, so
+        ## that only the read ids are kept in FASTQ headers.
+        ## This prevents errors in downstream read processing.
+        ## Recommended for SRA read datasets, which usually
+        ## report read length and other info in FASTQ header.
+        fix_read_header_cmd = ' | trim_read_header.py - '
+
+        ## trim_read_header.py supports only plain text input stream
+        ## we need to decompress first, and then compress the output
+        if env['READS'][0].endswith('.gz'):
+            cat_cmd = 'zcat '
+            fix_read_header_cmd = fix_read_header_cmd + ' | gzip -c '
+
+    unmapped_reads = env.Command(cat_reads_target,
+                               env['READS'],
+                               cat_cmd + '${SOURCES}' +\
+                               fix_read_header_cmd +\
+                               '> $TARGET')
+
+    env.Replace(READS = unmapped_reads)
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
    any([f in env['CIRCRNA_METHODS'] for f in ['testrealign', 'circexplorer2_segemehl']]):
@@ -119,6 +145,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                              src_dir = SRC_DIR,
                              duplicate = 0, 
                              exports='env_segemehl')
+
+    Depends(segemap['ALIGNMENTS'], env['READS'])
 
     ## segemehl Sconscript result keys:
     #'ALIGNMENTS'
@@ -131,7 +159,6 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 
     env_testrealign = env.Clone()
    
-    #env_testrealign['ALIGNMENTS'] = segemap['ALIGNMENTS']
     env_testrealign['BED'] = segemap['SINGLE_SPLITS']
     
     testrealign_dir = 'testrealign'
@@ -152,9 +179,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 	   'circexplorer2_segemehl' in env['CIRCRNA_METHODS']:
         circexplorer2_env = env.Clone()
         circexplorer2_env['ALIGNER'] = 'segemehl'
-        #circexplorer2_env['FUSION_FILE'] = testrealign[0][0]
         circexplorer2_env['FUSION_FILE'] = segemap['SINGLE_SPLITS']
-        #circexplorer2_env['ALIGNMENTS'] = segemap[0][0]
         circexplorer2_env['ALIGNMENTS'] = segemap['ALIGNMENTS']
         circexplorer2_segemehl = env.SConscript(os.path.join(build_dir,	
                                                              'ccp_circexplorer2.scons'),
@@ -163,7 +188,6 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                                 exports = '''circexplorer2_env''')
         results.append(circexplorer2_segemehl)
 
-        #Depends(circexplorer2_segemehl, testrealign)
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
    'findcirc' in env['CIRCRNA_METHODS']:
@@ -174,6 +198,9 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                variant_dir = build_dir, src_dir = SRC_DIR, 
                                duplicate = 0, 
                                exports = '''env''')
+
+    Depends(find_circ, env['READS'])
+    
     results.append(find_circ)
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
@@ -190,6 +217,9 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                           variant_dir = build_dir, src_dir = SRC_DIR,
                           duplicate = 0, 
     		      exports = '''star_env''')	
+
+    Depends(star, env['READS'])
+    
     results.append(star)
     
     Chimeric_out_junction = star[0][1]
@@ -240,6 +270,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                           duplicate = 0, 
                           exports = 'bwa_env')
     
+    Depends(bwa, env['READS'])
+
     results.append(bwa)
 
     if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
@@ -293,6 +325,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                               variant_dir = build_dir, src_dir = SRC_DIR,
                               duplicate = 0, exports = '''env_tophat''')
     
+    Depends(tophat['ALIGNMENTS'], env['READS'])
+
     results.append(tophat['ALIGNMENTS'])
     results.append(tophat['MAPPED_READS'])
 
