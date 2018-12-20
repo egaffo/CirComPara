@@ -107,7 +107,8 @@ if not env['CIRC_PE_MAPPING'] and len(env['READS']) > 1:
     env['READS'] = env.Command(cat_reads_target, 
                                env['READS'], 
                                'cat ${SOURCES} > $TARGET')
-
+elif len(env['READS']) == 1:
+    env.Replace(READS = File(env['READS']))
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
    any([f in env['CIRCRNA_METHODS'] for f in ['testrealign', 'circexplorer2_segemehl']]):
