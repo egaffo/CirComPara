@@ -217,8 +217,6 @@ if not env['BYPASS'] == 'circular':
                              ''' -2 ${str(TARGETS[2].abspath).replace('.gz', '')} ${SOURCES[0]} '''\
                              '''&& gzip ${str(TARGETS[1].abspath).replace('.gz', '')} '''\
                              '''&& gzip ${str(TARGETS[2].abspath).replace('.gz', '')} '''
-    #                         ''' -1 >( gzip -c > ${TARGETS[1]} )'''\
-    #                         ''' -2 >( gzip -c > ${TARGETS[2]} ) ${SOURCE}'''
         unmapped_reads_cmd = unmapped_reads_cmd +\
                             ''' && gzip ${str(TARGETS[0].abspath).replace('.gz', '')}'''
         
@@ -226,47 +224,30 @@ if not env['BYPASS'] == 'circular':
                                      [env['ALIGNMENTS'].abspath,
                                       mappings['BAM_INDEX']], 
                                      unmapped_reads_cmd)
-        
     else:
         unmapped_reads = mappings['UNMAPPED_READS']
     
     results.append(unmapped_reads)
                         
     # run circRNA detection pipeline 
-    sample_cpus         = env['CPUS']
-    sample_genome_fasta = env['GENOME_FASTA']
-    sample_annotation   = env['ANNOTATION']
-    
+    env_sample_circrna_methods = env.Clone()
+
     if len(env['READS']) > 1:
-        sample_raw_reads    = [f.abspath for f in unmapped_reads[1:3]]
+        env_sample_circrna_methods.Replace(READS = [f.abspath for f in unmapped_reads[1:3]])
     else:
-        sample_raw_reads    = [unmapped_reads.abspath]
-    
-    sample_segemehl_index     = env['SEGEMEHL_INDEX']
-    ciri_bwa_index            = env['BWA_INDEX']
-    ciri_bwa_extra_parameters = env['BWA_PARAMS']
-    ciri_script               = env['CIRI']
-    
-    bowtie2_index = env['BOWTIE2_INDEX']
-    
-    star_index  = env['STAR_INDEX']
-    gene_pred   = env['GENEPRED']
+        env_sample_circrna_methods.Replace(READS = [unmapped_reads.abspath])
     
     ## set strandness parameter for circRNA detection methods
     ## check by HISAT parameters
     strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
     if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
         ## Environment is propagated to the Sconscript
-        env['FINDCIRC_EXTRA_PARAMS'] = ' --strandpref --stranded '
-        #env.AppendUnique(DCC_EXTRA_PARAMS = ['-ss']) ## default DCC is stranded
+        env_sample_circrna_methods['FINDCIRC_EXTRA_PARAMS'] = ' --strandpref --stranded '
+        # env_sample_circrna_methods.AppendUnique(DCC_EXTRA_PARAMS = ['-ss']) ## default DCC is stranded
     else:
         ## assume non-stranded library
-        env.AppendUnique(DCC_EXTRA_PARAMS = ['-N'])
+         env_sample_circrna_methods.AppendUnique(DCC_EXTRA_PARAMS = ['-N'])
     
-    ## select which circRNA methods have to be performed
-    env_sample_circrna_methods = env.Clone()
-    env_sample_circrna_methods.Replace(READS = sample_raw_reads)
-
     circrnas = env.SConscript(os.path.join(build_dir, ccp_circrna_methods), 
                             src_dir = SRC_DIR, 
                             variant_dir = build_dir, duplicate = 0,
@@ -276,7 +257,6 @@ if not env['BYPASS'] == 'circular':
 results_dict = {'LINEAR_EXPRESSION' : expression[1],
                 'CIRCULAR_EXPRESSION' : circrnas,
                 'LINEAR_ALIGNMENTS' : env['ALIGNMENTS']}
-#Depends(circrnas, unmapped_reads)
 
 ## CLEAN COMMANDS
 Clean('.', read_statistics_dir)
