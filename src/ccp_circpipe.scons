@@ -256,7 +256,8 @@ if not env['BYPASS'] == 'circular':
 
 results_dict = {'LINEAR_EXPRESSION' : expression[1],
                 'CIRCULAR_EXPRESSION' : circrnas,
-                'LINEAR_ALIGNMENTS' : env['ALIGNMENTS']}
+                'LINEAR_ALIGNMENTS' : env['ALIGNMENTS'],
+                'LINEAR_ALIGNMENTS_IDX' : mappings['BAM_INDEX']}
 
 ## CLEAN COMMANDS
 Clean('.', read_statistics_dir)

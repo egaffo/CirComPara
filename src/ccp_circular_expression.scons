@@ -16,15 +16,9 @@ except NameError, ne:
         print "Run sample: unknown variables", unknown.keys()
         Exit(1)
 
-runs    = env['RUNS']
-samples = env['SAMPLES']
-linexp  = env['LINEXP'] 
-
 circRNA_collect_dir = 'circRNA_collection'
 
 env_merge_sample_circrnas = env.Clone()
-env_merge_sample_circrnas['SAMPLES'] = samples
-env_merge_sample_circrnas['RUNS'] = runs
 merge_sample_circrnas = SConscript(os.path.join(circRNA_collect_dir, 
 					'ccp_merge_sample_circrnas.scons'),
                             src_dir = env['SCONSCRIPT_HOME'], 
@@ -51,7 +45,9 @@ circrna_linexp = SConscript(os.path.join(circrna_linexp_dir,
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = circrna_linexp_dir, duplicate = 0,
                             exports = '''env_circrna_linexp''')
-Depends(circrna_linexp, circrna_collect[2:3])
+Depends(circrna_linexp, [circrna_collect[2:3], 
+                         [env['RUNS_DICT'][s]['LINEAR_ALIGNMENTS_IDX'] for s in 
+                            env['RUNS_DICT'].keys()]])
 
 
 ## ANALYZE AND REPORT CIRCRNAS 
@@ -60,8 +56,6 @@ env_circrna_analyze = env.Clone()
 env_circrna_analyze['META'] = File(env['META']).abspath
 env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
 env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
-#env_circrna_analyze['GENEEXP'] = linexp['GENE_EXP_ANALYSIS'][1] #gene_exp_analysis[1] #gene_exp
-#env_circrna_analyze['GENEMETA'] = env_circrna_analyze['META'] #File(gene_meta).abspath
 env_circrna_analyze['BKS_LIN_COUNTS'] = circrna_linexp
 if int(env_circrna_analyze['MIN_METHODS']) > len(env['CIRCRNA_METHODS']):
     env_circrna_analyze['MIN_METHODS'] = len(env['CIRCRNA_METHODS'])
@@ -71,11 +65,9 @@ circrna_analyze = SConscript(os.path.join(circrna_analyze_dir,
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = circrna_analyze_dir, duplicate = 0,
                             exports = '''env_circrna_analyze''')
-Depends(circrna_analyze, linexp['GENE_EXP_ANALYSIS'][1])#gene_exp)
 
 Clean('.', circRNA_collect_dir)
 Clean('.', circrna_analyze_dir)
-
 
 results = {'SNP_UNIQUE_CIRC': circrna_collect[2]}
 
