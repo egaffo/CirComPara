@@ -348,4 +348,13 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 
 Clean('.', build_dir)
 
-Return('results')
+results_dict = {'CE2_BWA': circexplorer2_bwa,
+                'CE2_TH' : circexplorer2_tophat,
+                'CE2_SE' : circexplorer2_segemehl,
+                'CE2_ST' : circexplorer2_star,
+                'CIRI'   : ciri,
+                'FC'     : find_circ,
+                'TR'     : testrealign,
+                'DCC'    : dcc
+               }
+Return('results results_dict')

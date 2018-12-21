@@ -164,7 +164,7 @@ bks_reads = env.Command([os.path.join(out_dir,
 
 results.append(bks_reads)
 
-Return('results')
+Return('results circ_bed')
 
 Clean('.', out_dir)
 

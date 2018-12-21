@@ -252,10 +252,10 @@ if not env['BYPASS'] == 'circular':
                             src_dir = SRC_DIR, 
                             variant_dir = build_dir, duplicate = 0,
                             exports = '''env_sample_circrna_methods''')
-    results.append(circrnas)
+    results.append(circrnas[0]) ## the list result format
 
 results_dict = {'LINEAR_EXPRESSION' : expression[1],
-                'CIRCULAR_EXPRESSION' : circrnas,
+                'CIRCULAR_EXPRESSION' : circrnas[1], ## the dict results format
                 'LINEAR_ALIGNMENTS' : env['ALIGNMENTS'],
                 'LINEAR_ALIGNMENTS_IDX' : mappings['BAM_INDEX']}
 
