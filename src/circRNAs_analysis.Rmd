@@ -1384,6 +1384,7 @@ ggplot(circ.lin.cor, aes(x = ifelse(Correlation > 0, "Positive", "Negative"),
 ```{r}
 ggplot(circ.lin.cor.cond, aes(x = "", y = Correlation)) + 
     geom_boxplot() + 
+    geom_text(aes(label = "", y = 1.1)) +
     facet_grid(facets = . ~ condition, drop = T, scales = "free_x", space = "free_x") +
     scale_y_continuous(expand = c(0, 0), limits = c(-1.1, 1.1)) +
     scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
@@ -1399,6 +1400,7 @@ ggplot(circ.lin.cor.cond, aes(x = "", y = Correlation)) +
 ggplot(circ.lin.cor.cond, aes(x = ifelse(Correlation > 0, "Positive", "Negative"), 
                          y = abs(Correlation))) +
     geom_boxplot() + 
+    geom_text(aes(label = "", y = 1.1)) +
     facet_grid(facets = . ~ condition, drop = T, scales = "free_x", space = "free_x") +
     scale_y_continuous(expand = c(0, 0), limits = c(-0.1, 1.1)) +
     scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
