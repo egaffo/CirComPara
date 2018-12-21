@@ -46,43 +46,49 @@ CIRCexplorer2_tophat_nodes = []
 dcc_nodes = []
 
 for sample in samples:
-    testrealign_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+    testrealign_nodes.append(get_matching_nodes(runs, '.*' + os.path.sep +\
+                                             sample + os.path.sep +  '.*' +\
                                              os.path.sep + 'splicesites\.bed'))
-    find_circ_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
-                                              os.path.sep + 'circ_candidates\.bed'))
-    ciri_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
-                                         os.path.sep + '.*_ciri\.out'))
-    CIRCexplorer2_star_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+    find_circ_nodes.append(get_matching_nodes(runs, '.*' + os.path.sep +\
+                                             sample + os.path.sep + '.*' +\
+                                             os.path.sep + 'circ_candidates\.bed'))
+    ciri_nodes.append(get_matching_nodes(runs, '.*' + os.path.sep +\
+                                             sample + os.path.sep + '.*' +\
+                                             os.path.sep + '.*_ciri\.out'))
+    CIRCexplorer2_star_nodes.append(get_matching_nodes(runs, '.*' +\
+                                             os.path.sep + sample + os.path.sep + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_star', 
                                                            'annotate', 
                                                            'circularRNA_known.txt')))
-    CIRCexplorer2_bwa_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+    CIRCexplorer2_bwa_nodes.append(get_matching_nodes(runs, '.*' +\
+                                             os.path.sep + sample + os.path.sep + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_bwa', 
                                                            'annotate', 
                                                            'circularRNA_known.txt')))
-    CIRCexplorer2_segemehl_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+    CIRCexplorer2_segemehl_nodes.append(get_matching_nodes(runs, '.*' +\
+                                             os.path.sep + sample + os.path.sep + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_segemehl', 
                                                            'annotate', 
                                                            'circularRNA_known.txt')))
-    CIRCexplorer2_tophat_pe_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+    CIRCexplorer2_tophat_pe_nodes.append(get_matching_nodes(runs, '.*' +\
+                                             os.path.sep + sample + os.path.sep + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_tophat_pe', 
                                                            'annotate', 
                                                            'circularRNA_known.txt')))
-    CIRCexplorer2_tophat_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
+    CIRCexplorer2_tophat_nodes.append(get_matching_nodes(runs, '.*' +\
+                                             os.path.sep + sample + os.path.sep + '.*' +\
                                              os.path.sep +
                                              os.path.join('CIRCexplorer2_tophat', 
                                                            'annotate', 
                                                            'circularRNA_known.txt')))
-    dcc_nodes.append(get_matching_nodes(runs, '.*' + sample + '.*' +\
-                                        os.path.sep +
-                                        'CircRNACount'))
+    dcc_nodes.append(get_matching_nodes(runs, '.*' + os.path.sep +\
+                                             sample + os.path.sep + '.*' +\
+                                             os.path.sep + 'CircRNACount'))
 
-
-## collect testrealign
 CIRCexplorer_compared = None
 ciri_compared = None
 find_circ_compared = None
@@ -94,6 +100,7 @@ CIRCexplorer2_tophat_pe_compared = None
 CIRCexplorer2_tophat_compared = None
 dcc_compared = None
 
+## collect testrealign
 if not ''.join([str(f) for f in Flatten(testrealign_nodes)]) == '':
 
     testrealign_files = ','.join([f.path for f in Flatten(testrealign_nodes)])
@@ -107,9 +114,9 @@ if not ''.join([str(f) for f in Flatten(testrealign_nodes)]) == '':
                                     testrealign_comapared_cmd)
     Depends(testrealign_compared, testrealign_nodes)
 
+## collect find_circ
 if not ''.join([str(f) for f in Flatten(find_circ_nodes)]) == '':
 
-    ## collect find_circ
     find_circ_files = ','.join([f.path for f in Flatten(find_circ_nodes)])
     find_circ_labels = ','.join(samples)
     find_circ_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
@@ -121,9 +128,9 @@ if not ''.join([str(f) for f in Flatten(find_circ_nodes)]) == '':
                                     find_circ_comapared_cmd)
     Depends(find_circ_compared, find_circ_nodes)
     
+## collect CIRI
 if not ''.join([str(f) for f in Flatten(ciri_nodes)]) == '':
 
-    ## collect CIRI
     ciri_files = ','.join([f.path for f in Flatten(ciri_nodes)])
     ciri_labels = ','.join(samples)
     ciri_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
@@ -135,8 +142,8 @@ if not ''.join([str(f) for f in Flatten(ciri_nodes)]) == '':
                                     ciri_comapared_cmd)
     Depends(ciri_compared, ciri_nodes)
     
+## collect CIRCexplorer2_star
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_star_nodes)]) == '':
-    ## collect CIRCexplorer2_star
     CIRCexplorer2_star_files = ','.join([f.path for f in Flatten(CIRCexplorer2_star_nodes)])
     CIRCexplorer2_star_labels = ','.join(samples)
     CIRCexplorer2_star_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
@@ -149,8 +156,8 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_star_nodes)]) == '':
                                     CIRCexplorer2_star_comapared_cmd)
     Depends(CIRCexplorer2_star_compared, CIRCexplorer2_star_nodes)
 
+## collect CIRCexplorer2_bwa
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_bwa_nodes)]) == '':
-    ## collect CIRCexplorer2_bwa
     CIRCexplorer2_bwa_files = ','.join([f.path for f in Flatten(CIRCexplorer2_bwa_nodes)])
     CIRCexplorer2_bwa_labels = ','.join(samples)
     CIRCexplorer2_bwa_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
@@ -163,8 +170,8 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_bwa_nodes)]) == '':
                                     CIRCexplorer2_bwa_comapared_cmd)
     Depends(CIRCexplorer2_bwa_compared, CIRCexplorer2_bwa_nodes)
 
+## collect CIRCexplorer2_segemehl
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_segemehl_nodes)]) == '':
-    ## collect CIRCexplorer2_segemehl
     CIRCexplorer2_segemehl_files = ','.join([f.path for f in Flatten(CIRCexplorer2_segemehl_nodes)])
     CIRCexplorer2_segemehl_labels = ','.join(samples)
     CIRCexplorer2_segemehl_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
@@ -177,11 +184,11 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_segemehl_nodes)]) == '':
                                     CIRCexplorer2_segemehl_comapared_cmd)
     Depends(CIRCexplorer2_segemehl_compared, CIRCexplorer2_segemehl_nodes)
 
+## collect CIRCexplorer2_tophat
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_pe_nodes)]) == '':
     CIRCexplorer2_tophat_nodes = CIRCexplorer2_tophat_pe_nodes
 
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_nodes)]) == '':
-    ## collect CIRCexplorer2_tophat
     CIRCexplorer2_tophat_files = ','.join([f.path for f in Flatten(CIRCexplorer2_tophat_nodes)])    
     CIRCexplorer2_tophat_labels = ','.join(samples)
     CIRCexplorer2_tophat_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
@@ -193,7 +200,8 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_nodes)]) == '':
                                     CIRCexplorer2_tophat_nodes, 
                                     CIRCexplorer2_tophat_comapared_cmd)
     Depends(CIRCexplorer2_tophat_compared, CIRCexplorer2_tophat_nodes)
-
+ 
+## collect DCC
 if not ''.join([str(f) for f in Flatten(dcc_nodes)]) == '':
 
     dcc_files = ','.join([f.path for f in Flatten(dcc_nodes)])
@@ -206,8 +214,6 @@ if not ''.join([str(f) for f in Flatten(dcc_nodes)]) == '':
                                     dcc_nodes, 
                                     dcc_comapared_cmd)
     Depends(dcc_compared, dcc_nodes)
-
-
 
 ## compose a dict with the results
 sample_results = {'CIRI': ciri_compared,
