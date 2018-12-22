@@ -130,20 +130,43 @@ if 'ccp' in env['LIN_COUNTER']:
     ## The -s in bedtools flank is not necessary since the flanking 
     ## regions are the same size in this case. Yet, it maybe useful 
     ## for chromosome terminal postions....   
-    btmcov_sources = [[env['CIRCRNAS'], genome_file], 
-                      [env['RUNS_DICT'][s]['LINEAR_ALIGNMENTS'] for 
-                                 s in sorted(env['RUNS_DICT'].keys())]]
-    btmcov_target = 'bks_linear_counts.tab'
-    btmcov_cmd = '''bedtools flank -i ${SOURCES[0]} -g ${SOURCES[1]} -s -b 1 | '''\
-                 '''bedtools multicov ''' + btmcovstrand + \
-                 ''' -bed stdin -bams ${SOURCES[2:]} > ${TARGET} '''\
-                 '''&& sed -i '1ichr\\tsource\\tfeature\\tstart\\tend'''\
-                 '''\\tscore\\tstrand\\tframe\\tname\\t''' +\
-                 '\\t'.join([s for s in sorted(env['RUNS_DICT'].keys())]) +\
-                 '''' $TARGET'''
-    btmcov = env.Command(btmcov_target, 
-                         btmcov_sources, 
-                         btmcov_cmd)
-    linexp = btmcov
-    
+    #btmcov_sources = [[env['CIRCRNAS'], genome_file], 
+    #                  [env['RUNS_DICT'][s]['LINEAR_ALIGNMENTS'] for 
+    #                             s in sorted(env['RUNS_DICT'].keys())]]
+    #btmcov_target = 'bks_linear_counts.tab'
+    #btmcov_cmd = '''bedtools flank -i ${SOURCES[0]} -g ${SOURCES[1]} -s -b 1 | '''\
+    #             '''bedtools multicov ''' + btmcovstrand + \
+    #             ''' -bed stdin -bams ${SOURCES[2:]} > ${TARGET} '''\
+    #             '''&& sed -i '1ichr\\tsource\\tfeature\\tstart\\tend'''\
+    #             '''\\tscore\\tstrand\\tframe\\tname\\t''' +\
+    #             '\\t'.join([s for s in sorted(env['RUNS_DICT'].keys())]) +\
+    #             '''' $TARGET'''
+    #btmcov = env.Command(btmcov_target, 
+    #                     btmcov_sources, 
+    #                     btmcov_cmd)
+    #linexp = btmcov
+
+    sorted_sn_cmd = '''bedtools flank -i ${SOURCES[0]} -g ${SOURCES[1]} -s -b 1 | '''\
+                    '''bedtools sort -faidx ${SOURCES[1]} -i stdin > $TARGET'''
+                    #'''sort -k1,1 -k4,4n > $TARGET'''
+    sorted_sn = env.Command('sorted_sn_circ.gtf',
+                            [env['CIRCRNAS'], genome_file],
+                            sorted_sn_cmd)
+    res = {}
+    for s in sorted(env['RUNS_DICT'].keys()):
+        ## TODO: preliminary select read aligned to circRNAs
+        # bedtools intesect env['CIRCRNAS'] f1.bam | bedtools coverage
+        btmcov_sources = [sorted_sn, genome_file,
+                          env['RUNS_DICT'][s]['LINEAR_ALIGNMENTS']]
+        btmcov_target = s + '_bks_linear_counts.tab'
+        btmcov_cmd = '''bedtools coverage -counts -sorted ''' + btmcovstrand + \
+                     ''' -g ${SOURCES[1]} -a ${SOURCES[0]} -b ${SOURCES[2]} > ${TARGET} '''
+        res[s] = env.Command(btmcov_target, 
+                             btmcov_sources, 
+                             btmcov_cmd)
+
+    linexp = env.Command('bks_linear_counts.tab',
+                         [res.values()], 
+                         "grep -H '.' ${SOURCES} > $TARGET")
+   
 Return('linexp')

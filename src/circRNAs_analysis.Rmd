@@ -1061,12 +1061,25 @@ circ.scales <-
 ```{r}
 bks_linear_counts.tab.gz <- fread(bks_linear_counts.tab.gz.file)
 
-if("name" %in% colnames(bks_linear_counts.tab.gz)){
-    bks_linear_counts.tab.gz <- 
-        bks_linear_counts.tab.gz[, c("name", sort(meta$sample_id)), 
-                                 with = F][, lapply(.SD, sum), 
-                                           by = .(circ_id = sub('gene_id "([^"]+)".*', 
-                                                                "\\1", name))]
+# if("name" %in% colnames(bks_linear_counts.tab.gz)){
+#     bks_linear_counts.tab.gz <- 
+#         bks_linear_counts.tab.gz[, c("name", sort(meta$sample_id)), 
+#                                  with = F][, lapply(.SD, sum), 
+#                                            by = .(circ_id = sub('gene_id "([^"]+)".*', 
+#                                                                 "\\1", name))]
+if("V1" %in% colnames(bks_linear_counts.tab.gz)){
+    bks_linear_counts.tab.gz[, c("sample_id", "chr") := (tstrsplit(V1, ":"))]
+    bks_linear_counts.tab.gz[, `:=`(sample_id = sub("_bks_linear_counts.tab$", "",
+                                             basename(sample_id)),
+                                    circ_id = sub('.*"([^"]+)".*', "\\1", V9))]
+    bks_linear_counts.tab.gz[, V1 := NULL]
+    bks_linear_counts.tab.gz.m <- 
+        bks_linear_counts.tab.gz[, .(lin.reads = sum(V10)), 
+                                 by = .(sample_id, circ_id)]
+    bks_linear_counts.tab.gz <- dcast(bks_linear_counts.tab.gz, fill = 0,
+                                   formula = circ_id ~ sample_id, value.var = "V10",
+                                   fun.aggregate = sum, )
+        
 }else{
     ## DCC uses BED coordinates, we need to convert
     bks_linear_counts.tab.gz[, circ_id := paste0(chr, ":", start+1, "-", end)]
@@ -1079,6 +1092,10 @@ if("name" %in% colnames(bks_linear_counts.tab.gz)){
                                      c("circ_id", sort(meta$sample_id)), 
                                      with = F]
     }
+    bks_linear_counts.tab.gz.m <- melt(bks_linear_counts.tab.gz, 
+                                   id.vars = "circ_id", 
+                                   variable.name = "sample_id", 
+                                   value.name = "lin.reads")
 }
 ```
 
@@ -1094,11 +1111,6 @@ Linear expression of circRNAs have been saved in file <a href="`r circrna.lin.xp
 
 
 ```{r}
-bks_linear_counts.tab.gz.m <- melt(bks_linear_counts.tab.gz, 
-                                   id.vars = "circ_id", 
-                                   variable.name = "sample_id", 
-                                   value.name = "lin.reads")
-
 scaled.circ <- 
     merge(circrna.rpms[circrnas.morethan2methods],
       circ.scales, 
@@ -1123,7 +1135,7 @@ circ.lin.xpr[, CLR := (2*circ.reads)/lin.reads]
 
 CLR = circular to linear expression ratio  
 
-```{r}
+```{r, dev='jpeg'}
 ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
                                           y = lin.reads*10^6/seq_depth)) +
     geom_point(aes(color = CLR)) +
@@ -1137,7 +1149,7 @@ ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth,
     theme(plot.title = element_text(hjust = .5))
 ```
 
-```{r}
+```{r, dev='jpeg'}
 ggplot(data = merge(circ.lin.xpr, intgroup.dt[, .(sample_id, condition)], 
                     by = "sample_id"), 
        mapping = aes(x = circ.reads*10^6/seq_depth, 
@@ -1155,7 +1167,7 @@ ggplot(data = merge(circ.lin.xpr, intgroup.dt[, .(sample_id, condition)],
 ```
 
 
-```{r}
+```{r, dev='jpeg'}
 ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
                                           y = lin.reads*10^6/seq_depth)) +
     geom_point(aes(color = CLR)) +
@@ -1172,7 +1184,7 @@ ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth,
 
 ## CircRNA expression  to CLR
 
-```{r}
+```{r, dev='jpeg'}
 ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
                                           y = CLR)) +
     geom_point(aes(color = ifelse(CLR > 1, ">1", ifelse(CLR < 0.5, "<0.5", "0.5<CLR<1")))) +
@@ -1185,7 +1197,7 @@ ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth,
     theme(plot.title = element_text(hjust = .5))
 ```
 
-```{r}
+```{r, dev='jpeg'}
 ggplot(data = merge(circ.lin.xpr, intgroup.dt[, .(sample_id, condition)], 
                     by = "sample_id"), 
        mapping = aes(x = circ.reads*10^6/seq_depth, 
@@ -1201,7 +1213,7 @@ ggplot(data = merge(circ.lin.xpr, intgroup.dt[, .(sample_id, condition)],
     theme(plot.title = element_text(hjust = .5))
 ```
 
-```{r}
+```{r, dev='jpeg'}
 ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
                                           y = CLR)) +
     geom_point(aes(color = ifelse(CLR > 1, ">1", ifelse(CLR < 0.5, "<0.5", "0.5<CLR<1")))) +
