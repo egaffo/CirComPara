@@ -134,8 +134,12 @@ if not env['GENEPRED'] == '':
     CIRCexplorer2_annotate_sources = [File(env['GENEPRED']),
                                       File(env['GENOME_FASTA']),
                                       CIRCexplorer2[0]]
-    CIRCexplorer2_annotate_cmd = 'CIRCexplorer2 annotate $CE2_PARAMS -r ${SOURCES[0]} '\
-                                '-g ${SOURCES[1]} -b ${SOURCES[2]} -o $TARGET'
+    CIRCexplorer2_annotate_cmd = ' && '.join(['cd ${TARGETS[0].dir}', 
+                                 'CIRCexplorer2 annotate $CE2_PARAMS -r '\
+                                 '${SOURCES[0].abspath} -g '\
+                                 '${SOURCES[1].abspath} -b '\
+                                 '${SOURCES[2].abspath} -o $TARGET.file',
+                                 'cd ' + Dir('#').abspath])
     CIRCexplorer2_annotate = env.Command(CIRCexplorer2_annotate_targets,
                                          CIRCexplorer2_annotate_sources,
                                          CIRCexplorer2_annotate_cmd)
