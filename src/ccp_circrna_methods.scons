@@ -248,7 +248,10 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         dcc_env = env.Clone()
         dcc_env['FUSION_FILE'] = Chimeric_out_junction
         dcc_env['ALIGNMENTS'] = star[0][0]
-        dcc_env.AppendUnique(EXTRA_PARAMS = env['DCC_EXTRA_PARAMS'])
+        #dcc_env.AppendUnique(EXTRA_PARAMS = env['DCC_EXTRA_PARAMS'])
+        ## AppendUnique will fail to correctly add multi-value options
+        ## such as -Nr 1 1, since it will not repeat identical values
+        dcc_env.Append(EXTRA_PARAMS = env['DCC_EXTRA_PARAMS'])
 
         dcc = env.SConscript(os.path.join(build_dir, 
         						'ccp_dcc.py'),
