@@ -493,20 +493,30 @@ circ_met.to.plot <- circrnas.gtf[V6 >= min_reads,
                                                                                     collapse = "|"), 
                                                                  n_methods = length(unique(V2))), by = gene_id]
 circ_met.plot.height <- max(c(4, (circ_met.to.plot[, .N, by = c_methods][, .N]*0.5)/2.54))
+
+circ_met.to.plot <- 
+    circ_met.to.plot[, .N, 
+                     by = .(c_methods, 
+                            n_methods)][order(-N)]
+
+circ_met.to.plot$c_methods <- 
+    factor(circ_met.to.plot$c_methods, 
+           levels = circ_met.to.plot$c_methods, 
+           ordered = T)
 ```
 
 ```{r, fig.height=`circ_met.plot.height`}
-ggplot(circ_met.to.plot, aes(x = c_methods)) + 
-    geom_bar(stat = "count", position = "stack", color = "black", 
+ggplot(circ_met.to.plot, aes(x = c_methods, y = N)) + 
+    geom_bar(stat = "identity", color = "black", 
              aes(fill = factor(n_methods))) + 
     scale_fill_brewer(direction = 1) + 
     guides(fill=FALSE) + 
-    geom_text(stat = 'count', aes(label = ..count..), hjust = -.05,
+    geom_text(stat = 'identity', aes(label = N), hjust = -.05,
               size = default.font.size*(5/14)) + 
     scale_y_continuous(expand = c(0, 0)) + 
     coord_flip() + 
     facet_grid(facets = n_methods ~ ., scales = "free_y", space = "free") +
-    geom_text(stat = 'count', aes(label = "", y = ..count.. * 1.1)) + 
+    geom_text(stat = 'identity', aes(label = "", y = N * 1.1)) + 
     xlab("Method combinations") + ylab("CircRNAs") +
     ggtitle(paste("CircRNAs commonly\ndetected by the methods")) +
     theme_bw() + 
