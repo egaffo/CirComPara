@@ -415,19 +415,29 @@ kable(rbind(circ.per.method[, .N, by = V2][, Method := V2][order(-N), .(Method, 
 
 ############# Barplot number of circRNAs per methods (sum over all samples) ###########
 default.font.size <- 12
+
+lev.order <- circ.per.method[, .N, by = V2][order(N), as.character(V2)]
+circ.per.method$V2 <- factor(circ.per.method$V2, 
+                                 levels = lev.order, ordered = T)
+
 ## select only circRNAs with >= 2 reads (not normalized values)
-circByMethod.barplot <- ggplot(data = circ.per.method, mapping = aes(x = V2, fill = V2)) + 
-  geom_bar(width = .7, colour="black") + 
-  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=default.font.size*(5/14)) + 
-  theme_bw() + xlab("CircRNA detection method") + ylab("CircRNA number") +
-  ggtitle(bquote("CircRNAs detected with " >= .(min_reads) ~ "reads by each method"))
+circByMethod.barplot <- 
+    ggplot(data = circ.per.method, mapping = aes(x = V2, fill = V2)) + 
+    geom_bar(width = .7, colour="black") + 
+    geom_text(stat='count', aes(label=..count..), vjust=-0.3,
+              size=default.font.size*(5/14)) + 
+    theme_bw() + xlab("CircRNA detection method") + 
+    ylab("CircRNA number") +
+    ggtitle(bquote("CircRNAs detected with " >= .(min_reads) ~ "reads by each method"))
 
 ## compute limits to remove space from x-axis. Add a 10% increase to the top limit
 circByMethod.barplot.limits <- c(0, max(circ.per.method[, .N, by = V2][, N])*1.1)
 circByMethod.barplot + guides(fill=FALSE) + 
-  theme(text = element_text(size=default.font.size), plot.title = element_text(hjust = 0.5)) + 
-  scale_y_continuous(expand = c(0, 0), limits = circByMethod.barplot.limits) + 
-  scale_fill_manual(values = rainbow(circ.per.method[, .N, by = V2][, .N])) +
+    theme(text = element_text(size=default.font.size), 
+          plot.title = element_text(hjust = 0.5)) + 
+    scale_y_continuous(expand = c(0, 0), limits = circByMethod.barplot.limits) + 
+    # scale_fill_manual(values = rainbow(circ.per.method[, .N, by = V2][, .N])) +
+    scale_fill_brewer(palette = "Spectral") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
@@ -464,6 +474,26 @@ sharedByMethod.barplot + guides(fill=FALSE) +
 
 ```
 
+```{r, fig.width=4}
+ggplot(data = circ.per.method[, .(shared_by = .N), 
+                              by = gene_id][, .N, by = shared_by], 
+       mapping = aes(x = "", y = N,
+                     fill = factor(shared_by))) + 
+    geom_bar(stat = "identity", width = .7, 
+             color = "black", position = position_stack(reverse = T)) + 
+    geom_text(stat='identity', aes(label=percent(N/sum(N))),
+              position = position_stack(vjust = .5, reverse = T)) +
+    scale_fill_brewer("# methods", direction = 1, palette = "Greens") +
+    scale_y_continuous(expand = c(0, 0)) +
+    scale_x_discrete(expand = c(0, 0)) +
+    ylab("CircRNAs") +
+    xlab(NULL) +
+    # coord_polar(theta = "y") +
+    theme_bw() +
+    theme(axis.ticks.x = element_blank())
+```
+
+
 ```{r}
 ## save methods detecting each circRNA
 cmet_per_circ.file <- file.path(results.dir, "cmet_per_circ.csv")
@@ -477,6 +507,28 @@ write.csv(circ_met[order(sample_id)], cmet_per_circ.file, row.names = F)
 ```
 
 Methods detecting each circRNAs are listed in  <a href="`r basename(cmet_per_circ.file)`">`r basename(cmet_per_circ.file)`</a>.
+
+```{r}
+## cumulative number of circrnas by number of methods
+cum.met <- 
+    circ.per.method[, .(n_methods = .N), 
+                    by = gene_id][, .N, 
+                                  by = n_methods][order(-n_methods)][
+                                      , .(n_methods, cum.sum = cumsum(N))]
+
+ggplot(cum.met, aes(x = factor(paste0("\u2265", n_methods)), 
+                    y = cum.sum, fill = factor(paste0("\u2265", n_methods)))) + 
+    geom_col(color = "black") +
+    geom_text(aes(label = cum.sum), vjust = -.5) +
+    geom_text(label = "", aes(y = cum.sum*1.1)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    scale_fill_brewer(guide = F, palette = "Reds") +
+    xlab("Cumulative number of methods") +
+    ylab("CircRNAs") +
+    theme_bw()
+    
+```
+
 
 ```{r}
 reduce.cmeth.names <- function(x){
