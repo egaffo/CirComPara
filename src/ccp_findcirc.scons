@@ -59,6 +59,12 @@ out_dir = 'find_circ_out'
 
 env.SetDefault(FINDCIRC_EXTRA_PARAMS = '')
 
+best_qual_val = 40
+if '--best-qual' in env['FINDCIRC_EXTRA_PARAMS']:
+    best_qual_idx = env['FINDCIRC_EXTRA_PARAMS'].index('--best-qual') + 1
+    best_qual_val = env['FINDCIRC_EXTRA_PARAMS'].pop(best_qual_idx)
+    env['FINDCIRC_EXTRA_PARAMS'].remove('--best-qual')
+
 cat_cmd = 'cat'
 if File(env['READS'][0]).path.endswith('.gz'):
     cat_cmd = 'zcat'
@@ -81,11 +87,13 @@ find_circ = env.Command([os.path.join(out_dir, 'sites.bed'),
 # and length are not performed
 # NB: the commands within curly braces are to prevent grep to return error status
 # when no match and/or no input
-filter_circ_cmd = "grep CIRCULAR ${SOURCES[0]} | " +\
-                  " { grep UNAMBIGUOUS_BP || true; } | "+\
-                  " { grep ANCHOR_UNIQUE || true; } > ${TARGET}"
+#filter_circ_cmd = "grep CIRCULAR ${SOURCES[0]} | " +\
+#                  " { grep UNAMBIGUOUS_BP || true; } | "+\
+#                  " { grep ANCHOR_UNIQUE || true; } > ${TARGET}"
+filter_circ_cmd = 'filter_findcirc_res.R -i $SOURCE -o $TARGET -q ' +\
+                  str(best_qual_val)
 filter_circ = env.Command([os.path.join(out_dir, 'circ_candidates.bed')], 
-                          [find_circ[0]], 
+                          find_circ[0], 
                           filter_circ_cmd)
 
 Clean('.', out_dir)
