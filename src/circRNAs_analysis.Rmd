@@ -180,59 +180,105 @@ simplify_circrna_labels <- function(label){
 }
 ```
 
-```{r sample_summary, echo=FALSE, include=FALSE}
-#"TODO"
-## meta <- fread(meta.file)
-## read.preprocessing
+```{r set custom color shades}
+## set custom color shades
+## function to compute color hues and colors to give to each sample
+get.color.hues <- function(meta){
+    intgroup.dt <- meta[, .(.N), by = .(sample_id, 
+                                        condition)][order(sample_id), 
+                                                    .(sample_id), by = condition]
+    samples.per.condition <- data.frame(intgroup.dt[, .N, by = .(condition)], 
+                                        row.names = "condition")
+    n.conditions <- nrow(samples.per.condition)
+    hues <- brewer_pal(palette = "Set2")(n.conditions)
+    
+    if(nrow(intgroup.dt) == 1){
+        intgroup.dt[, `:=`(color = hues[1],  hue = hues[1])]
+    }else{
+        for(i in 1:n.conditions){
+            n.hues <- samples.per.condition[i, "N"] + 2
+            col.hues <- colorRampPalette(colors = c(hues[i], 
+                                                    "white"))(n.hues)[1:(n.hues-2)]
+            
+            intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
+                                                                              hue = hues[i])]
+        }
+    }
+    intgroup.dt[]
+}
 ```
 
-<!-- 
-TODO: Considered samples: list (+ altri dati?)
-(insert summary per sample? E.g. total reads or other statistics that could describe sample differences?)
--->
+```{r, echo=FALSE}
+if(meta_file != ""){
+    meta <- unique(fread(meta_file)[, .(sample_id = sample, condition)])
+    intgroup.dt <- get.color.hues(meta)
+}
+```
 
 ```{r load_circrnas, echo=FALSE, include=FALSE}
 ## read circRNA results: filter low expressed (less than min_reads reads) circRNAs
-colClasses <- c("factor", "factor", "character", "integer", "integer", "integer", "factor", "character", "character")
-circrnas.gtf <- fread(circrnas.gtf.file, data.table = T, colClasses = colClasses)[V6 >= min_reads]
+colClasses <- c("factor", "factor", "character", "integer", 
+                "integer", "integer", "factor", "character", "character")
+circrnas.gtf <- fread(circrnas.gtf.file, data.table = T, 
+                      colClasses = colClasses)
 V9pattern <- '.*gene_id "([^"]*)".*transcript_id "([^"]*)".*'
 V9newCols <- c("gene_id", "transcript_id")
 exists_circrnas <- FALSE
-if(nrow(circrnas.gtf) > 0){
+if(nrow(circrnas.gtf[V6 >= min_reads]) > 0){
   exists_circrnas <- TRUE
   circrnas.gtf[, `:=` (sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9))
-               ][, (V9newCols) := tstrsplit(sub(V9pattern, "\\1@\\2", V9), "@", fixed=TRUE)
+               ][, (V9newCols) := tstrsplit(sub(V9pattern, 
+                                                "\\1@\\2", V9), "@", fixed=TRUE)
                  ][, V9 := NULL]
-  
-  # if(fix_testrealign){
-  #   setkey(circrnas.gtf, V2)
-  #   circrnas.gtf["testrealign", V4 := V4-1]
-  #   circrnas.gtf["testrealign", `:=`(gene_id = paste0(V1, ":", V4, "-", V5, ":", V7), 
-  #                                 transcript_id = paste0(V1, ":", V4, "-", V5, ":", V7, ".", sample_id))]
-  # }
-  
-  # ## read circRNA-method per sample normalization factors
-  # norm.factors.file <- "/home/enrico/Scrivania/QKI_anhal/analysis/circRNA_collection/circrna_maps_counts.txt"
-  # norm.factors <- as.data.table(scan(file = norm.factors.file, what = list("character", "integer"), sep = "\n"))
-  # norm.factors[, `:=` (sample_id = sub('.*samples/([^/]*).*', "\\1", V1),
-  #                      method = tolower(gsub("_out|_", "", sub('.*circRNAs/([^/]*).*', "\\1", V1))),
-  #                      norm_factor = as.integer(V2))][, `:=` (V1 = NULL, V2 = NULL)]
-  # setkey(x = norm.factors, sample_id, method)
-  # ## apply normalization factors: define normalized expression as RPM (Reads Per Million mapped reads)
-  # setkey(x = circrnas.gtf, sample_id, V2)
-  # circrnas_expression <- norm.factors[circrnas.gtf][, RPM := (V6*10^6)/norm_factor]
-  
+  full.circrnas.gtf <- copy(circrnas.gtf)
+  circrnas.gtf <- circrnas.gtf[V6 >= min_reads]
   ## normalize circrna reads by the amount of backsplice Reads in method (Per Million reads - RPM)
-  circrnas.gtf[, RPM := (V6/sum(V6))*10^6, by = .(sample_id, V2)]
+  # circrnas.gtf[, RPM := (V6/sum(V6))*10^6, by = .(sample_id, V2)]
+  ## use DESeq normalization to compute RPMs
+  suppressPackageStartupMessages(library(DESeq2))
+  full.circrnas.gtf.mat.dt <- 
+      dcast(full.circrnas.gtf, formula = gene_id ~ sample_id + V2, 
+            value.var = "V6", fill = 0, sep = ".._..", fun.aggregate = sum)
+  full.circrnas.gtf.mat <- as.matrix(full.circrnas.gtf.mat.dt, 
+                                     rownames = "gene_id")
+  
+  full.meta <- 
+      data.frame(unique(full.circrnas.gtf[, .(sample_id, 
+                                              method = V2, 
+                                              id = paste(sample_id, V2, 
+                                                         sep = ".._.."))]),
+                 row.names = "id")
+  dds <- 
+      DESeqDataSetFromMatrix(full.circrnas.gtf.mat[, rownames(full.meta)], 
+                             colData = full.meta,
+                             design = ~1)
+  dds <- estimateSizeFactors(dds, type = "poscount")
+  
+  norm.counts <- counts(dds, normalized = T)
+  norm.counts.m <- as.data.table(melt(norm.counts, 
+                                      varnames = c("gene_id", "id"),
+                                      value.name = "RPM"))
+  norm.counts.m <- merge(norm.counts.m, 
+                         data.table(full.meta, keep.rownames = "id"), 
+                         by = "id")
+  
+  circrnas.gtf <- 
+      merge(circrnas.gtf, 
+            norm.counts.m[, .(gene_id, RPM, sample_id, V2 = method)], 
+            by = c("gene_id", "V2", "sample_id"), 
+            all.x = T, all.y = F)
+  
   ## compute median of normalized value
-  circrna.rpms <- data.table::dcast(data = circrnas.gtf, 
-                                    formula = sample_id + gene_id + V1 + V4 + V5 + V7 ~ V2, 
-                                    value.var = "RPM", fill = 0)
+  circrna.rpms <- 
+      data.table::dcast(data = circrnas.gtf, 
+                        formula = sample_id + gene_id + V1 + V4 + V5 + V7 ~ V2, 
+                        value.var = "RPM", fill = 0)
   ## account also 0s for the computation of the meadian RPM
   #circrna.rpms$medRPM <- apply(X = circrna.rpms[, 7:ncol(circrna.rpms), with = F], MARGIN = 1, FUN = median)
   ## remove 0s from computation of the meadian RPM
   circrna.rpms <- merge(circrna.rpms, 
-                        circrnas.gtf[, .(medRPM = median(RPM)), by = .(sample_id, gene_id)], 
+                        circrnas.gtf[, .(medRPM = median(RPM)), 
+                                     by = .(sample_id, gene_id)], 
                         by = c("sample_id", "gene_id"))
 }else{
   circrnas.gtf[, `:=`(RPM="", gene_id="")]
@@ -603,46 +649,9 @@ The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per
 \*  The order of the labels correnspond to the order of the overlapping genes. Labels are not repeated thogh, and the number of different label may be lower than the number of different genes.  
 \*\* CircRNA expression is reported in reads per million mapped (RPM) computed as the median RPM of the circRNA detection methods used.  
 
-```{r set custom color shades}
-## set custom color shades
-## function to compute color hues and colors to give to each sample
-get.color.hues <- function(meta){
-    intgroup.dt <- meta[, .(.N), by = .(sample_id, 
-                                        condition)][order(sample_id), 
-                                                    .(sample_id), by = condition]
-    samples.per.condition <- data.frame(intgroup.dt[, .N, by = .(condition)], 
-                                        row.names = "condition")
-    n.conditions <- nrow(samples.per.condition)
-    hues <- brewer_pal(palette = "Set2")(n.conditions)
-    
-    if(nrow(intgroup.dt) == 1){
-        intgroup.dt[, `:=`(color = hues[1],  hue = hues[1])]
-    }else{
-        for(i in 1:n.conditions){
-            n.hues <- samples.per.condition[i, "N"] + 2
-            col.hues <- colorRampPalette(colors = c(hues[i], 
-                                                    "white"))(n.hues)[1:(n.hues-2)]
-            
-            intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
-                                                                              hue = hues[i])]
-        }
-    }
-    intgroup.dt[]
-}
-```
-
-
-```{r, echo=FALSE}
-if(meta_file != ""){
-    meta <- unique(fread(meta_file)[, .(sample_id = sample, condition)])
-    intgroup.dt <- get.color.hues(meta)
-}
-```
-
 ## CircRNAs detected by sample
 
 ```{r show_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE}
-
 circ.2reads.at.least <- circrnas.gtf[RPM > 0 , .N, 
                                      by = .(sample_id, gene_id)][, .(above_min_reads = .N), 
                                                                  by = sample_id]
