@@ -1118,19 +1118,20 @@ if(meta_file != ""){
 
 ```{r}
 ## get normalization scaling factor (i.e. clean reads)
-sample.depth <-
-    fread(read_stats_collect.file)[, .(sample_id = Sample,
-                                       seq_depth = as.integer(`Clean reads`))]
-
-circ.scales <- 
-    circrnas.gtf[, sum(V6), 
-                 by = .(sample_id, 
-                        V2)][, .(circ.RPM.scale = median(V1)), 
-                             by = sample_id]
+# sample.depth <-
+#     fread(read_stats_collect.file)[, .(sample_id = Sample,
+#                                        seq_depth = as.integer(`Clean reads`))]
+# 
+# circ.scales <- 
+#     circrnas.gtf[, sum(V6), 
+#                  by = .(sample_id, 
+#                         V2)][, .(circ.RPM.scale = median(V1)), 
+#                              by = sample_id]
 ```
 
 ```{r}
-bks_linear_counts.tab.gz <- fread(bks_linear_counts.tab.gz.file)
+bks_linear_counts.tab.gz <- fread(bks_linear_counts.tab.gz.file, 
+                                  showProgress = F)
 
 # if("name" %in% colnames(bks_linear_counts.tab.gz)){
 #     bks_linear_counts.tab.gz <- 
@@ -1148,8 +1149,9 @@ if("V1" %in% colnames(bks_linear_counts.tab.gz)){
         bks_linear_counts.tab.gz[, .(lin.reads = sum(V10)), 
                                  by = .(sample_id, circ_id)]
     bks_linear_counts.tab.gz <- dcast(bks_linear_counts.tab.gz, fill = 0,
-                                   formula = circ_id ~ sample_id, value.var = "V10",
-                                   fun.aggregate = sum, )
+                                   formula = circ_id ~ sample_id, 
+                                   value.var = "V10",
+                                   fun.aggregate = sum)
         
 }else{
     ## DCC uses BED coordinates, we need to convert
@@ -1182,24 +1184,44 @@ Linear expression of circRNAs have been saved in file <a href="`r circrna.lin.xp
 
 
 ```{r}
-scaled.circ <- 
-    merge(circrna.rpms[circrnas.morethan2methods],
-      circ.scales, 
-      by = "sample_id")[, .(circ_id = gene_id, 
-                            circ.reads = medRPM*circ.RPM.scale/10^6, 
-                            sample_id)]
+# scaled.circ <- 
+#     merge(circrna.rpms[circrnas.morethan2methods],
+#       circ.scales, 
+#       by = "sample_id")[, .(circ_id = gene_id, 
+#                             circ.reads = medRPM*circ.RPM.scale/10^6, 
+#                             sample_id)]
+# 
+# circ.lin.xpr <- 
+#     merge(scaled.circ, 
+#           bks_linear_counts.tab.gz.m, 
+#           by = c("sample_id", "circ_id"))
+# 
+# circ.lin.xpr <-
+#     merge(circ.lin.xpr,
+#           sample.depth,
+#           by = "sample_id")
+# circ.lin.xpr[, CLR := (2*circ.reads)/lin.reads]
 
-circ.lin.xpr <- 
-    merge(scaled.circ, 
-          bks_linear_counts.tab.gz.m, 
-          by = c("sample_id", "circ_id"))
+## normalize linear counts
+dds.lin <- 
+    DESeqDataSetFromMatrix(as.matrix(bks_linear_counts.tab.gz, 
+                                     rownames = "circ_id")[, as.character(meta$sample_id)],
+                           colData = data.frame(meta, row.names = "sample_id"), 
+                           design = ~1)
+dds.lin <- estimateSizeFactors(dds.lin, type = "poscounts")
+lin.norm.counts <- counts(dds.lin, normalized = T)
+lin.norm.counts.m <- as.data.table(melt(lin.norm.counts, 
+                          varnames = c("gene_id", "sample_id"), 
+                          value.name = "lin.reads"))
 
-circ.lin.xpr <-
-    merge(circ.lin.xpr,
-          sample.depth,
-          by = "sample_id")
-
-circ.lin.xpr[, CLR := (2*circ.reads)/lin.reads]
+## compute CLR
+circ.lin.xpr <- merge(circrna.rpms[circrnas.morethan2methods],
+      lin.norm.counts.m, 
+      by = c("sample_id", 
+             "gene_id"),
+      all.x = T, all.y = F)[, .(sample_id, circ_id = gene_id, 
+                                circ.reads = medRPM, 
+                                lin.reads, CLR = (2*medRPM)/lin.reads)]
 ```
 
 ## Circular to linear expression
@@ -1207,12 +1229,14 @@ circ.lin.xpr[, CLR := (2*circ.reads)/lin.reads]
 CLR = circular to linear expression ratio  
 
 ```{r, dev='jpeg'}
-ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
-                                          y = lin.reads*10^6/seq_depth)) +
+# ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
+#                                           y = lin.reads*10^6/seq_depth)) +
+ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads, 
+                                          y = lin.reads)) +
     geom_point(aes(color = CLR)) +
     # geom_smooth(method = "lm", se = F) +
-    scale_x_log10("Circular RPM") +
-    scale_y_log10("Linear RPM") +
+    scale_x_log10("Circular norm reads", label = comma) +
+    scale_y_log10("Linear norm reads", label = comma) +
     # coord_fixed(ratio = 1) +
     scale_color_distiller(name = "CLR", palette = "Spectral") +
     ggtitle("Circular to linear expression") +
@@ -1223,13 +1247,13 @@ ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth,
 ```{r, dev='jpeg'}
 ggplot(data = merge(circ.lin.xpr, intgroup.dt[, .(sample_id, condition)], 
                     by = "sample_id"), 
-       mapping = aes(x = circ.reads*10^6/seq_depth, 
-                     y = lin.reads*10^6/seq_depth)) +
+       mapping = aes(x = circ.reads, 
+                     y = lin.reads)) +
     geom_point(aes(color = CLR)) +
     # geom_smooth(method = "lm", se = F, aes(color = condition)) +
     facet_wrap(facets = ~ condition) +
-    scale_x_log10("Circular RPM") +
-    scale_y_log10("Linear RPM") +
+    scale_x_log10("Circular norm reads", label = comma) +
+    scale_y_log10("Linear norm reads", label = comma) +
     # coord_fixed(ratio = 1) +
     scale_color_distiller(name = "CLR", palette = "Spectral") +
     ggtitle("Circular to linear expression") +
@@ -1239,13 +1263,13 @@ ggplot(data = merge(circ.lin.xpr, intgroup.dt[, .(sample_id, condition)],
 
 
 ```{r, dev='jpeg'}
-ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
-                                          y = lin.reads*10^6/seq_depth)) +
+ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads, 
+                                          y = lin.reads)) +
     geom_point(aes(color = CLR)) +
     # geom_smooth(method = "lm", se = F) +
     facet_wrap(facets = ~ sample_id) +
-    scale_x_log10("Circular RPM") +
-    scale_y_log10("Linear RPM") +
+    scale_x_log10("Circular norm reads", label = comma) +
+    scale_y_log10("Linear norm reads", label = comma) +
     # coord_fixed(ratio = 1) +
     scale_color_distiller(name = "CLR", palette = "Spectral") +
     ggtitle("Circular to linear expression") +
@@ -1256,10 +1280,10 @@ ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth,
 ## CircRNA expression  to CLR
 
 ```{r, dev='jpeg'}
-ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
+ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads, 
                                           y = CLR)) +
     geom_point(aes(color = ifelse(CLR > 1, ">1", ifelse(CLR < 0.5, "<0.5", "0.5<CLR<1")))) +
-    scale_x_log10("Circular RPM") +
+    scale_x_log10("Circular norm reads", label = comma) +
     scale_y_log10("CLR") +
     # coord_fixed(ratio = 1) +
     scale_color_brewer(name = "CLR threshold", palette = "Set1") +
@@ -1271,11 +1295,11 @@ ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth,
 ```{r, dev='jpeg'}
 ggplot(data = merge(circ.lin.xpr, intgroup.dt[, .(sample_id, condition)], 
                     by = "sample_id"), 
-       mapping = aes(x = circ.reads*10^6/seq_depth, 
+       mapping = aes(x = circ.reads, 
                      y = CLR)) +
     geom_point(aes(color = ifelse(CLR > 1, ">1", ifelse(CLR < 0.5, "<0.5", "0.5<CLR<1")))) +
     facet_wrap(facets = ~ condition) +
-    scale_x_log10("Circular RPM") +
+    scale_x_log10("Circular norm reads", label = comma) +
     scale_y_log10("CLR") +
     # coord_fixed(ratio = 1) +
     scale_color_brewer(name = "CLR threshold", palette = "Set1") +
@@ -1285,12 +1309,12 @@ ggplot(data = merge(circ.lin.xpr, intgroup.dt[, .(sample_id, condition)],
 ```
 
 ```{r, dev='jpeg'}
-ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads*10^6/seq_depth, 
+ggplot(data = circ.lin.xpr, mapping = aes(x = circ.reads, 
                                           y = CLR)) +
     geom_point(aes(color = ifelse(CLR > 1, ">1", ifelse(CLR < 0.5, "<0.5", "0.5<CLR<1")))) +
     # geom_smooth(method = "lm", se = F) +
     facet_wrap(facets = ~ sample_id) +
-    scale_x_log10("Circular RPM") +
+    scale_x_log10("Circular norm reads", label = comma) +
     scale_y_log10("CLR") +
     # coord_fixed(ratio = 1) +
     scale_color_brewer(name = "CLR threshold", palette = "Set1") +
@@ -1313,11 +1337,11 @@ circ.lin.xpr <- merge(circ.lin.xpr, meta[, .(sample_id, condition)], by = "sampl
 ```{r}
 pdt <- circ.lin.xpr[]
 ## TODO: improve normalization of linear expression
-pdt[, CPM := lin.reads*10^6/seq_depth]
+pdt[, CPM := lin.reads]
 
 ggplot(pdt, aes(x = sample_id, y = CPM)) +
     geom_boxplot(aes(fill = sample_id)) +
-    scale_y_log10(name = "Linear CPM") +
+    scale_y_log10(name = "Linear CPM", label = comma) +
     scale_fill_manual(values = setNames(intgroup.dt[, color], 
                                         nm = intgroup.dt[, sample_id]), 
                       guide = F) +
@@ -1409,7 +1433,9 @@ circ.lin.cor.cond <-
 ```
 
 ```{r}
-ggplot(circ.lin.cor[, .(Count = .N), by = .(Correlation = round(Correlation, 1))], 
+ggplot(circ.lin.cor[, .(Count = .N), 
+                    by = .(Correlation = round(Correlation,
+                                               1))][!is.na(Correlation)], 
        aes(x = factor(Correlation, 
                       levels = seq(from = -1, to = 1, by = .1), 
                       ordered = T, exclude = NA), 
@@ -1426,7 +1452,7 @@ ggplot(circ.lin.cor[, .(Count = .N), by = .(Correlation = round(Correlation, 1))
 ```{r}
 ggplot(circ.lin.cor.cond[, .(Count = .N), 
                          by = .(condition, 
-                                Correlation = round(Correlation, 1))], 
+                                Correlation = round(Correlation, 1))][!is.na(Correlation)], 
        aes(x = factor(Correlation, 
                       levels = seq(from = -1, to = 1, by = .1), 
                       ordered = T, exclude = NA), 
@@ -1443,7 +1469,7 @@ ggplot(circ.lin.cor.cond[, .(Count = .N),
 
 
 ```{r}
-ggplot(circ.lin.cor, aes(x = "", y = Correlation)) + 
+ggplot(circ.lin.cor[!is.na(Correlation)], aes(x = "", y = Correlation)) + 
     geom_boxplot() + 
     scale_y_continuous(expand = c(0, 0), limits = c(-1.1, 1.1)) +
     xlab(NULL) +
@@ -1453,7 +1479,8 @@ ggplot(circ.lin.cor, aes(x = "", y = Correlation)) +
 ```
 
 ```{r}
-ggplot(circ.lin.cor, aes(x = ifelse(Correlation > 0, "Positive", "Negative"), 
+ggplot(circ.lin.cor[!is.na(Correlation)], 
+       aes(x = ifelse(Correlation > 0, "Positive", "Negative"), 
                          y = abs(Correlation))) + 
     geom_boxplot() + 
     scale_y_continuous(expand = c(0, 0), limits = c(-0.1, 1.1)) +
@@ -1465,7 +1492,8 @@ ggplot(circ.lin.cor, aes(x = ifelse(Correlation > 0, "Positive", "Negative"),
 
 
 ```{r}
-ggplot(circ.lin.cor.cond, aes(x = "", y = Correlation)) + 
+ggplot(circ.lin.cor.cond[!is.na(Correlation)], 
+       aes(x = "", y = Correlation)) + 
     geom_boxplot() + 
     geom_text(aes(label = "", y = 1.1)) +
     facet_grid(facets = . ~ condition, drop = T, scales = "free_x", space = "free_x") +
@@ -1480,7 +1508,8 @@ ggplot(circ.lin.cor.cond, aes(x = "", y = Correlation)) +
 ```
 
 ```{r}
-ggplot(circ.lin.cor.cond, aes(x = ifelse(Correlation > 0, "Positive", "Negative"), 
+ggplot(circ.lin.cor.cond[!is.na(Correlation)], 
+       aes(x = ifelse(Correlation > 0, "Positive", "Negative"), 
                          y = abs(Correlation))) +
     geom_boxplot() + 
     geom_text(aes(label = "", y = 1.1)) +
