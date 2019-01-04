@@ -1433,38 +1433,46 @@ circ.lin.cor.cond <-
 ```
 
 ```{r}
-ggplot(circ.lin.cor[, .(Count = .N), 
-                    by = .(Correlation = round(Correlation,
-                                               1))][!is.na(Correlation)], 
-       aes(x = factor(Correlation, 
-                      levels = seq(from = -1, to = 1, by = .1), 
-                      ordered = T, exclude = NA), 
-           y = Count)) + 
-    geom_col() + 
-    geom_text(label = "", aes(y = Count*1.1)) +
-    scale_x_discrete(expand = c(0, 0), drop = F) +
-    scale_y_continuous(expand = c(0, 0)) +
-    xlab(expression(rho[Spearman])) +
-    theme_bw() +
-    theme()
+plot.dt <- circ.lin.cor[, .(Count = .N), 
+                        by = .(Correlation = round(Correlation,
+                                                   1))][!is.na(Correlation)]
+plot.dt$Correlation <- factor(plot.dt$Correlation, 
+                              levels = seq(from = -1, to = 1, by = .1), 
+                              ordered = T, exclude = NA)
+if(nrow(plot.dt) > 0){
+    ggplot(plot.dt, 
+           aes(x = Correlation, 
+               y = Count)) + 
+        geom_col() + 
+        geom_text(label = "", aes(y = Count*1.1)) +
+        scale_x_discrete(expand = c(0, 0), drop = F) +
+        scale_y_continuous(expand = c(0, 0)) +
+        xlab(expression(rho[Spearman])) +
+        theme_bw() +
+        theme()
+}
 ```
 
 ```{r}
-ggplot(circ.lin.cor.cond[, .(Count = .N), 
-                         by = .(condition, 
-                                Correlation = round(Correlation, 1))][!is.na(Correlation)], 
-       aes(x = factor(Correlation, 
-                      levels = seq(from = -1, to = 1, by = .1), 
-                      ordered = T, exclude = NA), 
-           y = Count)) + 
-    geom_col() + 
-    geom_text(label = "", aes(y = Count*1.1)) +
-    facet_grid(facets = condition ~ ., drop = T, scales = "free_y") +
-    scale_x_discrete(expand = c(0, 0), drop = F) +
-    scale_y_continuous(expand = c(0, 0)) +
-    xlab(expression(rho[Spearman])) +
-    theme_bw() +
-    theme()
+plot.dt <- circ.lin.cor.cond[, .(Count = .N), 
+                             by = .(condition, 
+                                    Correlation = round(Correlation, 1))][!is.na(Correlation)]
+plot.dt$Correlation <- factor(plot.dt$Correlation, 
+                              levels = seq(from = -1, to = 1, by = .1), 
+                              ordered = T, exclude = NA)
+if(nrow(plot.dt) > 0){
+    ggplot(plot.dt, 
+           aes(x = Correlation, 
+               y = Count)) + 
+        geom_col() + 
+        geom_text(label = "", aes(y = Count*1.1)) +
+        facet_grid(facets = condition ~ ., drop = T, scales = "free_y") +
+        scale_x_discrete(expand = c(0, 0), drop = F) +
+        scale_y_continuous(expand = c(0, 0)) +
+        xlab(expression(rho[Spearman])) +
+        theme_bw() +
+        theme()
+}
 ```
 
 
@@ -1492,36 +1500,42 @@ ggplot(circ.lin.cor[!is.na(Correlation)],
 
 
 ```{r}
-ggplot(circ.lin.cor.cond[!is.na(Correlation)], 
-       aes(x = "", y = Correlation)) + 
-    geom_boxplot() + 
-    geom_text(aes(label = "", y = 1.1)) +
-    facet_grid(facets = . ~ condition, drop = T, scales = "free_x", space = "free_x") +
-    scale_y_continuous(expand = c(0, 0), limits = c(-1.1, 1.1)) +
-    scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
-                                        nm = unique(intgroup.dt[, condition])))+
-    xlab(NULL) +
-    ylab(expression(rho[Spearman])) +
-    theme_bw() +
-    theme(axis.ticks.x = element_blank(), 
-          panel.spacing.x = unit(.1, "lines"))
+plot.dt <- circ.lin.cor.cond[!is.na(Correlation)]
+if(nrow(plot.dt) > 0){
+    ggplot(plot.dt, 
+           aes(x = "", y = Correlation)) + 
+        geom_boxplot() + 
+        geom_text(aes(label = "", y = 1.1)) +
+        facet_grid(facets = . ~ condition, drop = T, scales = "free_x", space = "free_x") +
+        scale_y_continuous(expand = c(0, 0), limits = c(-1.1, 1.1)) +
+        scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
+                                            nm = unique(intgroup.dt[, condition])))+
+        xlab(NULL) +
+        ylab(expression(rho[Spearman])) +
+        theme_bw() +
+        theme(axis.ticks.x = element_blank(), 
+              panel.spacing.x = unit(.1, "lines"))
+}
 ```
 
 ```{r}
-ggplot(circ.lin.cor.cond[!is.na(Correlation)], 
-       aes(x = ifelse(Correlation > 0, "Positive", "Negative"), 
-                         y = abs(Correlation))) +
-    geom_boxplot() + 
-    geom_text(aes(label = "", y = 1.1)) +
-    facet_grid(facets = . ~ condition, drop = T, scales = "free_x", space = "free_x") +
-    scale_y_continuous(expand = c(0, 0), limits = c(-0.1, 1.1)) +
-    scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
-                                        nm = unique(intgroup.dt[, condition])))+
-    xlab(NULL) +
-    ylab(expression(rho[Spearman])) +
-    theme_bw() +
-    theme(axis.ticks.x = element_blank(), 
-          panel.spacing.x = unit(.1, "lines"))
+plot.dt <- circ.lin.cor.cond[!is.na(Correlation)]
+if(nrow(plot.dt) > 0){
+    ggplot(plot.dt, 
+           aes(x = ifelse(Correlation > 0, "Positive", "Negative"), 
+               y = abs(Correlation))) +
+        geom_boxplot() + 
+        geom_text(aes(label = "", y = 1.1)) +
+        facet_grid(facets = . ~ condition, drop = T, scales = "free_x", space = "free_x") +
+        scale_y_continuous(expand = c(0, 0), limits = c(-0.1, 1.1)) +
+        scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
+                                            nm = unique(intgroup.dt[, condition])))+
+        xlab(NULL) +
+        ylab(expression(rho[Spearman])) +
+        theme_bw() +
+        theme(axis.ticks.x = element_blank(), 
+              panel.spacing.x = unit(.1, "lines"))
+}
 ```
 
 
