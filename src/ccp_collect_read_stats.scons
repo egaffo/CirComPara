@@ -59,6 +59,8 @@ CIRCexplorerSEG_pattern = '.*.ce2seg.bks.reads'
 CIRCexplorerSTR_pattern = '.*.ce2star.bks.reads'
 # CIRCexplorer2 tophat reads
 CIRCexplorerTPH_pattern = '.*.ce2th.bks.reads'
+# DCC reads
+dcc_pattern = '.*.dcc.bks.reads'
 
 ## testrealign mapped reads
 #testrealign_mappings_pattern = '.*segemehl_mapped_reads_count\.txt'
@@ -77,6 +79,7 @@ CIRCexplorerBWA_reads = get_matching_nodes(runs, CIRCexplorerBWA_pattern)
 CIRCexplorerSEG_reads = get_matching_nodes(runs, CIRCexplorerSEG_pattern)
 CIRCexplorerSTR_reads = get_matching_nodes(runs, CIRCexplorerSTR_pattern)
 CIRCexplorerTPH_reads = get_matching_nodes(runs, CIRCexplorerTPH_pattern)
+dcc_reads          = get_matching_nodes(runs, dcc_pattern)
 
 #bwa_mappings          = get_matching_nodes(runs, BWA_mappings_pattern)
 #star_mappings         = get_matching_nodes(runs, STAR_mappings_pattern)
@@ -88,7 +91,8 @@ collect_circrna_maps_counts_sources = [testrealign_reads,
                                        CIRCexplorerBWA_reads,
                                        CIRCexplorerSEG_reads,
                                        CIRCexplorerSTR_reads,
-                                       CIRCexplorerTPH_reads]
+                                       CIRCexplorerTPH_reads,
+                                       dcc_reads]
 				       #bwa_mappings, star_mappings, 
 				       #tophat_mappings]
 

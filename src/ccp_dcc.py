@@ -96,7 +96,7 @@ if '-F' in env['DCC_EXTRA_PARAMS']:
 results = {'CIRCRNA_COUNT': circrnas,
            'CIRC_COORDINATES': dcc[1],
            'CIRC_SN_BED': bed,
-           'BKS_READS': bks_reads}
+           'BKS_READS': bks_reads[0]}
 
 Return('results')
 
