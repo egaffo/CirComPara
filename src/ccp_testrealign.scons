@@ -59,47 +59,14 @@ collect_splice = env.Command(collect_splice_targets,
                              extract_circular, 
                              collect_splice_cmd)
 
-# COLLECT SPLICE JUNCTIONS
-#collect_splice_cmd = "testrealign.x -d $GENOME_FASTA -q $SOURCE -n "\
-#                     "-U ${TARGETS[0]} -T ${TARGETS[1]} " + "$(-t ${CPUS} $)"
-#collect_splice_targets = ["splicesites.bed", "transrealigned.bed"]
-##collect_splice = env.Command(collect_splice_targets, sort_alignments[0], collect_splice_cmd)
-#collect_splice = env.Command(collect_splice_targets, 
-#                             File(env['ALIGNMENTS']), 
-#                             collect_splice_cmd)
-#
-## EXTRACT CIRCULAR SPLICE EVENTS
-#extract_circular_cmd = "grep ':C:' ${SOURCES[0]} | cut -f 4 | cut -f 2 -d: |"\
-#                       "sort | uniq -c | sort -k1,1n -k2,2n > $TARGET"
-#extract_circular = env.Command(["${SAMPLE}_circular.junction.stats.txt"], 
-#                               [collect_splice], 
-#                               extract_circular_cmd)
+bks_reads_cmd = '''tail -n+2 ${SOURCES[0]} | cut -f 1-6 | '''\
+                '''bedtools intersect -a ${SOURCES[1]} -b stdin -wa | '''\
+                '''cut -f 3 -d ';' | sort | uniq -c | '''\
+                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
+                '''sort -k1,1nr > ${TARGETS[0]} '''
 
-## use sed to write a BED file with 'single nucleotide' intervals
-## NB: stop position is not included in BED format (intervals are 
-## 0-based and 'half-open'), so the stop position must be incremented by 1.
-## Only the first six tab-separated fields are considered.
-## Consider only circular splice sites.
-#bed_cmd = '''grep ':C:' ${SOURCES[0]} | '''\
-#          '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
-#                    '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
-#                    '''\\1\\t\\2\\t$$((\\2+1))\\t\\4\\t\\5\\t\\6\\n'''\
-#                    '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\6"/e' | '''\
-#                    '''sort -k1,1 -k2,2n -k3,3n > $TARGET'''
-#
-#bed = env.Command(["${SAMPLE}.sn.circ.bed"],
-#                  [collect_splice[0]],
-#                  bed_cmd)
-#bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
-#                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''\
-#                '''cut -f 4 | sort | uniq -c | '''\
-#                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
-#                '''sort -k1,1nr > ${TARGETS[0]} '''
-#
-#bks_reads = env.Command([env['SAMPLE'] + '.testrealign.bks.reads'], 
-#                        [env['ALIGNMENTS'], bed], 
-#                        bks_reads_cmd)
-bks_reads = extract_circular
+bks_reads = env.Command([env['SAMPLE'] + '.testrealign.bks.reads'], 
+                        [collect_splice_targets, extract_circular], 
+                        bks_reads_cmd)
 
-#Return('collect_splice', 'extract_circular', 'bed', 'bks_reads')
 Return('collect_splice', 'extract_circular', 'bks_reads')
