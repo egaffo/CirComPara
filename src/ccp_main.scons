@@ -114,6 +114,8 @@ vars.Add('FINDCIRC_EXTRA_PARAMS', 'Parameters for find_circ.py. '\
          'A special parameter --best-qual INT is used to filter '\
          'find_circ results according to best_qual_left and best_qual_right '\
          'fields >= INT. INT = 40 as default', '')
+## CircRNA_finder parameters
+vars.Add('CFINDER_EXTRA_PARAMS', 'Parameters for CircRNA_finder', '')
 
 ## alternative workflow parameters
 vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
