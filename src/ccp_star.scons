@@ -71,7 +71,9 @@ chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 star_targets = [os.path.join(star_out_dir, f) for f in ['Aligned.sortedByCoord.out.bam', 
                                                         'Chimeric.out.junction',
                                                         'Log.out', 'Log.progress.out',
-                                                        'Log.final.out', 'SJ.out.tab']]
+                                                        'Log.final.out',
+                                                        'SJ.out.tab',
+                                                        'Chimeric.out.sam']]
 
 star = env.Command(star_targets, READS, [chdir_working_cmd + ' && '+\
                                              star_cmd + ' && ' +\
