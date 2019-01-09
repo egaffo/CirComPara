@@ -158,7 +158,7 @@ vars.Add('LIN_COUNTER', 'The method to estimate circRNA-host gene '\
                         'linear expression. Available are using the DCC '\
                         '[dcc], or the CirComPara [ccp] method', 'ccp')
 vars.Add('FIX_READ_HEADER', 'Trim FASTQ headers to the read ids. '\
-                            'Recommended when processing SRA datasets', 'False')
+                            'Recommended when processing SRA datasets', 'True')
 
 ## deprecated parameters (legacy)
 vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\

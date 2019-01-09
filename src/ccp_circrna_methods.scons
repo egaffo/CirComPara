@@ -106,33 +106,31 @@ if env['CIRC_PE_MAPPING']:
    exit(-1)
 else:
     ## collapse paired reads into single file
-    ## indeed processing reads as they were single-ended
+    ## indeed processing reads as they were single-end
     cat_reads_target = os.path.join(build_dir,  
                                     env['SAMPLE'] + '.unmappedSE.fq.gz')
     
     ## we can concatenate gzipped files, no need to decompress
-    cat_cmd = 'cat '
+    cat_cmd = 'cat ${SOURCES} '
 
-    fix_read_header_cmd = ''
     if env['FIX_READ_HEADER']:
         ## trim FASTQ header to the first white space, so
         ## that only the read ids are kept in FASTQ headers.
         ## This prevents errors in downstream read processing.
         ## Recommended for SRA read datasets, which usually
         ## report read length and other info in FASTQ header.
-        fix_read_header_cmd = ' | trim_read_header.py - '
+        ## Plus, append suffix to read ids in order to discriminate
+        ## mate reads after concatenation.
+        cat_cmd = '''trim_read_header.py -s '\\' -f ${SOURCES[0]} '''
 
-        ## trim_read_header.py supports only plain text input stream
-        ## we need to decompress first, and then compress the output
-        if env['READS'][0].endswith('.gz'):
-            cat_cmd = 'zcat '
-            fix_read_header_cmd = fix_read_header_cmd + ' | gzip -c '
+        if len(env['READS']) > 1:
+            cat_cmd = cat_cmd + '''-r ${SOURCES[1]} '''
+
+        cat_cmd = cat_cmd + '''| gzip -c '''
 
     unmapped_reads = env.Command(cat_reads_target,
                                env['READS'],
-                               cat_cmd + '${SOURCES}' +\
-                               fix_read_header_cmd +\
-                               '> $TARGET')
+                               cat_cmd + '> $TARGET')
 
     env.Replace(READS = unmapped_reads)
 
