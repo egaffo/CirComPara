@@ -89,7 +89,7 @@ circrnas = dcc[0]
 ## when -F filtering option is used the results loose strand info
 ## and we nhave to retrieve it from the coodinates file
 if '-F' in env['DCC_EXTRA_PARAMS']:
-    circrnas = env.Command('strandedCircRNACount',
+    circrnas = env.Command(os.path.join(out_dir, 'strandedCircRNACount'),
                            [dcc[0], dcc[1]],
                            'dcc_fix_strand.R -c ${SOURCES[0]} -d ${SOURCES[1]} -o ${TARGET}')
 
