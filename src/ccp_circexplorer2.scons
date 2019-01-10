@@ -69,7 +69,9 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
 #TopHat-Fusion, STAR, MapSplice, BWA, segemel
 if env['ALIGNER'].lower() == 'star':
     env.Replace(ALIGNER = 'STAR')    
-    bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+    bks_reads_cmd = '''samtools view -uhS ${SOURCES[0]} | '''\
+                    '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
+    #bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
     bks_sfx = ".ce2star"
 
 if env['ALIGNER'].lower() == 'bwa':

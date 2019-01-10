@@ -36,9 +36,6 @@ out_dir = 'dcc'
 #env['TMP_DIR'] = os.path.join(out_dir, "_tmp_DCC")
 env['TMP_DIR'] = '_tmp_DCC'
 
-bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
-                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
-
 ## use sed to write a BED file with 'single nucleotide' intervals
 ## NB: stop position is not included in BED format (intervals are 
 ## 0-based and 'half-open'), so the stop position must be incremented by 1.
@@ -48,8 +45,6 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                     '''\\1\\t\\2\\t$$((\\2+1))\\t\\4\\t\\5\\t\\6\\n'''\
                     '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\6"/e' '''\
                     '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
-
-bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
 
 ## TODO: implement paired-end reads DCC
 dcc_cmd = 'DCC $EXTRA_PARAMS $( -T $CPUS $) -D -O ${TARGETS[0].dir} '\
@@ -72,6 +67,11 @@ bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
                   bed_cmd)
 
 #results.append(bed)
+
+#bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+bks_reads_cmd = '''samtools view -uhS ${SOURCES[0]} | '''\
+                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
+
 
 bks_reads_cmd = bks_reads_cmd + \
                     '''cut -f 4 | sort | uniq -c | '''\
