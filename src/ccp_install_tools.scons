@@ -390,4 +390,38 @@ stringtie_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), string
 #
 #gffcompare_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), gffcompare[1], SymLink)
 
+# CIRCRNA_FINDER
+cfinder_dir = os.path.join(tools_dir, 'circRNA_finder-1.1')
+cfinder_tar = 'v1.1.tar.gz'
+cfinder_url = 'https://github.com/orzechoj/circRNA_finder/archive/' + cfinder_tar
+cfinder_target = [os.path.join(tools_dir, cfinder_tar), 
+                  [os.path.join(cfinder_dir, f) for f in
+                                                ['postProcessStarAlignment.pl',
+                                                  'filterCirc.awk', 
+                                                  'filterSpliceSiteCircles.pl', 
+                                                  'nrForwardSplicedReads.pl', 
+                                                  'starCirclesToBed.pl']]
+                 ]
+cfinder = env.Command(cfinder_target,
+                      [],
+                      ['wget -O ${TARGETS[0]} ' + cfinder_url,
+                       'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
+for t in cfinder:
+    env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), t, SymLink)
+
+# SAMTOOLS <v1.0 is required by circrna_finder
+samtools0_dir = os.path.join(tools_dir, 'samtools-0.1.20')
+samtools0_tar = '0.1.20.tar.gz'
+samtools0_url = 'https://github.com/samtools/samtools/archive/' + samtools0_tar
+samtools0_target = [os.path.join(tools_dir, samtools0_tar), 
+                    os.path.join(samtools0_dir, 'samtools')]
+samtools0 = env.Command(samtools0_target, 
+                        [], 
+                        ['wget -O $TARGET  ' + samtools0_url,
+                        'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                        ' && '.join(['cd ' + samtools0_dir, 
+                                     'make']) + 
+                        '; cd ' + Dir('.').abspath])
+env.Command(os.path.join(ccp_bin_dir, 'samtools_v0', "${SOURCE.file}"), samtools0[1], SymLink)
+
 
