@@ -42,7 +42,8 @@ methods = {'CIRI': 'ciri',
        'CIRCEXPLORER2_BWA': 'circexplorer2_bwa',
        'CIRCEXPLORER2_SEGEMEHL': 'circexplorer2_segemehl',
        'CIRCEXPLORER2_TOPHAT': 'circexplorer2_tophat',
-       'DCC': 'dcc'
+       'DCC': 'dcc',
+       'CFINDER': 'circrna_finder'
        }
 
 ## collect circRNAs in a single GTF annotation file
