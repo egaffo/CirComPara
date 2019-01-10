@@ -33,10 +33,6 @@ except NameError:
         Exit(1)
 
 out_dir = 'circrna_finder'
-#env['TMP_DIR'] = '_tmp_DCC'
-
-bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
-                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
 
 ## use sed to write a BED file with 'single nucleotide' intervals
 ## NB: stop position is not included in BED format (intervals are 
@@ -48,7 +44,8 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                     '''\\1\\t\\3\\t$$((\\3+1))\\t\\4\\t\\5\\t\\6"/e' '''\
                     '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
-bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+bks_reads_cmd = '''samtools view -uhS ${SOURCES[0]} | '''\
+                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
 
 cfinder_cmd = 'postProcessStarAlignment.pl $EXTRA_PARAMS '\
               '--starDir ${SOURCES[0].dir}' + os.path.sep +\
@@ -61,7 +58,7 @@ cfinder = env.Command(cfinder_targets,
                       cfinder_sources, 
                       cfinder_cmd)
 
-circ_bed = cfinder[1] ## check
+circ_bed = cfinder[1]
 
 bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
                   [circ_bed],
