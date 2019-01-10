@@ -44,6 +44,7 @@ CIRCexplorer2_segemehl_nodes = []
 CIRCexplorer2_tophat_pe_nodes = []
 CIRCexplorer2_tophat_nodes = []
 dcc_nodes = []
+cfinder_nodes = []
 
 ## grab circrna methods' results
 for sample in samples:
@@ -56,6 +57,7 @@ for sample in samples:
     #CIRCexplorer2_tophat_pe_nodes.append(get_matching_nodes(runs[sample]['CIRCULAR_EXPRESSION']['CE2_TH'][1])
     CIRCexplorer2_tophat_nodes.append(runs[sample]['CIRCULAR_EXPRESSION']['CE2_TH'][1])
     dcc_nodes.append(runs[sample]['CIRCULAR_EXPRESSION']['DCC']['CIRCRNA_COUNT'])
+    cfinder_nodes.append(runs[sample]['CIRCULAR_EXPRESSION']['CFINDER']['CIRCRNAS'])
 
 CIRCexplorer_compared = None
 ciri_compared = None
@@ -67,6 +69,7 @@ CIRCexplorer2_segemehl_compared = None
 CIRCexplorer2_tophat_pe_compared = None
 CIRCexplorer2_tophat_compared = None
 dcc_compared = None
+cfinder_compared = None
 
 ## collect testrealign
 if not ''.join([str(f) for f in Flatten(testrealign_nodes)]) == '':
@@ -183,6 +186,20 @@ if not ''.join([str(f) for f in Flatten(dcc_nodes)]) == '':
                                     dcc_comapared_cmd)
     Depends(dcc_compared, dcc_nodes)
 
+## collect CircRNA_finder
+if not ''.join([str(f) for f in Flatten(cfinder_nodes)]) == '':
+
+    cfinder_files = ','.join([f.path for f in Flatten(cfinder_nodes)])
+    cfinder_labels = ','.join(samples)
+    cfinder_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
+                             '''cfinder_compare.R -l ''' + cfinder_labels +\
+                             ''' -i ''' + cfinder_files + ''' -o $TARGET''')
+    cfinder_comapared_target = os.path.join(circRNA_collect_dir, 'cfinder_compared.csv')
+    cfinder_compared = env.Command(cfinder_comapared_target, 
+                                    cfinder_nodes, 
+                                    cfinder_comapared_cmd)
+    Depends(cfinder_compared, cfinder_nodes)
+
 ## compose a dict with the results
 sample_results = {'CIRI': ciri_compared,
                   'FINDCIRC': find_circ_compared,
@@ -191,7 +208,8 @@ sample_results = {'CIRI': ciri_compared,
                   'CIRCEXPLORER2_BWA': CIRCexplorer2_bwa_compared,
                   'CIRCEXPLORER2_SEGEMEHL': CIRCexplorer2_segemehl_compared,
                   'CIRCEXPLORER2_TOPHAT': CIRCexplorer2_tophat_compared,
-                  'DCC': dcc_compared
+                  'DCC': dcc_compared,
+                  'CFINDER': cfinder_compared
                   }
 
 Return('sample_results')
