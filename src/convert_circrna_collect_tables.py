@@ -112,6 +112,27 @@ def format_dcc(line, outformat):
         outline = 'BED6 formatting not yet immplemented'
     return outline
 
+def format_cfinder(line, outformat):
+    fields = line
+    if outformat == 'gtf':
+        sample = fields[0]
+        chrom   = fields[1]
+        start   = str(int(float(fields[2])) + 1) # CircRNA_finder gives BED coordinates
+        end     = fields[3]
+        strand  = fields[6]
+        score   = fields[5]
+        gene_id = chrom + ':' + start + '-' + end + ':' + strand
+        transcript_id = gene_id + '.' + sample
+        
+        outline = format_gtf_line(chrom, 'cfinder', 'backsplice', 
+                                  start, end, score, strand, '.', 
+                                  gene_id, transcript_id, 'sample_id "' + sample + '";')
+
+    elif outformat == 'bed6':
+        outline = 'BED6 formatting not yet immplemented'
+    return outline
+
+
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description = '''Convert Junk2-circpipe circRNA '''\
@@ -126,7 +147,8 @@ if __name__ == '__main__':
                                    'circexplorer2_tophat_pe',
                                    'circexplorer2_tophat',
                                    'circexplorer2_mapsplice',
-                                   'dcc'], 
+                                   'dcc',
+                                   'circrna_finder'], 
                         required = True, dest = 'program', 
                         help = 'The program that generated the input file')
     parser.add_argument('-f', '--format', type = str, 
@@ -159,6 +181,8 @@ if __name__ == '__main__':
             outline = format_testrealign(line, args.outformat)
         elif args.program == 'dcc':
             outline = format_dcc(line, args.outformat)
+        elif args.program == 'circrna_finder':
+            outline = format_cfinder(line, args.outformat)
 
         print outline
 
