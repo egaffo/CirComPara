@@ -108,7 +108,11 @@ vars.Add('DCC_EXTRA_PARAMS', 'DCC additional parameters', '')
 ## CIRCexplorer2 (annotate) parameters
 vars.Add('CE2_PARAMS', 'Parameters to pass to CIRCexplorer2 annotate', '')
 ## Segemehl/Haarz extra parameters
-vars.Add('HAARZ_PARAMS', 'Segemehl/Haarz parameters', '')
+#vars.Add('HAARZ_PARAMS', 'Segemehl/Haarz parameters', '')
+## Segemehl/testrealign extra parameters
+vars.Add('TESTREALIGN_PARAMS', 'Segemehl/testrealign filtering parameters'\
+         '-q indicates the minimum median quality of backsplices ends '\
+         '(like the Haarz parameter)', '-q 25')
 ## Find_circ parameters
 vars.Add('FINDCIRC_EXTRA_PARAMS', 'Parameters for find_circ.py. '\
          'A special parameter --best-qual INT is used to filter '\

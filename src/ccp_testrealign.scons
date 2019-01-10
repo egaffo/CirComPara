@@ -52,8 +52,10 @@ extract_circular = env.Command(["${SAMPLE}_circular.reads.bed"],
                                extract_circular_cmd)
 
 ## COLLECT SPLICE JUNCTIONS
-collect_splice_cmd = "haarz.x split -f $SOURCE $HAARZ_PARAMS | "\
-                     "sort -k1,1n -k2,2n > ${TARGETS[0]}"
+#collect_splice_cmd = "haarz.x split -f $SOURCE $HAARZ_PARAMS | "\
+#                     "sort -k1,1n -k2,2n > ${TARGETS[0]}"
+collect_splice_cmd = "filter_segemehl.R -i $SOURCE $TESTREALIGN_PARAMS "\
+                     "-o ${TARGETS[0]}"
 collect_splice_targets = ["splicesites.bed"]
 collect_splice = env.Command(collect_splice_targets, 
                              extract_circular, 
