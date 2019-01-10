@@ -51,8 +51,8 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
 bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
 
 cfinder_cmd = 'postProcessStarAlignment.pl $EXTRA_PARAMS '\
-              '$( -T $CPUS $) --starDir ${SOURCES[0].dir} '\
-              '--outDir ${TARGETS[0].dir} '
+              '--starDir ${SOURCES[0].dir}' + os.path.sep +\
+              ' --outDir ${TARGETS[0].dir}' + os.path.sep
 cfinder_targets = [os.path.join(out_dir, f) for f in ['filteredJunctions.bed',
                                                       's_filteredJunctions.bed',
                                                       's_filteredJunctions_fw.bed']]
