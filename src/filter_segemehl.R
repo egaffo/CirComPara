@@ -33,8 +33,9 @@ if(nrow(sege_circ) > 0){
                                  median_qual = median(V5)),
                              by = .(chr = V1, left = V2, right = V3,
                                     strand = V6)][, .(chr, left, right, n, median_qual,
-                                                      strand)][order(left, right, n, median_qual,
-                                                                     strand)][median_qual >= minqual]
+                                                      strand,
+                                                      score = n)][order(chr, left,
+                                                                        right)][median_qual >= minqual]
 }
 
 write.table(x = sege_circ,
