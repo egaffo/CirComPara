@@ -22,11 +22,15 @@ output <- arguments$output
 minqual <- arguments$minqual
 
 circ_candidates.bed <-
-    fread(input, showProgress = F, skip = 1)[
-        grepl('CIRCULAR', V18)][
-            grepl('UNAMBIGUOUS_BP', V18)][
-                grepl('ANCHOR_UNIQUE', V18)][
-                    V9 >= minqual & V10 >= minqual]
+    fread(cmd = paste0("grep -v '^#' ", input, " | ",
+                       "grep -w CIRCULAR | ",
+                       "grep -w UNAMBIGUOUS_BP | ",
+                       "grep -w ANCHOR_UNIQUE"),
+          showProgress = F)
+
+if(nrow(circ_candidates.bed) > 0){
+    circ_candidates.bed <- circ_candidates.bed[V9 >= minqual & V10 >= minqual]
+}
 
 write.table(x = circ_candidates.bed,
             file = output, row.names = F, quote = F, sep = "\t", col.names = F)
