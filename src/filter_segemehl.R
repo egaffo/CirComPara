@@ -9,9 +9,12 @@ option_list <- list(
                 help = "Segemehl result table file"),
     make_option(c("-q", "--minqual"), action = "store", type = "integer",
                 default = 25,
-                help = "Minimum quality of backsplice end mapping"),
-    make_option(c("-o", "--output"), action = "store", type = "character",
+                help = "Minimum mapping quality of backsplice-reads"),
+    make_option(c("-o", "--count_output"), action = "store", type = "character",
                 default = "splicesites.bed",
+                help = "The filtered circrnas in BED format. The 7th column is just a copy of the score field and reports the read count."),
+    make_option(c("-r", "--reads_output"), action = "store", type = "character",
+                default = "sample.circular.reads.bed.gz",
                 help = "The output file")
 )
 
@@ -20,24 +23,44 @@ parser <- OptionParser(usage = "%prog -i sample.sngl.bed -q 25 -o splicesites.be
                        description = "Filter segemehl results by quality and compute backsplices' counts")
 arguments <- parse_args(parser, positional_arguments = F)
 input <- arguments$input
-# input <- "/blackhole/enrico/circular/circompara_testing/circompara/test_circompara/analysis/samples/sample_A/processings/circRNAs/segemehl/sample_A.unmappedSE.fq.sngl.bed"
-output <- arguments$output
+count_output <- arguments$count_output
+reads_output <- arguments$reads_output
 minqual <- arguments$minqual
 
-sege_circ <- fread(input, header = F, skip = 1)
+# Start and end position indicate the genomic range of the predicted intron.
+# The name has the format (read-group;type;read-name;mate-status), the bed
+# score is the alignment score of the respective alignment. The type is either
+# 'R' (in case of a regular, collinear split), 'C' (circular split) or 'B' (backsplice)
+
+sege_circ <- fread(cmd = paste0('grep ";B\\|C;" ', input), header = F, skip = 1)
 
 if(nrow(sege_circ) > 0){
-    sege_circ <-
-        sege_circ[grepl(";B|C;",
-                        V4)][, .(n = .N,
-                                 median_qual = median(V5)),
-                             by = .(chr = V1, left = V2, right = V3,
-                                    strand = V6)][, .(chr, left, right, n, median_qual,
-                                                      strand,
-                                                      score = n)][order(chr, left,
-                                                                        right)][median_qual >= minqual]
+
+    sege_circ <- sege_circ[V5 >= minqual]
+    sege_circ[, c("read.group", "type", "read.name", "mate.status"):=(tstrsplit(V4, ";"))]
+    sege_circ <- sege_circ[, .(multi.mapping = .N, map.qual = median(V5)),
+                           by = .(chr = V1, left = V2,
+                                  right = V3, read.name,
+                                  strand = V6)]
+
+    splicesites.bed <-
+        sege_circ[, .(n = .N,
+                      median_qual = median(map.qual)),
+                  by = .(chr, left, right,
+                         strand)][, .(chr, left, right, n, median_qual, strand,
+                                      score = n)][order(chr, left,
+                                                        right)]
+
 }
 
-write.table(x = sege_circ,
-            file = output,
+## write backsplice counts
+write.table(x = splicesites.bed,
+            file = count_output,
             row.names = F, quote = F, sep = "\t", col.names = T)
+
+## write gzipped file for circular reads
+reads_output.gz <- gzfile(reads_output, "w")
+write.table(x = sege_circ[, .(chr, left, right, read.name, map.qual, strand)],
+            file = reads_output.gz,
+            row.names = F, quote = F, sep = "\t", col.names = F)
+close(reads_output.gz)

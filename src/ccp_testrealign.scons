@@ -1,5 +1,6 @@
 '''
-This SConscript performs circular RNAs detection by means of the
+This SConscript filters segemehl results using custom script to obtain backsplices.
+Formerly, it predicted circular RNAs by means of the
 testrealign.x program of segemehl [1]
     
 [1] Hoffmann, S. et al. 
@@ -8,17 +9,6 @@ testrealign.x program of segemehl [1]
     trans-splicing and fusion detection. 
     
     Genome Biology 15, R34 (2014).
-
-Software dependencies:
- * testrealign.x
- * Samtools-1.1
- * grep, cut, sort
-
-When called from a SConscript it imports the following variables:
- * mapping_file
- * sample_name
- * segemehlcirc_cpus
- * segemehlcirc_genome_fasta
 
 '''
 
@@ -30,11 +20,9 @@ try:
     env = env_testrealign.Clone()
 except NameError:
     vars = Variables('vars.py')
-    vars.Add('CPUS', 'Number of parallel jobs', '4')
-    vars.Add('ALIGNMENTS', 'Sorted alignment file in gzipped SAM format from'\
-                           'segemehl', '')
     vars.Add('SAMPLE', 'The sample name', 'sample')
-    vars.Add('GENOME_FASTA', 'The FASTA file with genome sequence', 'genome.fa')
+    vars.Add('BED', 'The BED file output by Segemehl', 
+             'sample.sngl.bed')
     
     env = Environment(ENV=os.environ,
                       variables=vars)
@@ -45,30 +33,25 @@ except NameError:
         print "Unknown variables:", unknown.keys()
         Exit(1)
 
-## EXTRACT CIRCULAR SPLICE EVENTS
-extract_circular_cmd = "grep ';B\\|C;' ${SOURCES[0]} > $TARGET"
-extract_circular = env.Command(["${SAMPLE}_circular.reads.bed"], 
-                               env['BED'], 
-                               extract_circular_cmd)
-
-## COLLECT SPLICE JUNCTIONS
-#collect_splice_cmd = "haarz.x split -f $SOURCE $HAARZ_PARAMS | "\
-#                     "sort -k1,1n -k2,2n > ${TARGETS[0]}"
+## EXTRACT CIRCULAR SPLICE EVENTS, COLLECT SPLICE JUNCTIONS 
+## AND FILTER BY MAPPING QUALITY
 collect_splice_cmd = "filter_segemehl.R -i $SOURCE $TESTREALIGN_PARAMS "\
-                     "-o ${TARGETS[0]}"
-collect_splice_targets = ["splicesites.bed"]
+                     "-o ${TARGETS[0]} -r ${TARGETS[1]}"
+collect_splice_targets = ["splicesites.bed", "${SAMPLE}_circular.reads.bed.gz"]
 collect_splice = env.Command(collect_splice_targets, 
-                             extract_circular, 
+                             env['BED'],
                              collect_splice_cmd)
 
-bks_reads_cmd = '''tail -n+2 ${SOURCES[0]} | cut -f 1-6 | '''\
-                '''bedtools intersect -a ${SOURCES[1]} -b stdin -wa | '''\
-                '''cut -f 3 -d ';' | sort | uniq -c | '''\
+## COLLECT BACKSPLICED READS
+bks_reads_cmd = '''zcat ${SOURCES[0]} | cut -f 4 | sort | uniq -c | '''\
                 '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
                 '''sort -k1,1nr > ${TARGETS[0]} '''
 
 bks_reads = env.Command([env['SAMPLE'] + '.testrealign.bks.reads'], 
-                        [collect_splice_targets, extract_circular], 
+                        collect_splice_targets[1],
                         bks_reads_cmd)
 
-Return('collect_splice', 'extract_circular', 'bks_reads')
+circ_bed = collect_splice[0]
+circ_reads = collect_splice[1]
+Return('circ_bed', 'circ_reads', 'bks_reads')
+
