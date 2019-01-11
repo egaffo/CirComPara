@@ -53,6 +53,7 @@ results = []
 
 env['OPTIONS'] = ''
 
+## default command assuming alignment file is gzip'd SAM
 bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
                 '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
 
@@ -71,10 +72,7 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
 
 #TopHat-Fusion, STAR, MapSplice, BWA, segemel
 if env['ALIGNER'].lower() == 'star':
-    env.Replace(ALIGNER = 'STAR')    
-    bks_reads_cmd = '''samtools view -uhS ${SOURCES[0]} | '''\
-                    '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
-    #bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
+    env.Replace(ALIGNER = 'STAR')
     bks_sfx = ".ce2star"
 
 if env['ALIGNER'].lower() == 'bwa':
@@ -175,7 +173,26 @@ bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
 results.append(bed)
 
 ## get backsplice read ids
+if env['ALIGNER'].lower() == 'star':
+
+    circ_reads_cmd = '''samtools view -uS ${SOURCES[0]} | '''\
+                     '''bedtools intersect -s -bed -b stdin -a '''\
+                     '''${SOURCES[1]} -wa -wb | cut -f4,10 | '''\
+                     '''sed -r 's/([^:]+):([0-9]+)-([0-9]+):([^\\t])\\t(.*)'''\
+                              '''/\\1\\t\\2\\t\\3\\t\\5\\t0\\t\\4/' | '''\
+                     '''gzip -c > $TARGET'''
+
+    circ_reads = env.Command([os.path.join(out_dir,
+                                          'bks.reads.bed.gz')], 
+                             [env['ALIGNMENTS'], bed], 
+                             circ_reads_cmd)
+    
+    env.Replace(ALIGNMENTS = circ_reads)
+
+    bks_reads_cmd = 'zcat ${SOURCES[0]} | '
+
 if env['ALIGNER'].lower() == 'segemehl':
+
     ##TODO: should -s (strandness) be considered in bedtools intersect
     ## commmand, since CIRCexplorer annotate may change strand field?
     circ_reads_cmd = '''grep ";B\\|C;" ${SOURCES[0]} | '''\
@@ -186,11 +203,14 @@ if env['ALIGNER'].lower() == 'segemehl':
                      '''sort | uniq | '''\
                      '''bedtools intersect -s -wa -a stdin -b ${SOURCES[1]} | '''\
                      '''gzip -c > $TARGET'''
+
     circ_reads = env.Command([os.path.join(out_dir,
                                           'bks.reads.bed.gz')], 
                              [env['ALIGNMENTS'], bed], 
                              circ_reads_cmd)
+    
     env.Replace(ALIGNMENTS = circ_reads)
+    
     bks_reads_cmd = 'zcat ${SOURCES[0]} | '
 
 ## collect all read ids
