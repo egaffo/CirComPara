@@ -60,6 +60,7 @@ env['OPTIONS'] = ''
 ## Moreover, the circrna's end position must be decreased by 1 when it is 
 ## reported as the sn start.
 ## Only the first six tab-separated fields are considered
+## Finally, in name field set circRNA id defined as chr:start-end:strand
 bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                     '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
                     '''\\1\\t\\2\\t$$((\\2+1))\\t\\1:\\2-\\3:\\6\\t\\5\\t\\6\\n'''\
@@ -77,9 +78,12 @@ if env['ALIGNER'].lower() == 'star':
 
 if env['ALIGNER'].lower() == 'bwa':
     env.Replace(ALIGNER = 'BWA')
-    ## default command assuming alignment file is gzip'd SAM
-    bks_reads_cmd = '''zgrep "^@\|SA:Z" ${SOURCES[0]} | samtools view -huF 260 - | '''\
-                    '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
+    ## alignment file is gzip'd SAM
+    circ_reads_cmd = '''zgrep "^@\|SA:Z" ${SOURCES[0]} | samtools view -huF 260 - | '''\
+                     '''bedtools intersect -s -bed -a ${SOURCES[1]} -b stdin -wa -wb | '''\
+                     + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+
+    bks_reads_cmd = 'zcat ${SOURCES[0]} | '
     bks_sfx = ".ce2bwa"
 
 if env['ALIGNER'].lower() == 'segemehl':
@@ -181,6 +185,21 @@ if env['ALIGNER'] == 'STAR':
                      '''${SOURCES[1]} -wa -wb | '''\
                      + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
 
+    circ_reads = env.Command([os.path.join(out_dir,
+                                          'bks.reads.bed.gz')], 
+                             [env['ALIGNMENTS'], bed], 
+                             circ_reads_cmd)
+    
+    env.Replace(ALIGNMENTS = circ_reads)
+
+    bks_reads_cmd = 'zcat ${SOURCES[0]} | '
+
+if env['ALIGNER'] == 'BWA':
+    ## alignment file is gzip'd SAM
+    circ_reads_cmd = '''zgrep "^@\|SA:Z" ${SOURCES[0]} | samtools view -huF 260 - | '''\
+                     '''bedtools intersect -s -bed -a ${SOURCES[1]} -b stdin -wa -wb | '''\
+                     + bedsamwawb_parse + ''' | sort | uniq | gzip -c > $TARGET'''
+    
     circ_reads = env.Command([os.path.join(out_dir,
                                           'bks.reads.bed.gz')], 
                              [env['ALIGNMENTS'], bed], 
