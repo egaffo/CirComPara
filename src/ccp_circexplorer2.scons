@@ -70,6 +70,10 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                     '''\\1\\t$$((\\3-1))\\t\\3\\t\\1:\\2-\\3:\\6\\t\\5\\t\\6"/e' '''\
                     '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
+bedsamwawb_parse = '''cut -f4,10 | '''\
+                   '''sed -r 's/([^:]+):([0-9]+)-([0-9]+):([^\\t])\\t(.*)'''\
+                            '''/\\1\\t\\2\\t\\3\\t\\5\\t0\\t\\4/' '''
+
 #TopHat-Fusion, STAR, MapSplice, BWA, segemel
 if env['ALIGNER'].lower() == 'star':
     env.Replace(ALIGNER = 'STAR')
@@ -118,13 +122,11 @@ if env['ALIGNER'].lower() == 'segemehl':
 
 if env['ALIGNER'].lower() == 'tophat':
     env.Replace(ALIGNER = 'TopHat-Fusion')
-    bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
     bks_sfx = ".ce2th"
 
 if env['ALIGNER'].lower() == 'tophat_pe':
     env.Replace(ALIGNER = 'TopHat-Fusion')
     env.Replace(OPTIONS = '--pe')
-    bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
     bks_sfx = ".ce2th"
 
 if env['ALIGNER'].lower() == 'mapsplice':
@@ -174,7 +176,7 @@ results.append(bed)
 
 ## get backsplice read ids
 if env['ALIGNER'].lower() == 'star':
-
+    
     circ_reads_cmd = '''samtools view -uS ${SOURCES[0]} | '''\
                      '''bedtools intersect -s -bed -b stdin -a '''\
                      '''${SOURCES[1]} -wa -wb | cut -f4,10 | '''\
@@ -204,6 +206,30 @@ if env['ALIGNER'].lower() == 'segemehl':
                      '''bedtools intersect -s -wa -a stdin -b ${SOURCES[1]} | '''\
                      '''gzip -c > $TARGET'''
 
+    circ_reads = env.Command([os.path.join(out_dir,
+                                          'bks.reads.bed.gz')], 
+                             [env['ALIGNMENTS'], bed], 
+                             circ_reads_cmd)
+    
+    env.Replace(ALIGNMENTS = circ_reads)
+    
+    bks_reads_cmd = 'zcat ${SOURCES[0]} | '
+
+if env['ALIGNER'] == 'TopHat-Fusion':
+    ## first, filter TopHat-Fusion alignments to get only fusion alignments
+    ## then intersect with backsplices.
+    ## 260=256+4 i.e: secondary alignment and not mapped.
+    ## Keep SAM header in grep (required by bedtools).
+    ## Mind that we want BAM input to bedtools being the B file,
+    ## check bedtools intersect note (1) "When a BAM file is used for the A
+    ##  file, the alignment is retained if overlaps exist, and exlcuded if an
+    ##  overlap cannot be found.  If multiple overlaps exist, they are notreported,
+    ##  as we are only testing for one or more overlaps."
+    circ_reads_cmd = '''samtools view -hF 260 ${SOURCES[0]} | grep "^@\\|XF:Z\\|XP:Z" | '''\
+                    '''samtools view -uS - | bedtools intersect -s -bed '''\
+                    '''-a ${SOURCES[1]} -b stdin -wa -wb | ''' +\
+                    bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+    
     circ_reads = env.Command([os.path.join(out_dir,
                                           'bks.reads.bed.gz')], 
                              [env['ALIGNMENTS'], bed], 
