@@ -53,10 +53,6 @@ results = []
 
 env['OPTIONS'] = ''
 
-## default command assuming alignment file is gzip'd SAM
-bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -Su - | '''\
-                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
-
 ## use sed to write a BED file with 'single nucleotide' (sn) intervals
 ## NB: stop position is not included in BED format (intervals are 
 ## 0-based and 'half-open'), so the stop position must be incremented by 1
@@ -81,6 +77,9 @@ if env['ALIGNER'].lower() == 'star':
 
 if env['ALIGNER'].lower() == 'bwa':
     env.Replace(ALIGNER = 'BWA')
+    ## default command assuming alignment file is gzip'd SAM
+    bks_reads_cmd = '''zgrep "^@\|SA:Z" ${SOURCES[0]} | samtools view -huF 260 - | '''\
+                    '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
     bks_sfx = ".ce2bwa"
 
 if env['ALIGNER'].lower() == 'segemehl':
