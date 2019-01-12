@@ -203,9 +203,10 @@ if env['ALIGNER'].lower() == 'segemehl':
                                '''([^\\t]+)\\t([^\\t]+)/echo "'''\
                                '''\\1\\t$$((\\2+1))\\t\\3\\t\\6\\t\\8\\t\\9"/e' | '''\
                      '''sort | uniq | '''\
-                     '''bedtools intersect -s -wa -a stdin -b ${SOURCES[1]} | '''\
-                     '''gzip -c > $TARGET'''
+                     '''bedtools intersect -s -a ${SOURCES[1]} -b stdin -wa -wb | '''\
+                      + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
 
+                     #'''bedtools intersect -s -wa -a stdin -b ${SOURCES[1]} | '''\
     circ_reads = env.Command([os.path.join(out_dir,
                                           'bks.reads.bed.gz')], 
                              [env['ALIGNMENTS'], bed], 
