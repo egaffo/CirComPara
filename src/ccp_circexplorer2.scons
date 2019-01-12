@@ -201,7 +201,7 @@ results.append(bed)
 
 ## get backsplice read ids
 circ_reads = env.Command([os.path.join(out_dir,
-                                      'bks.reads.bed.gz')], 
+                                      '${SAMPLE}.circular.reads.bed.gz')], 
                          [env['ALIGNMENTS'], bed], 
                          circ_reads_cmd)
 

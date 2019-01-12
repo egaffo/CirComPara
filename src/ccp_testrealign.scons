@@ -37,7 +37,7 @@ except NameError:
 ## AND FILTER BY MAPPING QUALITY
 collect_splice_cmd = "filter_segemehl.R -i $SOURCE $TESTREALIGN_PARAMS "\
                      "-o ${TARGETS[0]} -r ${TARGETS[1]}"
-collect_splice_targets = ["splicesites.bed", "${SAMPLE}_circular.reads.bed.gz"]
+collect_splice_targets = ["splicesites.bed", "${SAMPLE}.circular.reads.bed.gz"]
 collect_splice = env.Command(collect_splice_targets, 
                              env['BED'],
                              collect_splice_cmd)
