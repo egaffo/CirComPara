@@ -68,6 +68,30 @@ circ_gtf_cmd = circ_gtf_cmd + '''} | sort -k1,1 -k4,4n > ${TARGETS[0]}'''
 circ_gtf_target = 'circrnas.gtf'
 circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
 
+## compute CirComPara merged read counts
+ccp_counts_dir = 'ccp_counts'
+circular_reads_bed_gz_txt_sources = []
+for s in env['RUNS_DICT'].keys():
+    for m in env['RUNS_DICT'][s]['CIRCULAR_EXPRESSION'].keys():
+        circular_reads_bed_gz_txt_sources.append(env['RUNS_DICT'][s]['CIRCULAR_EXPRESSION'][m]['CIRC_READS'])
+circular_reads_bed_gz_txt_target = os.path.join(ccp_counts_dir,
+                                                'circular.reads.bed.gz.txt')
+circular_reads_bed_gz_txt_cmd = 'find samples/ -name "*circular.reads.bed.gz" > $TARGET'
+circular_reads_bed_gz_txt = env.Command(circular_reads_bed_gz_txt_target, 
+                                        circular_reads_bed_gz_txt_sources,
+                                        circular_reads_bed_gz_txt_cmd)
+
+ccp_counts_targets = [os.path.join(ccp_counts_dir, f) for f in
+                                ['bks.counts.intersect.csv', 
+                                 'bks.counts.union.csv', 
+                                 'bks.counts.union.intersected.csv']]
+ccp_counts_cmd = 'get_circompara_counts.R -i ${SOURCES[0]} '\
+                 '-q $MIN_METHODS -o ${TARGETS[0].dir}'\
+                 + os.path.sep + 'bks.counts.'
+ccp_counts = env.Command(ccp_counts_targets, 
+                         circular_reads_bed_gz_txt, 
+                         ccp_counts_cmd)
+
 ## compute gene introns
 merge_exons_cmd = '''grep -w exon ${SOURCES[0]} | '''\
                   '''sort -k1,1 -k4,4n | '''\
