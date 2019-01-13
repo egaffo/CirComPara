@@ -42,8 +42,8 @@ env['TMP_DIR'] = '_tmp_DCC'
 ## Only the first six tab-separated fields are considered
 bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                     '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+).*/echo "'''\
-                    '''\\1\\t\\2\\t$$((\\2+1))\\t\\4\\t\\5\\t\\6\\n'''\
-                    '''\\1\\t$$((\\3-1))\\t\\3\\t\\4\\t\\5\\t\\6"/e' '''\
+                    '''\\1\\t\\2\\t$$((\\2+1))\\t\\1:\\2-\\3:\\6\\t\\5\\t\\6\\n'''\
+                    '''\\1\\t$$((\\3-1))\\t\\3\\t\\1:\\2-\\3:\\6\\t\\5\\t\\6"/e' '''\
                     '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
 ## TODO: implement paired-end reads DCC
@@ -60,32 +60,35 @@ dcc = env.Command(dcc_targets,
 ## to collect backsplice reads
 circ_bed = dcc[1] ## CircCoordinates file is in BED format
 
-#results.append(dcc)
-
 bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
                   [circ_bed],
                   bed_cmd)
 
-#results.append(bed)
-
-#bks_reads_cmd = '''bedtools intersect -s -bed -abam ${SOURCES[0]} -b ${SOURCES[1]} | '''
-bks_reads_cmd = '''samtools view -uhS ${SOURCES[0]} | '''\
-                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
-
-
-bks_reads_cmd = bks_reads_cmd + \
-                    '''cut -f 4 | sort | uniq -c | '''\
-                    '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
-                    '''sort -k1,1nr > ${TARGETS[0]} '''
+## get backsplice read ids
+bedsamwawb_parse = '''cut -f4,10 | '''\
+                   '''sed -r 's/([^:]+):([0-9]+)-([0-9]+):([^\\t])\\t(.*)'''\
+                            '''/\\1\\t\\2\\t\\3\\t\\5\\t0\\t\\4/' '''
+circ_reads_cmd = '''samtools view -uS ${SOURCES[0]} | '''\
+                 '''bedtools intersect -s -bed -b stdin -a '''\
+                 '''${SOURCES[1]} -wa -wb | '''\
+                 + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+circ_reads = env.Command([os.path.join(out_dir,
+                                      '${SAMPLE}.circular.reads.bed.gz')], 
+                         [env['ALIGNMENTS'], bed], 
+                         circ_reads_cmd)
+    
+## collect all read ids
+bks_reads_cmd = '''zcat ${SOURCES[0]} | cut -f 4 | sort | uniq -c | '''\
+                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
+                '''sort -k1,1nr > ${TARGETS[0]} '''
     
 bks_reads = env.Command([os.path.join(out_dir, 
                                       env['SAMPLE'] + '.dcc.bks.reads')], 
-                        [env['ALIGNMENTS'], bed], 
+                        [circ_reads, bed], 
                         bks_reads_cmd)
 
-#results.append(bks_reads)
-
 circrnas = dcc[0]
+
 ## when -F filtering option is used the results loose strand info
 ## and we nhave to retrieve it from the coodinates file
 if '-F' in env['DCC_EXTRA_PARAMS']:
