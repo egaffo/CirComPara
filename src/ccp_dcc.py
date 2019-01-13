@@ -96,10 +96,11 @@ if '-F' in env['DCC_EXTRA_PARAMS']:
                            [dcc[0], dcc[1]],
                            'dcc_fix_strand.R -c ${SOURCES[0]} -d ${SOURCES[1]} -o ${TARGET}')
 
-results = {'CIRCRNA_COUNT': circrnas,
+results = {'CIRCRNAS': circrnas[0],
            'CIRC_COORDINATES': dcc[1],
            'CIRC_SN_BED': bed,
-           'BKS_READS': bks_reads[0]}
+           'BKS_READS': bks_reads[0],
+           'CIRC_READS': circ_reads}
 
 Return('results')
 

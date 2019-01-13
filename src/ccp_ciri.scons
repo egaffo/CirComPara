@@ -91,4 +91,9 @@ bks_reads = env.Command(bks_reads_tagets, ciri, bks_reads_cmd)
 ## Clean log files, etc.
 Clean(ciri, [ciri_target + '.log', os.path.join(Dir('.').abspath, 'CIRIerror.log')])
 
-Return('ciri bks_reads')
+results = {'CIRCRNAS':    ciri[0],
+           #'CIRC_SN_BED': bed,
+           'BKS_READS':   bks_reads[1],
+           'CIRC_READS':  bks_reads[0]}
+
+Return('results')

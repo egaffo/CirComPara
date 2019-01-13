@@ -219,7 +219,12 @@ bks_reads = env.Command([os.path.join(out_dir,
 
 results.append(bks_reads)
 
-Return('results circ_bed')
+results = {'CIRCRNAS':          circ_bed[0],
+           'CIRC_SN_BED':       bed,
+           'BKS_READS':         bks_reads[0],
+           'CIRC_READS':        circ_reads[0]}
+
+Return('results')
 
 Clean('.', out_dir)
 

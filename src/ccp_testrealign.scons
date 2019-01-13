@@ -53,5 +53,11 @@ bks_reads = env.Command([env['SAMPLE'] + '.testrealign.bks.reads'],
 
 circ_bed = collect_splice[0]
 circ_reads = collect_splice[1]
-Return('circ_bed', 'circ_reads', 'bks_reads')
+
+results = {'CIRCRNAS':    circ_bed,
+           #'CIRC_SN_BED': bed,
+           'BKS_READS':   bks_reads[0],
+           'CIRC_READS':  circ_reads}
+
+Return('results')
 

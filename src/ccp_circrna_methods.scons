@@ -184,7 +184,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                      src_dir = SRC_DIR,
                                      duplicate = 0, 
                                      exports = '''env_testrealign''')
-        results.append(testrealign)
+		results.append(testrealign.values())
 	
     if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 	   'circexplorer2_segemehl' in env['CIRCRNA_METHODS']:
@@ -197,7 +197,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                                 variant_dir = build_dir, src_dir = SRC_DIR,
                                                 duplicate = 0,
                                                 exports = '''circexplorer2_env''')
-        results.append(circexplorer2_segemehl)
+        results.append(circexplorer2_segemehl.values())
 
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
@@ -210,9 +210,9 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                duplicate = 0, 
                                exports = '''env''')
 
-    Depends(find_circ, env['READS'])
+    Depends(find_circ.values(), env['READS'])
     
-    results.append(find_circ)
+    results.append(find_circ.values())
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
    any([f in env['CIRCRNA_METHODS'] for f in ['dcc', 
@@ -252,8 +252,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                     duplicate = 0,
         			exports = '''circexplorer2_env''')
         
-        results.append(circexplorer2_star)	
-        Depends(circexplorer2_star, star)
+        results.append(circexplorer2_star.values())	
+        Depends(circexplorer2_star.values(), star)
 
     if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         'dcc' in env['CIRCRNA_METHODS']:
@@ -273,8 +273,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                   duplicate = 0,
         			exports = '''dcc_env''')
         
-        results.append([File(f) for f in dcc.items()])	
-        Depends(dcc.items(), star)
+        results.append([File(f) for f in dcc.values()])	
+        Depends(dcc.values(), star)
 
     if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         'circrna_finder' in env['CIRCRNA_METHODS']:
@@ -294,8 +294,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                   duplicate = 0,
         			exports = '''cfinder_env''')
         
-        results.append([File(f) for f in cfinder.items()])	
-        Depends(cfinder.items(), star)
+        results.append([File(f) for f in cfinder.values()])	
+        Depends(cfinder.values(), star)
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 	any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_bwa', 'ciri']]):
@@ -326,8 +326,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                                 duplicate = 0,
         			exports = '''circexplorer2_env''')
         
-        results.append(circexplorer2_bwa)
-        Depends(circexplorer2_bwa, bwa)
+        results.append(circexplorer2_bwa.values())
+        Depends(circexplorer2_bwa.values(), bwa)
 
     if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
        'ciri' in env['CIRCRNA_METHODS']:
@@ -340,8 +340,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                               duplicate = 0, 
                               exports = 'env_ciri')
         
-        results.append(ciri)
-        Depends(ciri, bwa)
+        results.append(ciri.values())
+        Depends(ciri.values(), bwa)
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 	'circexplorer2_tophat' in env['CIRCRNA_METHODS'] or \
@@ -380,8 +380,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
                             duplicate = 0,
     			exports = '''circexplorer2_env''')
     
-    results.append(circexplorer2_tophat)
-    Depends(circexplorer2_tophat, tophat['ALIGNMENTS'])
+    results.append(circexplorer2_tophat.values())
+    Depends(circexplorer2_tophat.values(), tophat['ALIGNMENTS'])
 
 Clean('.', build_dir)
 

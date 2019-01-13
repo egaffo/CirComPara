@@ -123,12 +123,10 @@ bks_reads = env.Command(bks_reads_tagets,
                         [find_circ[1], filter_circ[0]], 
                         bks_reads_cmd)
 
-
-## Collect mapped reads count
-#mapped_reads_target = os.path.join(out_dir, 'find_circ_mapped_reads_count.txt')
-#mapped_reads_cmd    = '''sed "s@.*circ_reads': \([0-9]*\).*@\\1@g" $SOURCE > $TARGET'''
-#mapped_reads        = env.Command(mapped_reads_target, find_circ[3], mapped_reads_cmd)
-
+results = {'CIRCRNAS':    filter_circ[0],
+           #'CIRC_SN_BED': bed,
+           'BKS_READS':   bks_reads[1],
+           'CIRC_READS':  bks_reads[0]}
 
 #Return('find_circ filter_circ mapped_reads bks_reads')
-Return('find_circ filter_circ bks_reads')
+Return('results')
