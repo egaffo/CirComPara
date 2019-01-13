@@ -27,7 +27,9 @@ read.list <- arguments$read_list
 
 # input <- "/blackhole/enrico/circular/circompara_testing/circompara/test_circompara/analysis/samples/sample_A/processings/circRNAs/ciri_out/sample_A_ciri.out"
 
-ciri.out <- fread(input = input, select = c(2,3,4,11,12), showProgress = F)
+## N.B: CIRI output is 1-based as GTFs.
+## We need to decrease start position to comply with BED format
+ciri.out <- fread(input = input, select = c(2,3,4,11,12), showProgress = F)[, circRNA_start := circRNA_start - 1]
 
 ## method jaap_DT2 from
 ## https://stackoverflow.com/questions/13773770/split-comma-separated-strings-in-a-column-into-separate-rows
