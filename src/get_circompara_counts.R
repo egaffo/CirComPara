@@ -6,15 +6,15 @@ suppressPackageStartupMessages(library(data.table))
 option_list <- list(
     make_option(c("-i", "--input"), action = "store", type = "character",
                 default = "circular.reads.bed.gz.txt",
-                help = "File with the list of circular.reads.bed.gz files to merge (each sample and method)"),
+                help = "File with the list of circular.reads.bed.gz files to merge, each sample and method (default: circular.reads.bed.gz.txt)"),
     make_option(c("-q", "--min_methods"), action = "store", type = "integer",
                 default = 2,
-                help = "Minimum number of methods"),
+                help = "Minimum number of methods (default: 2)"),
     make_option(c("-o", "--output_prefix"), action = "store", type = "character",
                 default = "bks.counts.",
-                help = "A prefix for output file names")#,
+                help = "A prefix for output file names (default: bks.counts.intersect.csv, bks.counts.union.csv, bks.counts.union.intersected.csv)")#,
     # make_option(c("-f", "--format"), action = "store", type = "character",
-    #             default = "GTF",
+    #             default = "BED",
     #             help = "The file format of output files {GTF,BED}")
 )
 
@@ -30,24 +30,7 @@ min_methods <- arguments$min_methods
 # file.ext <- tolower(arguments$format)
 file.ext <- "csv"
 
-# setwd("test_circompara/analysis")
-# input <- "circular.reads.bed.gz.txt"
-# min_methods <- 2
-
 circular.reads.bed.gz.txt <- readLines(input)
-
-
-# read.dt <- function(x){
-#     d <- fread(x, header = F,
-#                col.names = c("chr", "start", "end",
-#                              "read_id", "score", "strand"))
-#     d$sample_id <- sub(".circular.reads.bed.gz", "", basename(x))
-#     d
-# }
-
-# bks.read.counts <-
-#     unique(rbindlist(lapply(circular.reads.bed.gz.txt, read.dt)))[, .(read.count = .N),
-#                                                               by = .(sample_id, chr, start, end, strand)]
 
 bks.read.method <-
     rbindlist(sapply(circular.reads.bed.gz.txt, fread, header = F,
