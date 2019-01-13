@@ -103,22 +103,32 @@ Clean('.', out_dir)
 ## in which it is reported the read name as a second field
 ## with attached an underscore and a number
 ## N.B.: count only circRNAs in circ_candidates.bed
-bks_reads_cmd = '''grep ">" ${SOURCES[0]} | '''\
-                '''grep -f <(cut -f 4 ${SOURCES[1]}) | '''\
-                '''sed -E "s/>[^ ]+ ([^_]+)_[0-9]+/\\1/g" | '''\
-                '''sort | uniq -c | '''\
-                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
-                '''sort -k1,1nr > ${TARGETS[0]} '''
+#bks_reads_cmd = '''grep ">" ${SOURCES[0]} | '''\
+#                '''grep -f <(cut -f 4 ${SOURCES[1]}) | '''\
+#                '''sed -E "s/>[^ ]+ ([^_]+)_[0-9]+/\\1/g" | '''\
+#                '''sort | uniq -c | '''\
+#                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
+#                '''sort -k1,1nr > ${TARGETS[0]} '''
+#
+#bks_reads = env.Command([os.path.join(out_dir, env['SAMPLE'] + '.fc.bks.reads')], 
+#                        [find_circ[1], filter_circ], 
+#                        bks_reads_cmd)
 
-bks_reads = env.Command([os.path.join(out_dir, env['SAMPLE'] + '.fc.bks.reads')], 
-                        [find_circ[1], filter_circ], 
+bks_reads_tagets = [os.path.join(out_dir, f) for f in 
+                                ['${SAMPLE}.circular.reads.bed.gz', 
+                                 '${SAMPLE}.fc.bks.reads']]
+bks_reads_cmd = 'get_findcirc_bks_reads.R -s ${SOURCES[0]} '\
+                '-c ${SOURCES[1]} -r ${TARGETS[0]} -l ${TARGETS[1]}'
+bks_reads = env.Command(bks_reads_tagets, 
+                        [find_circ[1], filter_circ[0]], 
                         bks_reads_cmd)
 
 
 ## Collect mapped reads count
-mapped_reads_target = os.path.join(out_dir, 'find_circ_mapped_reads_count.txt')
-mapped_reads_cmd    = '''sed "s@.*circ_reads': \([0-9]*\).*@\\1@g" $SOURCE > $TARGET'''
-mapped_reads        = env.Command(mapped_reads_target, find_circ[3], mapped_reads_cmd)
+#mapped_reads_target = os.path.join(out_dir, 'find_circ_mapped_reads_count.txt')
+#mapped_reads_cmd    = '''sed "s@.*circ_reads': \([0-9]*\).*@\\1@g" $SOURCE > $TARGET'''
+#mapped_reads        = env.Command(mapped_reads_target, find_circ[3], mapped_reads_cmd)
 
 
-Return('find_circ filter_circ mapped_reads bks_reads')
+#Return('find_circ filter_circ mapped_reads bks_reads')
+Return('find_circ filter_circ bks_reads')
