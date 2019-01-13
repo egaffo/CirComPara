@@ -44,9 +44,6 @@ bed_cmd = '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                     '''\\1\\t$$((\\3-1))\\t\\3\\t\\1:\\2-\\3:\\6\\t\\5\\t\\6"/e' '''\
                     '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
-bks_reads_cmd = '''samtools view -uhS ${SOURCES[0]} | '''\
-                '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
-
 cfinder_cmd = 'postProcessStarAlignment.pl $EXTRA_PARAMS '\
               '--starDir ${SOURCES[0].dir}' + os.path.sep +\
               ' --outDir ${TARGETS[0].dir}' + os.path.sep
