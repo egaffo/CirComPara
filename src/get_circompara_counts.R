@@ -33,13 +33,16 @@ file.ext <- "csv"
 circular.reads.bed.gz.txt <- readLines(input)
 
 bks.read.method <-
-    rbindlist(sapply(circular.reads.bed.gz.txt, fread, header = F,
+    unique(rbindlist(sapply(circular.reads.bed.gz.txt, fread, header = F,
                      col.names = c("chr", "start", "end", "read_id", "score", "strand"),
                      simplify = F),
               idcol = "sample_id")[, `:=`(sample_id = sub(".circular.reads.bed.gz", "",
                                                           basename(sample_id)),
                                           circ_method = sub(".+circRNAs/([^/]+)/.*", "\\1",
-                                                            sample_id))][]
+                                                            sample_id))][])
+## fix DCC coordinates
+bks.read.method[circ_method == "dcc", start := start -1L]
+
 bks.reads <-
     bks.read.method[, .(n_methods = length(unique(circ_method)),
                         methods = paste0(sort(unique(circ_method)), collapse = "|")),
@@ -82,11 +85,15 @@ write.csv(x = bks.read.counts.intersect,
 ## - discard bks Z with 100 reads detected only by DCC
 ## This should improve sensibility of detection
 bks.read.counts.union <-
-    bks.read.method[, .(read.count = .N,
-                        n_methods = length(unique(circ_method)),
-                        circ_methods = paste0(sort(unique(circ_method)),
-                                              collapse = "|")),
-                    by = .(sample_id, chr, start, end, strand)][n_methods >= min_methods]
+    bks.read.method[, .(circ_methods = list(unique(circ_method))),
+                    by = .(sample_id, chr, start, end, strand,
+                           read_id)][, .(read.count = .N,
+                                         circ_methods = list(unique(unlist(circ_methods)))),
+                                     by = .(sample_id, chr, start, end,
+                                            strand)][, .(n_methods = length(unlist(circ_methods)),
+                                                         circ_methods = paste0(sort(unlist(circ_methods)), collapse = "|")),
+                                                     by = .(sample_id, chr, start, end,
+                                                            strand, read.count)] #[n_methods >= min_methods] ## do not filter already
 
 filename <- paste0(output_prefix, "union.", file.ext)
 write.csv(x = bks.read.counts.union,
