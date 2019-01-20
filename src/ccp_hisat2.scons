@@ -79,7 +79,7 @@ hisat2_targets = [os.path.join(Dir('.').abspath,
                                hisat2_out_dir, f) for f in hisat2_targets_postfixes]
 
 hisat2_cmd = hisat2_cmd + ''' 2> ${TARGETS[1].abspath} | samtools view -hu '''\
-             '''-@ $( $CPUS $) - | samtools sort -O 'bam' -@ $( $CPUS $) '''\
+             '''-@ $( $CPUS $) - | samtools sort $( -m $SAM_SORT_MM $) -O 'bam' -@ $( $CPUS $) '''\
              '''-T $(hisat2_''' + env['SAMPLE'] + '''$) > ${TARGETS[0].abspath}'''
 
 hisat2 = env.Command(hisat2_targets, 

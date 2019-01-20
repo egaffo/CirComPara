@@ -59,7 +59,7 @@ segemehl_mapping_dir = 'segemehl'
 
 ## MAP READS
 sam_sort_cmd = '''samtools view -u $(-@ $CPUS '''\
-               '''$) - | samtools sort -@$( $CPUS '''\
+               '''$) - | samtools sort $( -m $SAM_SORT_MM $) -@$( $CPUS '''\
                '''$) -O 'sam' -T $( ${TARGETS[0].dir}_tmp_$SAMPLE '''\
                '''$) | gzip > ${TARGETS[0].abspath} '''
 

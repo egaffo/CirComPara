@@ -60,7 +60,7 @@ if env['STRANDED'].lower() not in ['yes', 'no']:
 #                  "-O 'sam' -T $({}$) ".format(mapfile_basename) + \
 #                  "${SOURCES[0]} | samtools fixmate -r -O 'sam' - - | awk '!/\\t\*\\t/' - | "\
 #                  "htseq-count -f sam -r name -s no - ${SOURCES[1]} > $TARGET"
-htseq_count_cmd = "samtools sort -n $( -@ $CPUS $) " + \
+htseq_count_cmd = "samtools sort -n $( -@ $CPUS $) $( -m $SAM_SORT_MM $) " + \
                   "-O 'sam' -T $( $SAMPLE $) ${SOURCES[0]} |"\
                   "htseq-count -f sam -r name -s $STRANDED - ${SOURCES[1]} > $TARGET"
 

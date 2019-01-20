@@ -166,6 +166,9 @@ vars.Add('LIN_COUNTER', 'The method to estimate circRNA-host gene '\
 vars.Add('FIX_READ_HEADER', 'Trim FASTQ headers to the read ids. '\
                             'Recommended when processing SRA datasets', 'True')
 
+## performance options
+vars.Add('SAM_SORT_MM', 'Value for samtools sort -m option', '768M')
+
 ## deprecated parameters (legacy)
 vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
 	'By default the symlink in CirComPara bin/ directory will be used', '')
