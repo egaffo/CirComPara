@@ -32,11 +32,14 @@ minqual <- arguments$minqual
 # score is the alignment score of the respective alignment. The type is either
 # 'R' (in case of a regular, collinear split), 'C' (circular split) or 'B' (backsplice)
 
-sege_circ <- fread(cmd = paste0('grep ";B\\|C;" ', input), header = F, skip = 1)
+sege_circ <- fread(cmd = paste0('grep ";B\\|C;" ', input),
+                   header = F, skip = 1)[V5 >= minqual]
+
+splicesites.bed <- data.table()
+reads_output.dt <- data.table()
 
 if(nrow(sege_circ) > 0){
 
-    sege_circ <- sege_circ[V5 >= minqual]
     sege_circ[, c("read.group", "type", "read.name", "mate.status"):=(tstrsplit(V4, ";"))]
     sege_circ <- sege_circ[, .(multi.mapping = .N, map.qual = median(V5)),
                            by = .(chr = V1, left = V2,
@@ -51,6 +54,7 @@ if(nrow(sege_circ) > 0){
                                       score = n)][order(chr, left,
                                                         right)]
 
+    reads_output.dt <- sege_circ[, .(chr, left, right, read.name, map.qual, strand)]
 }
 
 ## write backsplice counts
@@ -60,7 +64,7 @@ write.table(x = splicesites.bed,
 
 ## write gzipped file for circular reads
 reads_output.gz <- gzfile(reads_output, "w")
-write.table(x = sege_circ[, .(chr, left, right, read.name, map.qual, strand)],
+write.table(x = reads_output.dt,
             file = reads_output.gz,
             row.names = F, quote = F, sep = "\t", col.names = F)
 close(reads_output.gz)
