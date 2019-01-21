@@ -36,7 +36,7 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
                         '''min_methods <- ${MIN_METHODS}; '''\
                         '''min_reads <- ${MIN_READS}; '''\
-                        '''meta_file <- "$META"; '''\
+                        '''meta_file <- "${SOURCES[4].abspath}"; '''\
                         '''bks_linear_counts.tab.gz.file <- "${SOURCES[2].abspath}"; '''\
                         '''read_stats_collect.file <- "${SOURCES[3].abspath}"; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
@@ -44,9 +44,11 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
 circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
-circrnas_analysis_sources = [env['CIRCRNAS'], env['CIRCGENES'], 
-                             env['BKS_LIN_COUNTS'],
-                             env['PROCESSING_READ_STATS']]
+circrnas_analysis_sources = [env['CIRCRNAS'], 
+                             env['CIRCGENES'], 
+                             env['BKS_LIN_COUNTS'], 
+                             env['PROCESSING_READ_STATS'],
+                             env['META']]
 circrnas_analysis = env.Command(circrnas_analysis_targets, 
                                 circrnas_analysis_sources, 
                                 circrnas_analysis_cmd)
