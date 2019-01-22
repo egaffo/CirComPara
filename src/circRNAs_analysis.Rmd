@@ -232,6 +232,16 @@ if(nrow(circrnas.gtf[V6 >= min_reads]) > 0){
                ][, (V9newCols) := tstrsplit(sub(V9pattern, 
                                                 "\\1@\\2", V9), "@", fixed=TRUE)
                  ][, V9 := NULL]
+  if(!stranded.lib){
+      ## remove starnd info from circrna names and column by setting all to "+"
+      # circrnas.gtf[, `:=`(V7 = "+",
+      #                     gene_id = sub("(.*):[+-](.*)", "\\1:+\\2", gene_id),
+      #                     transcript_id = sub("(.*):[+-](.*)", "\\1:+\\2", transcript_id))]
+      ## sumup expression by circ_id 
+      circrnas.gtf[, .(V6 = sum(V6)), 
+                   by = .(V1, V2, V3, V4, V5, V7, V8, sample_id, gene_id, transcript_id)]
+  }
+  
   full.circrnas.gtf <- copy(circrnas.gtf)
   circrnas.gtf <- circrnas.gtf[V6 >= min_reads]
   ## normalize circrna reads by the amount of backsplice Reads in method (Per Million reads - RPM)

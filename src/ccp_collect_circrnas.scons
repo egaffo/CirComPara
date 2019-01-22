@@ -7,7 +7,7 @@ Currently supported/implemented for:
     * testrealign (segemehl)
 '''
 
-import os
+import os, re
 Import('*')
 
 try:
@@ -46,13 +46,22 @@ methods = {'CIRI': 'ciri',
        'CFINDER': 'circrna_finder'
        }
 
+## intersect circRNAs with gene annotation: use exon-intron GTF
+## set strandness to set circRNA if stranded library
+## check by HISAT parameters
+strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+env['STRANDED'] = ''
+if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
+    env['STRANDED'] = '-s'
+
 ## collect circRNAs in a single GTF annotation file
 circ_gtf_sources = []
 circ_gtf_cmd = '''{ '''
 for k,v in env['CSVS'].iteritems():
     if v:
 	circ_gtf_sources.append(v)
-        circ_gtf_cmd = circ_gtf_cmd + '''convert_circrna_collect_tables.py -p ''' +\
+        circ_gtf_cmd = circ_gtf_cmd + \
+                       '''convert_circrna_collect_tables.py $STRANDED -p ''' +\
                        methods[k] + ''' ''' + v[0].path + ''' ; '''
 circ_gtf_cmd = circ_gtf_cmd + '''} | sort -k1,1 -k4,4n > ${TARGETS[0]}'''
 
@@ -115,8 +124,7 @@ snp_unique_circ = env.Command('sn_unique_circ.gtf.gz',
                               [unique_circ], 
                               snp_unique_circ_cmd)
 
-## intersect circRNAs with gene annotation: use exon-intron GTF
-circ_gene_combine_cmd = '''bedtools intersect -s -loj -sorted -wa -wb '''\
+circ_gene_combine_cmd = '''bedtools intersect $STRANDED -loj -sorted -wa -wb '''\
                         '''-a ${SOURCES[0]} -b ${SOURCES[1]} | '''\
                         '''gzip -c > $TARGET'''
 circ_gene_combine_sources = [snp_unique_circ, 

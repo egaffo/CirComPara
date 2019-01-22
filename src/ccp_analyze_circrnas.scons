@@ -2,7 +2,7 @@
 Analyze circRNA predictions and set up a report
 '''
 
-import os
+import os,re
 Import('*')
 
 try:
@@ -31,6 +31,13 @@ except NameError, ne:
 
 env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 
+## set strandness to set circRNA if stranded library
+## check by HISAT parameters
+strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+env['STRANDED'] = 'F'
+if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
+    env['STRANDED'] = 'T'
+
 circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                         '''circrnas.gtf.file <- "${SOURCES[0].abspath}"; '''\
                         '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
@@ -39,6 +46,7 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''meta_file <- "${SOURCES[4].abspath}"; '''\
                         '''bks_linear_counts.tab.gz.file <- "${SOURCES[2].abspath}"; '''\
                         '''read_stats_collect.file <- "${SOURCES[3].abspath}"; '''\
+                        '''stranded.lib <- $STRANDED; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
