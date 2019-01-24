@@ -159,8 +159,8 @@ HTSLIB = env.Command(HTSLIB_target,
                       ])
 
 # SEGEMEHL
-SEGEMEHL_tar = 'segemehl-0.3.2.tar.gz'
-SEGEMEHL_dir = os.path.join(tools_dir, 'segemehl-0.3.2')
+SEGEMEHL_tar = 'segemehl-0.3.4.tar.gz'
+SEGEMEHL_dir = os.path.join(tools_dir, 'segemehl-0.3.4')
 SEGEMEHL_link = 'http://www.bioinf.uni-leipzig.de/Software/segemehl/downloads/' + SEGEMEHL_tar
 SEGEMEHL_target = [os.path.join(tools_dir, SEGEMEHL_tar),
                    os.path.join(SEGEMEHL_dir, 'segemehl.x'),
