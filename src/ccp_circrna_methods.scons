@@ -93,6 +93,17 @@ env.SetDefault(CIRC_PE_MAPPING = False)
 
 results = []
 
+## default values when method is not set
+circexplorer2_bwa = None
+circexplorer2_tophat = None
+circexplorer2_segemehl = None
+circexplorer2_star = None
+ciri = None
+find_circ = None
+testrealign = None
+dcc = None
+cfinder = None
+
 sample_name = env['SAMPLE']
 
 env.SetDefault(FIX_READ_HEADER = True)
@@ -155,23 +166,21 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     #'MAPPED_READS' 
     results.append([File(f) for f in segemap.iteritems()])
 
-    env_testrealign = env.Clone()
-   
-    env_testrealign['BED'] = segemap['SINGLE_SPLITS']
-    
-    testrealign_dir = 'testrealign'
-    
-    testrealign = env.SConscript(os.path.join(build_dir, testrealign_dir, 
-                                              ccp_testrealign),
-                                 variant_dir = os.path.join(build_dir, 
-                                                            testrealign_dir), 
-                                 src_dir = SRC_DIR,
-                                 duplicate = 0, 
-                                 exports = '''env_testrealign''')
 
     if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or 'testrealign' in \
 	   env['CIRCRNA_METHODS']:
-		results.append(testrealign)
+
+        env_testrealign = env.Clone()
+        env_testrealign['BED'] = segemap['SINGLE_SPLITS']
+        testrealign_dir = 'testrealign'
+        testrealign = env.SConscript(os.path.join(build_dir, testrealign_dir, 
+                                                  ccp_testrealign),
+                                     variant_dir = os.path.join(build_dir, 
+                                                                testrealign_dir), 
+                                     src_dir = SRC_DIR,
+                                     duplicate = 0, 
+                                     exports = '''env_testrealign''')
+        results.append(testrealign)
 	
     if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 	   'circexplorer2_segemehl' in env['CIRCRNA_METHODS']:
