@@ -58,10 +58,13 @@ except NameError:
 segemehl_mapping_dir = 'segemehl'
 
 ## MAP READS
-sam_sort_cmd = '''samtools view -u $(-@ $CPUS '''\
-               '''$) - | samtools sort $( -m $SAM_SORT_MM $) -@$( $CPUS '''\
-               '''$) -O 'sam' -T $( ${TARGETS[0].dir}_tmp_$SAMPLE '''\
-               '''$) | gzip > ${TARGETS[0].abspath} '''
+#sam_sort_cmd = '''samtools view -u $(-@ $CPUS '''\
+#               '''$) - | samtools sort $( -m $SAM_SORT_MM $) -@$( $CPUS '''\
+#               '''$) -O 'sam' -T $( ${TARGETS[0].dir}_tmp_$SAMPLE '''\
+#               '''$) | gzip > ${TARGETS[0].abspath} '''
+
+## do not sort to prevent samtools failures to fail SAM output file
+sam_sort_cmd = '''gzip > ${TARGETS[0].abspath} '''
 
 segemehl_map_cmd = 'cd ${TARGETS[0].dir} && '
 if len(env['READS']) > 1:
@@ -89,7 +92,7 @@ segemehl_map_cmd = ' && '.join([segemehl_map_cmd,
 segemehl_unmatched_target = "{}_unmatched.fastq.gz".format(env['SAMPLE'])
 
 segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, 
-                                         "{}.sam.gz".format(env['SAMPLE'])), 
+                                         "{}.unsorted.sam.gz".format(env['SAMPLE'])), 
                             os.path.join(segemehl_mapping_dir, 
                                          segemehl_unmatched_target),
                             os.path.join(segemehl_mapping_dir,
