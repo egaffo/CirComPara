@@ -108,6 +108,9 @@ unique_circ = env.Command('unique_circ_ids.gtf.gz',
                           unique_circ_cmd)
 
 ## translate backsplice intervals into start and stop single nucleotide intervals
+## mind that we are writing a newline at the end of the file that will end up
+## in the head of the sorted final file. This breaks bedtools intersect with
+## -sorted option. Thus, we need to get rid of the newline by using grep -v '^$'
 snp_unique_circ_cmd = '''zcat ${SOURCES[0]} | '''\
                       '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                                 '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
@@ -118,8 +121,8 @@ snp_unique_circ_cmd = '''zcat ${SOURCES[0]} | '''\
                                        '''\\1\\t\\2\\tstop\\t'''\
                                        '''$$((\\5))\\t\\5\\t\\6\\t'''\
                                        '''\\7\\t\\8\\tgene_id @\\9@;"/e' | '''\
-                                       '''sed -r 's/@/"/g' | '''\
-                                       '''sort -k1,1 -k4,4n -k5,5n | gzip -c > $TARGET '''
+                      '''sed -r 's/@/"/g' | sort -k1,1 -k4,4n -k5,5n | '''\
+                      '''grep -v '^$' | gzip -c > $TARGET '''
 snp_unique_circ = env.Command('sn_unique_circ.gtf.gz',
                               [unique_circ], 
                               snp_unique_circ_cmd)
