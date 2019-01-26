@@ -89,7 +89,8 @@ ccp_counts_cmd = 'get_circompara_counts.R -i ${SOURCES[0]} '\
                  '-q $MIN_METHODS -o ${TARGETS[0].dir}'\
                  + os.path.sep + 'bks.counts.'
 ccp_counts = env.Command(ccp_counts_targets, 
-                         circular_reads_bed_gz_txt, 
+                         [circular_reads_bed_gz_txt,
+                          circular_reads_bed_gz_txt_sources], 
                          ccp_counts_cmd)
 
 ## compute gene introns
