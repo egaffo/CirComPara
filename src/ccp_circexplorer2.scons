@@ -114,9 +114,9 @@ if env['ALIGNER'].lower() == 'segemehl':
                         '''\\1\\t$$((\\3-1))\\t\\3\\t\\4\\t\\5\\t\\+"/e' '''\
                         '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
-    bks_reads_cmd = '''zcat ${SOURCES[0]} | samtools view -uh $(-@ $CPUS '''\
-                   '''$) - | samtools sort $( -m $SAM_SORT_MM $) -@$( $CPUS '''\
-                   '''$) -O 'sam' -T $( ${TARGETS[0].dir}_tmp_$SAMPLE $) | '''\
+    bks_reads_cmd = '''zcat ${SOURCES[0]} | '''\
+                   '''samtools sort -l 0 $( -m $SAM_SORT_MM $) -@$( $CPUS '''\
+                   '''$) -O 'bam' -T $( ${TARGETS[0].dir}_tmp_$SAMPLE $) | '''\
                     '''bedtools intersect -s -bed -abam stdin -b ${SOURCES[1]} | '''
 
 if env['ALIGNER'].lower() == 'tophat':
