@@ -73,7 +73,9 @@ ccp_counts_dir = 'ccp_counts'
 circular_reads_bed_gz_txt_sources = []
 for s in env['RUNS_DICT'].keys():
     for m in env['RUNS_DICT'][s]['CIRCULAR_EXPRESSION'].keys():
-        circular_reads_bed_gz_txt_sources.append(env['RUNS_DICT'][s]['CIRCULAR_EXPRESSION'][m]['CIRC_READS'])
+        res = env['RUNS_DICT'][s]['CIRCULAR_EXPRESSION'][m]
+        if res:
+            circular_reads_bed_gz_txt_sources.append(res['CIRC_READS'])
 circular_reads_bed_gz_txt_target = os.path.join(ccp_counts_dir,
                                                 'circular.reads.bed.gz.txt')
 circular_reads_bed_gz_txt_cmd = 'find samples/ -name "*circular.reads.bed.gz" > $TARGET'
