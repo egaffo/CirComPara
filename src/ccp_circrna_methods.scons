@@ -94,6 +94,10 @@ env.SetDefault(CIRC_PE_MAPPING = False)
 results = []
 
 ## default values when method is not set
+segemap = None
+star = None
+bwa = None
+tophat = None
 circexplorer2_bwa = None
 circexplorer2_tophat = None
 circexplorer2_segemehl = None
@@ -389,6 +393,10 @@ results_dict = {'CE2_BWA': circexplorer2_bwa,
                 'FC'     : find_circ,
                 'TR'     : testrealign,
                 'DCC'    : dcc,
-                'CFINDER': cfinder
-               }
+                'CFINDER': cfinder,
+                'SEGEMEHL_MAP' : segemap,
+                'STAR_MAP'     : star,
+                'BWA_MAP'      : bwa, 
+                'TOPHAT_MAP'   : tophat
+                }
 Return('results results_dict')
