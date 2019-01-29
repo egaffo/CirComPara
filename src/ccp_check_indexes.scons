@@ -59,7 +59,8 @@ else:
 
 ## check for each of the specified methods whether the genome index 
 ## was given as input or it has to be built
-if any([f in env['CIRCRNA_METHODS'] for f in ['testrealign', 'circexplorer2_segemehl']]):
+if any([f in env['CIRCRNA_METHODS'] for f in ['testrealign', 
+                                              'circexplorer2_segemehl']]):
     if env['SEGEMEHL_INDEX'] == '':
         # set the index to be built
         genome_indexes_to_build.append('SEGEMEHL')
@@ -67,7 +68,8 @@ if any([f in env['CIRCRNA_METHODS'] for f in ['testrealign', 'circexplorer2_sege
         # set the given index to the actual index list
         indexes['SEGEMEHL'] = [env['SEGEMEHL_INDEX']]
 
-if any([f in env['CIRCRNA_METHODS'] for f in ['ciri', 'circexplorer2_bwa']]):
+if any([f in env['CIRCRNA_METHODS'] for f in ['ciri', 
+                                              'circexplorer2_bwa']]):
     if env['BWA_INDEX'] == '':
         genome_indexes_to_build.append('BWA')
     else:
@@ -79,7 +81,9 @@ if 'findcirc' in env['CIRCRNA_METHODS']:
     else:
         indexes['BOWTIE2'] = [env['BOWTIE2_INDEX'] + suffix for suffix in bowtie2_index_suffixes] 
 
-if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_star']]):
+if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_star', 
+                                              'dcc',
+                                              'circrna_finder']]):
     if env['STAR_INDEX'] == '':
 	    genome_indexes_to_build.append('STAR')
     else:
