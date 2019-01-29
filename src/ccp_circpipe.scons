@@ -259,7 +259,8 @@ results_dict = {'RAW_READ_STATS'        : raw_read_stats,
                 'LINEAR_EXPRESSION'     : expression[1],
                 'CIRCULAR_EXPRESSION'   : circrnas[1], ## the dict results format
                 'LINEAR_ALIGNMENTS'     : env['ALIGNMENTS'],
-                'LINEAR_ALIGNMENTS_IDX' : mappings['BAM_INDEX']}
+                'LINEAR_ALIGNMENTS_IDX' : mappings['BAM_INDEX'],
+                'LINEAR_MAPPING_RES'    : mappings}
 
 ## CLEAN COMMANDS
 Clean('.', read_statistics_dir)
