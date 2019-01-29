@@ -107,8 +107,6 @@ vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
 vars.Add('DCC_EXTRA_PARAMS', 'DCC additional parameters', '')
 ## CIRCexplorer2 (annotate) parameters
 vars.Add('CE2_PARAMS', 'Parameters to pass to CIRCexplorer2 annotate', '')
-## Segemehl/Haarz extra parameters
-#vars.Add('HAARZ_PARAMS', 'Segemehl/Haarz parameters', '')
 ## Segemehl/testrealign extra parameters
 vars.Add('TESTREALIGN_PARAMS', 'Segemehl/testrealign filtering parameters'\
          '-q indicates the minimum median quality of backsplices ends '\
