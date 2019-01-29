@@ -206,10 +206,15 @@ else:
 
 if not env['BYPASS'] == 'circular':
     if env['CIRCRNA_METHODS'] == ['']:
-        env.Replace(CIRCRNA_METHODS = ['ciri', 'circexplorer2_bwa', 
+        env.Replace(CIRCRNA_METHODS = ['ciri', 
+                                       'circexplorer2_bwa', 
                                        'circexplorer2_segemehl',
-                                       'circexplorer2_star', 'circexplorer2_tophat', 
-                                       'findcirc', 'testrealign'])
+                                       'circexplorer2_star', 
+                                       'circexplorer2_tophat', 
+                                       'findcirc', 
+                                       'testrealign',
+                                       'dcc',
+                                       'circrna_finder'])
     env.Replace(CIRCRNA_METHODS = sorted(set([m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')])))
 else:
     env['CIRCRNA_METHODS'] == ['']
