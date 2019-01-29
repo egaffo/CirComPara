@@ -338,15 +338,44 @@ for sample in sorted(samples.keys()):
     runs.append(run_sample[0])
     runs_dict[sample] = run_sample[1]
 
-    for k in indexes['INDEXES'].keys():
-        if indexes['INDEXES'][k]: 
-            Depends(run_sample[0], indexes['INDEXES'][k])
+    ## dependencies from aligners' genome index
+    ## TODO: set these dependencies in each Sconscript command by set
+    ## proper command sources
+    Depends([f for f in runs_dict[sample]['LINEAR_MAPPING_RES'].values() if f], 
+            indexes['INDEXES']['HISAT2'])
 
-    if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_bwa', 
-                                                  'circexplorer2_star', 
-                                                  'circexplorer2_segemehl', 
-                                                  'circexplorer2_tophat']]):
-	Depends(run_sample[0], env['GENEPRED']) 
+    if runs_dict[sample]['CIRCULAR_EXPRESSION']['SEGEMEHL_MAP']:
+        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['SEGEMEHL_MAP'].values(), 
+                indexes['INDEXES']['SEGEMEHL']) 
+
+    if runs_dict[sample]['CIRCULAR_EXPRESSION']['STAR_MAP']:
+        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['STAR_MAP'], 
+                indexes['INDEXES']['STAR'])
+
+    if runs_dict[sample]['CIRCULAR_EXPRESSION']['BWA_MAP']:
+        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['BWA_MAP'], 
+                indexes['INDEXES']['BWA'])
+
+    if runs_dict[sample]['CIRCULAR_EXPRESSION']['TOPHAT_MAP']:
+        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['TOPHAT_MAP'].values(), 
+                indexes['INDEXES']['BOWTIE'])
+
+    ## dependencies from processed gene annotation
+    if 'circexplorer2_bwa' in env['CIRCRNA_METHODS']:
+        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CE2_BWA'],
+                env['GENEPRED'])
+
+    if 'circexplorer2_segemehl' in env['CIRCRNA_METHODS']:
+        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CE2_SE'],
+                env['GENEPRED'])
+
+    if 'circexplorer2_star' in env['CIRCRNA_METHODS']:
+        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CE2_ST'],
+                env['GENEPRED'])
+
+    if'circexplorer2_tophat' in env['CIRCRNA_METHODS']:
+        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CE2_TH'],
+                env['GENEPRED'])
 
 env['RUNS_DICT'] = runs_dict
 
