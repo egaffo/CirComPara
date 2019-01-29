@@ -48,35 +48,35 @@ cfinder_nodes = []
 
 ## grab circrna methods' results
 for sample in samples:
-    r = runs[sample]['CIRCULAR_EXPRESSION']['TR']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['TR']
     testrealign_nodes.append(r['CIRCRNAS']) if r else testrealign_nodes.append([''])
 
-    r = runs[sample]['CIRCULAR_EXPRESSION']['FC']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['FC']
     find_circ_nodes.append(r['CIRCRNAS']) if r else find_circ_nodes.append([''])
     
-    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRI']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CIRI']
     ciri_nodes.append(r['CIRCRNAS']) if r else ciri_nodes.append([''])
     
-    r = runs[sample]['CIRCULAR_EXPRESSION']['CE2_ST']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_ST']
     CIRCexplorer2_star_nodes.append(r['CIRCRNAS']) if r else CIRCexplorer2_star_nodes.append([''])
     
-    r = runs[sample]['CIRCULAR_EXPRESSION']['CE2_BWA']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_BWA']
     CIRCexplorer2_bwa_nodes.append(r['CIRCRNAS']) if r else CIRCexplorer2_bwa_nodes.append([''])
     
-    r = runs[sample]['CIRCULAR_EXPRESSION']['CE2_SE']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_SE']
     CIRCexplorer2_segemehl_nodes.append(r['CIRCRNAS']) if r else CIRCexplorer2_segemehl_nodes.append([''])
     
     ##r = runs[sample]['CIRCULAR_EXPRESSION']['CE2_TH']
     ##CIRCexplorer2_tophat_pe_nodes.append(r['CIRCRNAS']) if r else CIRCexplorer2_tophat_pe_nodes.append([''])
     ##CIRCexplorer2_tophat_pe_nodes.append(get_matching_nodes(runs[sample]['CIRCULAR_EXPRESSION']['CE2_TH'][1])
     
-    r = runs[sample]['CIRCULAR_EXPRESSION']['CE2_TH']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_TH']
     CIRCexplorer2_tophat_nodes.append(r['CIRCRNAS']) if r else CIRCexplorer2_tophat_nodes.append([''])
     
-    r = runs[sample]['CIRCULAR_EXPRESSION']['DCC']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['DCC']
     dcc_nodes.append(r['CIRCRNAS']) if r else dcc_nodes.append([''])
     
-    r = runs[sample]['CIRCULAR_EXPRESSION']['CFINDER']
+    r = runs[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CFINDER']
     cfinder_nodes.append(r['CIRCRNAS']) if r else cfinder_nodes.append([''])
 
 CIRCexplorer_compared = None
