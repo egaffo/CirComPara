@@ -1,23 +1,24 @@
-META            = "meta.csv"
+META            = 'meta.csv'
 GENOME_FASTA    = '../annotation/CFLAR_HIPK3.fa'
 ANNOTATION      = '../annotation/CFLAR_HIPK3.gtf' 
-CPUS            = "2"
-PREPROCESSOR    = "trimmomatic"
-PREPROCESSOR_PARAMS = "MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:35 AVGQUAL:30"
-CIRCRNA_METHODS = "dcc,ciri,findcirc,testrealign,"\
-                  "circexplorer2_star,circexplorer2_segemehl,"\
-                  "circexplorer2_bwa,circexplorer2_tophat,circrna_finder"
+CPUS            = '4'
+PREPROCESSOR    = 'trimmomatic'
+PREPROCESSOR_PARAMS = 'MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:35 AVGQUAL:30'
+CIRCRNA_METHODS = 'dcc,ciri,findcirc,testrealign,'\
+                  'circexplorer2_star,circexplorer2_segemehl,'\
+                  'circexplorer2_bwa,circexplorer2_tophat,circrna_finder'
 
+TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = 'False'
 FIX_READ_HEADER = 'True'
 #MIN_READS = 2 #default
 
 ## aligners' custom parameters
-HISAT2_EXTRA_PARAMS = "--rna-strandness RF" # stranded libraries
+HISAT2_EXTRA_PARAMS = '--rna-strandness RF' # stranded libraries
 ## parameters from CIRI
 BWA_PARAMS = ['-T', '19', '-c', '1']
 ## parameters from CIRCexplorer2
-SEGEMEHL_PARAMS = ['-M','1']
-TOPHAT_PARAMS = ['--zpacker','pigz', '--max-multihits', '1']
+SEGEMEHL_PARAMS = ['-M','1'] #'-D', '0', '-Z', '20'
+TOPHAT_PARAMS = ['--max-multihits', '1']#'--zpacker','pigz' 
 ## parameters used in DCC manual example
 STAR_PARAMS = ['--outFilterMultimapNmax', '1', 
                '--outSJfilterOverhangMin', '15', '15', '15', '15',
@@ -44,6 +45,9 @@ STAR_PARAMS = ['--outFilterMultimapNmax', '1',
 LIN_COUNTER = 'ccp' #'dcc'
 
 DCC_EXTRA_PARAMS = ['-fg', '-M', '-Nr', 1, 1, '-F', '-ss']
-TESTREALIGN_PARAMS = ['-q', '1']
-CE2_PARAMS = ['--no-fix']
-FINDCIRC_EXTRA_PARAMS = ['--best-qual', '0']
+TESTREALIGN_PARAMS = ['-q', 'median_15'] ## suggested 'median_40'
+CE2_PARAMS = ['--no-fix'] #suggested not to set '--no-fix' in real datasets
+FINDCIRC_EXTRA_PARAMS = ['--best-qual', '0'] #suggested '40' 
+FIX_READ_HEADER = 'True'
+SAM_SORT_MM = '1G'
+#BYPASS = 'linear'
