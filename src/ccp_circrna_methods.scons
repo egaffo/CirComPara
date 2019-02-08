@@ -285,7 +285,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         cfinder_env.PrependENVPath('PATH', os.path.join(env['ENV']['CIRCOMPARA_HOME'],
                                                         'bin', 'samtools_v0'))
         cfinder_env['FUSION_FILE'] = Chimeric_out_sam
-        cfinder_env['ALIGNMENTS'] = Chimeric_out_sam
+        cfinder_env['ALIGNMENTS'] = Chimeric_out_junction #Chimeric_out_sam
         cfinder_env.Append(EXTRA_PARAMS = env['CFINDER_EXTRA_PARAMS'])
 
         cfinder = env.SConscript(os.path.join(build_dir, 

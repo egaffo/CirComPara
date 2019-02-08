@@ -65,7 +65,8 @@ bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
 bedsamwawb_parse = '''cut -f4,10 | '''\
                    '''sed -r 's/([^:]+):([0-9]+)-([0-9]+):([^\\t])\\t(.*)'''\
                             '''/\\1\\t\\2\\t\\3\\t\\5\\t0\\t\\4/' '''
-circ_reads_cmd = '''samtools view -uS ${SOURCES[0]} | '''\
+
+circ_reads_cmd = '''chimoutjunc_to_bed.py -i ${SOURCES[0]} | '''\
                  '''bedtools intersect -s -bed -b stdin -a '''\
                  '''${SOURCES[1]} -wa -wb | '''\
                  + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
