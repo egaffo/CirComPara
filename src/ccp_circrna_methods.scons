@@ -261,7 +261,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         ## parse STAR alignments with DCC
         dcc_env = env.Clone()
         dcc_env['FUSION_FILE'] = Chimeric_out_junction
-        dcc_env['ALIGNMENTS'] = Chimeric_out_sam #star[0][0]
+        dcc_env['ALIGNMENTS'] = Chimeric_out_junction #Chimeric_out_sam #star[0][0]
         #dcc_env.AppendUnique(EXTRA_PARAMS = env['DCC_EXTRA_PARAMS'])
         ## AppendUnique will fail to correctly add multi-value options
         ## such as -Nr 1 1, since it will not repeat identical values
