@@ -116,9 +116,7 @@ build_dir = 'circRNAs'
 
 ## PREPARE CIRCRNA METHODS' INPUT READS
 if env['CIRC_PE_MAPPING']:
-   ## TODO:
-   print 'CIRC_PE_MAPPING not yet implemented :('
-   exit(-1)
+    env['READS'] = [File(f) for f in env['READS']]
 else:
     ## collapse paired reads into single file
     ## indeed processing reads as they were single-end
