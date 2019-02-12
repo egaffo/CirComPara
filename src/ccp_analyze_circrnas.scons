@@ -33,10 +33,11 @@ env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 
 ## set strandness to set circRNA if stranded library
 ## check by HISAT parameters
-strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
 env['STRANDED'] = 'F'
+strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
 if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
-    env['STRANDED'] = 'T'
+    if not env['UNSTRANDED_CIRCS']:
+        env['STRANDED'] = 'T'
 
 circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                         '''circrnas.gtf.file <- "${SOURCES[0].abspath}"; '''\

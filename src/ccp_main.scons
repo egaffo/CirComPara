@@ -163,6 +163,9 @@ vars.Add('LIN_COUNTER', 'The method to estimate circRNA-host gene '\
                         '[dcc], or the CirComPara [ccp] method', 'ccp')
 vars.Add('FIX_READ_HEADER', 'Trim FASTQ headers to the read ids. '\
                             'Recommended when processing SRA datasets', 'True')
+vars.Add('UNSTRANDED_CIRCS', 'Force unstranded circRNAs even if stranded library '\
+                        'was used', 
+                        'False')
 
 ## performance options
 vars.Add('SAM_SORT_MM', 'Value for samtools sort -m option', '768M')
@@ -201,6 +204,12 @@ if env['FIX_READ_HEADER'].lower() == 'true':
     env.Replace(FIX_READ_HEADER = True)
 else:
     env.Replace(FIX_READ_HEADER = False)
+
+env.SetDefault(UNSTRANDED_CIRCS = False)
+if env['UNSTRANDED_CIRCS'].lower() == 'true':
+    env.Replace(UNSTRANDED_CIRCS = True)
+else:
+    env.Replace(UNSTRANDED_CIRCS = False)
 
 if not env['BYPASS'] == 'circular':
     if env['CIRCRNA_METHODS'] == ['']:

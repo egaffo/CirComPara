@@ -49,10 +49,11 @@ methods = {'CIRI': 'ciri',
 ## intersect circRNAs with gene annotation: use exon-intron GTF
 ## set strandness to set circRNA if stranded library
 ## check by HISAT parameters
-strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
 env['STRANDED'] = ''
+strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
 if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
-    env['STRANDED'] = '-s'
+    if not env['UNSTRANDED_CIRCS']:
+        env['STRANDED'] = '-s'
 
 ## collect circRNAs in a single GTF annotation file
 circ_gtf_sources = []
