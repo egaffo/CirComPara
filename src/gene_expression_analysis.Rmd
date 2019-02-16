@@ -65,6 +65,11 @@ intgroup.dt <- merge(intgroup.dt,
 
 
 ```{r load data, include=FALSE}
+gene.xpr.file           <- readLines(gene.xpr.file)
+transcripts.gtf.files   <- readLines(transcripts.gtf.files)
+gene_raw_counts_list    <- readLines(gene_raw_counts_list)
+trx_raw_counts_list     <- readLines(trx_raw_counts_list)
+
 ## use only the first method in the list
 method <- strsplit(linear.method, ",")[[1]][1]
 if(method == "cufflinks"){
