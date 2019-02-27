@@ -44,6 +44,7 @@ library(scales)
 library(DT)
 library(pheatmap)
 library(viridis)
+library(DESeq2)
 ```
 
 
@@ -239,62 +240,37 @@ if(nrow(circrnas.gtf[V6 >= min_reads]) > 0){
                        by = .(V1, V2, V3, V4, V5, V7, V8, sample_id, gene_id, transcript_id)]
   }
   
-  full.circrnas.gtf <- copy(circrnas.gtf)
-  circrnas.gtf <- circrnas.gtf[V6 >= min_reads]
-  ## normalize circrna reads by the amount of backsplice Reads in method (Per Million reads - RPM)
-  # circrnas.gtf[, RPM := (V6/sum(V6))*10^6, by = .(sample_id, V2)]
-  ## use DESeq normalization to compute RPMs
-  suppressPackageStartupMessages(library(DESeq2))
-  full.circrnas.gtf.mat.dt <- 
-      dcast(full.circrnas.gtf, formula = gene_id ~ sample_id + V2, 
-            value.var = "V6", fill = 0, sep = ".._..", fun.aggregate = sum)
-  full.circrnas.gtf.mat <- as.matrix(full.circrnas.gtf.mat.dt, 
-                                     rownames = "gene_id")
+  ## >= min_reads circrnas
+  xpr.filtered.circ.ids <- circrnas.gtf[V6 >= min_reads, unique(gene_id)]
   
-  full.meta <- 
-      data.frame(unique(full.circrnas.gtf[, .(sample_id, 
-                                              method = V2, 
-                                              id = paste(sample_id, V2, 
-                                                         sep = ".._.."))]),
-                 row.names = "id")
-  dds <- 
-      DESeqDataSetFromMatrix(full.circrnas.gtf.mat[, rownames(full.meta)], 
-                             colData = full.meta,
-                             design = ~1)
-  dds <- estimateSizeFactors(dds, type = "poscount")
+  ## compute median read count
+  circrna.median.reads <- circrnas.gtf[, .(median.reads = median(as.numeric(V6)),
+                                           n_methods = .N), 
+                               by = .(sample_id, gene_id)]
   
-  norm.counts <- counts(dds, normalized = T)
-  norm.counts.m <- as.data.table(melt(norm.counts, 
-                                      varnames = c("gene_id", "id"),
-                                      value.name = "RPM"))
-  norm.counts.m <- merge(norm.counts.m, 
-                         data.table(full.meta, keep.rownames = "id"), 
-                         by = "id")
+  ## >= min_reads circrnas & >= min_methods circrnas
+  meth.filtered.circ.ids <- 
+      circrnas.gtf[V6 >= min_reads, 
+                   .(n_methods = .N), 
+                   by = .(sample_id, gene_id)][n_methods >= min_methods, 
+                                               unique(gene_id)]
   
-  circrnas.gtf <- 
-      merge(circrnas.gtf, 
-            norm.counts.m[, .(gene_id, RPM, sample_id, V2 = method)], 
-            by = c("gene_id", "V2", "sample_id"), 
-            all.x = T, all.y = F)
-  
-  ## compute median of normalized value
+  ## make wide expression table circ ~ method
   circrna.rpms <- 
-      data.table::dcast(data = circrnas.gtf, 
-                        formula = sample_id + gene_id + V1 + V4 + V5 + V7 ~ V2, 
-                        value.var = "RPM", fill = 0)
-  ## account also 0s for the computation of the meadian RPM
-  #circrna.rpms$medRPM <- apply(X = circrna.rpms[, 7:ncol(circrna.rpms), with = F], MARGIN = 1, FUN = median)
-  ## remove 0s from computation of the meadian RPM
+      dcast(data = circrnas.gtf, fun.aggregate = sum,
+            formula = sample_id + gene_id + V1 + V4 + V5 + V7 ~ V2, 
+            value.var = "V6", fill = 0)
+  
   circrna.rpms <- merge(circrna.rpms, 
-                        circrnas.gtf[, .(medRPM = median(RPM)), 
-                                     by = .(sample_id, gene_id)], 
+                        circrna.median.reads, 
                         by = c("sample_id", "gene_id"))
 }else{
-  circrnas.gtf[, `:=`(RPM="", gene_id="")]
+  circrnas.gtf[, `:=`(median.reads="", gene_id="")]
   circrna.rpms <- circrnas.gtf
   circrna.rpms.genes <- circrna.rpms
-  circrna.rpms.genes[, `:=`(circ_id="", gene_ids="", gene_names="", label="", sample_id="", chr="", V1="", start="", V4="", 
-                            end="", V5="", strand="", V7="", medRPM="")]
+  circrna.rpms.genes[, `:=`(circ_id="", gene_ids="", gene_names="", label="", 
+                            sample_id="", chr="", V1="", start="", V4="", 
+                            end="", V5="", strand="", V7="", median.reads="")]
 }
 
 ```
@@ -398,9 +374,10 @@ if(exists_circrnas & exists_gene_overlaps){
 }
 ```
 
-Backsplices were detected using `r circrnas.gtf[, .N, by = V2][, .N]` programs in parallel: `r paste0(sort(circrnas.gtf[, .N, by = V2][, V2]), collapse = ", ")`
+Backsplices were detected by `r circrnas.gtf[, .N, by = V2][, .N]` different methods: `r paste0(sort(circrnas.gtf[, .N, by = V2][, V2]), collapse = ", ")`
 
 The detected circRNAs were saved in the following files:
+
 ```{r sample_circrna_table_files, echo=FALSE, include=TRUE}
 sample.table.file.names <- as.data.frame(sample.table.file.names, stringsAsFactors = F)
 sample.table.file.names$Sample <- rownames(sample.table.file.names)
@@ -419,31 +396,35 @@ kable(sample.table.file.names[, c("Sample", "File")], row.names = F,
 ```{r reliable_circrnas, echo=FALSE, include=TRUE}
 ############# CircRNA expression per sample ###########
 ## get the list of circRNAs detected by min_methods or more methods
-circrnas.morethan2methods <- circrnas.gtf[, .N, 
-                                          by = .(gene_id, V2)][
-                                            , N := NULL][
-                                              , .(n_methods = .N), 
-                                              by = gene_id][
-                                                n_methods >= min_methods, .(gene_id)]
+# circrnas.morethan2methods <- circrnas.gtf[, .N, 
+#                                           by = .(gene_id, V2)][
+#                                             , N := NULL][
+#                                               , .(n_methods = .N), 
+#                                               by = gene_id][
+#                                                 n_methods >= min_methods, .(gene_id)]
+
+circrnas.morethan2methods <- circrnas.gtf[gene_id %in% meth.filtered.circ.ids]
 
 ## subset the circRNA expression table by the circRNAs detected by at least min_methods methods and
 ## with normalized median expression > 0
 setkey(circrna.rpms.genes, circ_id)
 setkey(circrnas.morethan2methods, gene_id)
-circrnas.morethan2methods.medrpm <- circrna.rpms.genes[circrnas.morethan2methods][
-  , .(circ_id, gene_ids, gene_names, label, sample_id, chr = V1, start = V4, end = V5, strand = V7, medRPM)][medRPM > 0]
+
+circrnas.morethan2methods.medrpm <- 
+    unique(circrna.rpms.genes[circrnas.morethan2methods][median.reads > 0, 
+                                                  .(circ_id, gene_ids, gene_names, 
+                                                    label, sample_id, chr = V1, 
+                                                    start = V4, end = V5, 
+                                                    strand = V7, median.reads)])
 
 circrnas.morethan2methods.medrpm.table <- circrnas.morethan2methods
 if(nrow(circrnas.morethan2methods) > 0 ){
   ## reshape with one expression column per sample 
-  circrnas.morethan2methods.medrpm.table <- data.table::dcast(data = circrnas.morethan2methods.medrpm, 
-                                                              formula = circ_id + gene_ids + gene_names + label + chr + start + end + strand ~ sample_id,
-                                                              value.var = "medRPM", fill = 0)
-  
-  # ## add a useful mean expression column
-  # circrnas.morethan2methods.medrpm.table$avg_xpr <- apply(X = circrnas.morethan2methods.medrpm.table[
-  #   , 9:ncol(circrnas.morethan2methods.medrpm.table)], 
-  #   MARGIN = 1, FUN = mean)
+  circrnas.morethan2methods.medrpm.table <- 
+      dcast(data = circrnas.morethan2methods.medrpm, 
+            formula = circ_id + gene_ids + gene_names + label + 
+                chr + start + end + strand ~ sample_id,
+            value.var = "median.reads", fill = 0, fun.aggregate = median)
 }
 ## save table
 circRNA_expression_per_sample.csv.basename <- "circRNA_expression_per_sample.csv"
@@ -460,7 +441,6 @@ write.csv(x = circrnas.morethan2methods.medrpm.table,
 ## CircRNAs detected per method
 
 ```{r show_circrnas_per_method, echo=FALSE, include=TRUE}
-
 circ.per.method <- circrnas.gtf[V6 >= min_reads][, .N, by = .(gene_id, V2)]
 #circ.per.method[, .N, by = V2][, Method := V2][order(-N), .(Method, N)]
 non.redundant <- circ.per.method[, .N, by = gene_id][, .N]
@@ -514,13 +494,13 @@ kable(data.frame(shared.counts.table), caption = "")
 ```
 
 ```{r, echo=FALSE, include=TRUE, fig.height = 6}
-if(nrow(shared.counts.table) > 2){
-    pheatmap(as.matrix(shared.counts.table), 
-             cellwidth = 20, cellheight = 20, 
-             color = viridis(255), 
-             cluster_rows = T, cluster_cols = T,
-             main = "Shared # circRNAs")
-}
+# if(nrow(shared.counts.table) > 2){
+#     pheatmap(as.matrix(shared.counts.table), 
+#              cellwidth = 20, cellheight = 20, 
+#              color = viridis(255), 
+#              cluster_rows = T, cluster_cols = T,
+#              main = "Shared # circRNAs")
+# }
 ```
 
 ```{r, echo=FALSE, include=TRUE}
@@ -654,7 +634,7 @@ For each method, at least `r min_reads` reads were required to consider a circRN
 
 With at least `r min_reads` reads | With at least `r min_reads` reads and `r min_methods` methods
 ---------------: | -----------------------------------------:
-`r circrnas.gtf[RPM > 0, .N, by = .(gene_id)][, .N]` | `r circrnas.morethan2methods.medrpm.table[, .N]`
+`r circrnas.gtf[V6 >= min_reads, .N, by = .(gene_id)][, .N]` | `r circrnas.morethan2methods.medrpm.table[, .N]`
 
 The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per_sample.csv.basename`">`r circRNA_expression_per_sample.csv.basename`</a>. The fields of the table header are explained below:
 
@@ -671,22 +651,22 @@ The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per
 |sample_id |circRNA expression in the sample **                                                | 
 
 \*  The order of the labels correnspond to the order of the overlapping genes. Labels are not repeated thogh, and the number of different label may be lower than the number of different genes.  
-\*\* CircRNA expression is reported in reads per million mapped (RPM) computed as the median RPM of the circRNA detection methods used.  
+\*\* CircRNA expression is reported in median raw count of circRNA detection methods.  
 
 ## CircRNAs detected by sample
 
 ```{r show_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE}
-circ.2reads.at.least <- circrnas.gtf[RPM > 0 , .N, 
+circ.2reads.at.least <- circrnas.gtf[V6 > 0 , .N, 
                                      by = .(sample_id, gene_id)][, .(above_min_reads = .N), 
                                                                  by = sample_id]
 colnames(circ.2reads.at.least)[colnames(circ.2reads.at.least) == "above_min_reads"] <- paste0("With at least ",
                                                                                               min_reads, " reads")
 
 coln <- paste0("With at least ", min_reads, " reads and ", min_methods, " methods")
-circ.2reads.at.least.2methods.at.least <- circrnas.morethan2methods.medrpm[, .N, 
-                                                                           by = .(sample_id, circ_id)][
-                                                                             , .(reliable = .N),
-                                                                             by = sample_id]
+circ.2reads.at.least.2methods.at.least <- 
+    circrnas.morethan2methods.medrpm[, .N, by = .(sample_id, 
+                                                  circ_id)][, .(reliable = .N),
+                                                            by = sample_id]
 colnames(circ.2reads.at.least.2methods.at.least)[colnames(circ.2reads.at.least.2methods.at.least) == "reliable"] <- coln
 reliable.circ.tab <- merge(circ.2reads.at.least, circ.2reads.at.least.2methods.at.least, by = "sample_id")
 
@@ -787,7 +767,7 @@ In the following, circRNA categories are grouped into three main classes: _exoni
 
 ```{r show circrnas classes tab, echo=FALSE, include=TRUE}
 circ.cat.cond.xpr <- merge(circrnas.morethan2methods.medrpm[
-    , .(circ_id, medRPM, sample_id, sorted_label)], 
+    , .(circ_id, median.reads, sample_id, sorted_label)], 
     intgroup.dt[, .(condition, sample_id)], by = "sample_id")
 
 circ.cat.cond.xpr$simple_label <- sapply(circ.cat.cond.xpr$sorted_label, 
@@ -818,7 +798,8 @@ circrna.classes.cond.tab <- dcast(merge(circ.cat.cond.xpr[
     formula = simple_label ~ condition, value.var = "N", fill = 0)
 
 circrna.categories.tab.ext <- merge(circrna.classes.tab.ext, circrna.classes.cond.tab,
-                                    by.x = "Class", by.y = "simple_label", all = T)[order(-`All samples`),]
+                                    by.x = "Class", by.y = "simple_label", 
+                                    all = T)[order(-`All samples`)]
 
 ## TABLE of circRNA category counts
 datatable(data = circrna.categories.tab.ext,
@@ -834,38 +815,57 @@ datatable(data = circrna.categories.tab.ext,
 ## PLOTS
 ## boxplot of circRNA expression divided by circRNA category and , possibly, grouped by condition
 ## just group by category
-circrna.cat.xpr.boxplot <- ggplot(data = circ.cat.cond.xpr, 
-                                             mapping = aes(x = simple_label, y = medRPM, fill = simple_label)) + 
-  geom_boxplot(notch = F) + scale_y_log10() + xlab(NULL) + ylab("RPM") + 
+circrna.cat.xpr.boxplot <- 
+    ggplot(data = circ.cat.cond.xpr, 
+           mapping = aes(x = simple_label, y = median.reads, 
+                         fill = simple_label)) + 
+    geom_boxplot(notch = F) + 
+    scale_y_log10() + 
+    xlab(NULL) + 
+    ylab("Reads") + 
     scale_fill_discrete("Category") +
-  ggtitle("CircRNAs' category\nexpression") + theme_bw()
+    ggtitle("CircRNAs' category\nexpression") + 
+    theme_bw()
+
 circrna.cat.xpr.boxplot <- circrna.cat.xpr.boxplot + 
-  theme(text = element_text(size=default.font.size), 
-        #axis.text.x = element_text(angle=45, hjust=1), 
-        plot.title = element_text(hjust = 0.5), 
-        legend.position = "bottom")
+    theme(text = element_text(size=default.font.size), 
+          #axis.text.x = element_text(angle=45, hjust=1), 
+          plot.title = element_text(hjust = 0.5), 
+          legend.position = "bottom")
 
 ## group by condition
-circrna.cat.xpr.per.cond.boxplot <- ggplot(data = circ.cat.cond.xpr, 
-                                             mapping = aes(x = condition, y = medRPM, fill = simple_label)) + 
-  geom_boxplot(notch = F) + scale_y_log10() + xlab(NULL) + ylab("RPM") + 
+circrna.cat.xpr.per.cond.boxplot <- 
+    ggplot(data = circ.cat.cond.xpr, 
+           mapping = aes(x = condition, y = median.reads, fill = simple_label)) + 
+    geom_boxplot(notch = F) + 
+    scale_y_log10() + 
+    xlab(NULL) + 
+    ylab("Reads") + 
     scale_fill_discrete("Category") +
-  ggtitle("CircRNAs' category\nexpression") + theme_bw()
+    ggtitle("CircRNAs' category\nexpression") + 
+    theme_bw()
+
 circrna.cat.xpr.per.cond.boxplot <- circrna.cat.xpr.per.cond.boxplot + 
-  theme(text = element_text(size=default.font.size), 
-        #axis.text.x = element_text(angle=45, hjust=1), 
-        plot.title = element_text(hjust = 0.5), 
-        legend.position = "bottom")
+    theme(text = element_text(size=default.font.size), 
+          #axis.text.x = element_text(angle=45, hjust=1), 
+          plot.title = element_text(hjust = 0.5), 
+          legend.position = "bottom")
 
 multiplot(circrna.cat.xpr.boxplot, circrna.cat.xpr.per.cond.boxplot, cols = 2)
 
 ## show all samples
-circrna.cat.xpr.per.sample.boxplot <- ggplot(data = circ.cat.cond.xpr, 
-                                             mapping = aes(x = sample_id, y = medRPM, fill = simple_label)) + 
-  geom_boxplot(notch = F) + scale_y_log10() + 
-    facet_grid(facets = . ~ condition, drop = T, scales = "free_x") + xlab(NULL) + ylab("RPM") + 
+circrna.cat.xpr.per.sample.boxplot <- 
+    ggplot(data = circ.cat.cond.xpr, 
+           mapping = aes(x = sample_id, y = median.reads, fill = simple_label)) + 
+    geom_boxplot(notch = F) + 
+    scale_y_log10() + 
+    facet_grid(facets = . ~ condition, drop = T, scales = "free_x") + 
+    xlab(NULL) + 
+    ylab("Reads") + 
     scale_fill_discrete("Category") +
-  ggtitle("CircRNAs' category\nexpression per sample") + theme_bw()
+    ggtitle("CircRNAs' category\nexpression per sample") + 
+    theme_bw()
+
 circrna.cat.xpr.per.sample.boxplot <- circrna.cat.xpr.per.sample.boxplot + 
   theme(text = element_text(size=default.font.size), 
         axis.text.x = element_text(angle=45, hjust=1), 
@@ -1070,7 +1070,7 @@ Note: boxes are drawn with widths proportional to the square-roots of the number
 ```{r CircRNA expression vs circRNAs expressed per gene, include=FALSE}
 circ.expr.to.circ.per.gene.per.sample <- merge(circRNAs.to.gene.per.sample, 
                                                circrna.rpms[, .(circ_id = gene_id, 
-                                                                sample_id, medRPM)], 
+                                                                sample_id, median.reads)], 
                                                by = c("circ_id", "sample_id"), 
                                                all.x = T, all.y = F)
 
@@ -1081,12 +1081,15 @@ circ.expr.to.circ.per.gene.per.sample[, circRNAs_per_gene := .N, by = .(sample_i
 ```{r CircRNA expression vs circRNAs expressed per gene plots, fig.width=12, fig.height=8}
 ## boxplot
 circ.expr.to.circ.per.gene.per.sample.plot <- ggplot(data = circ.expr.to.circ.per.gene.per.sample, 
-                                                     mapping = aes(x = factor(circRNAs_per_gene), y = medRPM)) + 
+                                                     mapping = aes(x = factor(circRNAs_per_gene), 
+                                                                   y = median.reads)) + 
     geom_boxplot(varwidth = T, aes(fill = sample_id)) + 
     scale_y_log10() + facet_wrap(facets = ~ sample_id, scales = "free_x")
 ## add decorations to plot
 circ.expr.to.circ.per.gene.per.sample.plot <- circ.expr.to.circ.per.gene.per.sample.plot + 
-    ggtitle("CircRNAs per gene vs circRNA expression") + xlab("Number of circRNAs") + ylab("CircRNA RPM") + 
+    ggtitle("CircRNAs per gene vs circRNA expression") + 
+    xlab("Number of circRNAs") + 
+    ylab("CircRNA reads") + 
     theme_bw() + 
     theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=90, hjust=1))
 if(meta_file != ""){
@@ -1097,15 +1100,20 @@ circ.expr.to.circ.per.gene.per.sample.plot + theme(plot.title = element_text(hju
     guides(fill = FALSE)
 
 ## all samples together: mean expression across samples
-circ.expr.to.circ.per.gene <- unique(circ.expr.to.circ.per.gene.per.sample[, .(avgRPM = mean(medRPM)), 
-                                                                           by = .(gene_id, circ_id)])[
-                                                                               , circRNAs_per_gene := .N, by = gene_id][]
+circ.expr.to.circ.per.gene <- 
+    unique(circ.expr.to.circ.per.gene.per.sample[, .(avgReads = mean(median.reads)), 
+                                                 by = .(gene_id, 
+                                                        circ_id)])[, circRNAs_per_gene := .N, 
+                                                                   by = gene_id][]
 circ.expr.to.circ.per.gene.plot <- ggplot(data = circ.expr.to.circ.per.gene, 
-                                          mapping = aes(x = factor(circRNAs_per_gene), y = avgRPM)) + 
+                                          mapping = aes(x = factor(circRNAs_per_gene), 
+                                                        y = avgReads)) + 
     geom_boxplot(varwidth = T) + scale_y_log10()
 ## add decorations to plot
 circ.expr.to.circ.per.gene.plot <- circ.expr.to.circ.per.gene.plot + 
-    ggtitle("CircRNAs per gene vs circRNA expression") + xlab("Number of circRNAs") + ylab("CircRNA RPM") + 
+    ggtitle("CircRNAs per gene vs circRNA expression") + 
+    xlab("Number of circRNAs") + 
+    ylab("CircRNA reads") + 
     theme_bw() + 
     theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=90, hjust=1))
 circ.expr.to.circ.per.gene.plot + theme(plot.title = element_text(hjust = 0.5)) + 
@@ -1113,19 +1121,21 @@ circ.expr.to.circ.per.gene.plot + theme(plot.title = element_text(hjust = 0.5)) 
 
 if(meta_file != ""){
     ## discriminate per condition: mean expression across samples, within conditions
-    circ.expr.to.circ.per.gene.per.condition <- unique(circ.expr.to.circ.per.gene.per.sample[, .(avgRPM = mean(medRPM)), 
-                                                                                             by = .(condition, gene_id,
-                                                                                                    circ_id)])[
-                                                                                                 , circRNAs_per_gene := .N, 
-                                                                                                 by = .(condition, gene_id)][]
-    circ.expr.to.circ.per.gene.per.condition.plot <- ggplot(data = circ.expr.to.circ.per.gene.per.condition, 
-                                                            mapping = aes(x = factor(circRNAs_per_gene), y = avgRPM,
-                                                                          fill = condition)) + 
+    circ.expr.to.circ.per.gene.per.condition <- 
+        unique(circ.expr.to.circ.per.gene.per.sample[, .(avgReads = mean(median.reads)), 
+                                                     by = .(condition, gene_id,
+                                                            circ_id)])[, circRNAs_per_gene := .N, 
+                                                                       by = .(condition, gene_id)][]
+    circ.expr.to.circ.per.gene.per.condition.plot <- 
+        ggplot(data = circ.expr.to.circ.per.gene.per.condition, 
+               mapping = aes(x = factor(circRNAs_per_gene), 
+                             y = avgReads,
+                             fill = condition)) + 
         geom_boxplot(varwidth = T) + scale_y_log10() +  
         facet_wrap(facets = ~ condition, scales = "free", nrow = intgroup.dt[, .N, by = condition][, .N])
     ## add decorations to plot
     circ.expr.to.circ.per.gene.per.condition.plot <- circ.expr.to.circ.per.gene.per.condition.plot + 
-        ggtitle("CircRNAs per gene vs circRNA expression") + xlab("Number of circRNAs") + ylab("CircRNA RPM") + 
+        ggtitle("CircRNAs per gene vs circRNA expression") + xlab("Number of circRNAs") + ylab("CircRNA reads") + 
         theme_bw() + 
         theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=90, hjust=1))
     
@@ -1139,19 +1149,6 @@ if(meta_file != ""){
 ```
 
 # Circular - linear expression
-
-```{r}
-## get normalization scaling factor (i.e. clean reads)
-# sample.depth <-
-#     fread(read_stats_collect.file)[, .(sample_id = Sample,
-#                                        seq_depth = as.integer(`Clean reads`))]
-# 
-# circ.scales <- 
-#     circrnas.gtf[, sum(V6), 
-#                  by = .(sample_id, 
-#                         V2)][, .(circ.RPM.scale = median(V1)), 
-#                              by = sample_id]
-```
 
 ```{r}
 bks_linear_counts.tab.gz <- fread(bks_linear_counts.tab.gz.file, 
@@ -1244,8 +1241,8 @@ circ.lin.xpr <- merge(circrna.rpms[circrnas.morethan2methods],
       by = c("sample_id", 
              "gene_id"),
       all.x = T, all.y = F)[, .(sample_id, circ_id = gene_id, 
-                                circ.reads = medRPM, 
-                                lin.reads, CLR = (2*medRPM)/lin.reads)]
+                                circ.reads = median.reads, 
+                                lin.reads, CLR = (2*median.reads)/lin.reads)]
 ```
 
 ## Circular to linear expression
