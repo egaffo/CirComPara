@@ -1434,7 +1434,6 @@ ggplot(circ.lin.xpr, aes(x = "", y = log2(CLR))) +
 ggplot(circ.lin.xpr, 
        aes(x = condition, y = log2(CLR), fill = condition)) +
     geom_boxplot(varwidth = T) +
-    geom_point() +
     xlab(NULL) +
     ylab(expression(Log[2](CLR))) +
     scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
