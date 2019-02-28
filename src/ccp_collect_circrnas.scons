@@ -165,4 +165,14 @@ circ_gene_combine = env.Command(circ_gene_combine_target,
                                 circ_gene_combine_sources, 
                                 circ_gene_combine_cmd)
 
-Return('circ_gene_combine circ_gtf snp_unique_circ unique_circ')
+## generate circrna gene annotation files
+circ_gene_ann_targets = [os.path.join('circrna_gene_annotation', f) for 
+                            f in ['circ_to_genes.tsv', 'gene_to_circ.tsv']]
+circ_gene_ann_sources = circ_gene_combine
+circ_gene_ann_cmd = '''gene_annotation.R -c $SOURCE -o ${TARGETS[0].dir}'''
+circ_gene_ann = env.Command(circ_gene_ann_targets, 
+                            circ_gene_ann_sources,
+                            circ_gene_ann_cmd)
+
+
+Return('circ_gene_combine circ_gtf snp_unique_circ unique_circ circ_gene_ann')
