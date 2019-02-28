@@ -1420,6 +1420,15 @@ circ.lin.xpr <- merge(circ.lin.xpr,
                       meta, by = "sample_id")
 ```
 
+```{r}
+## save CLR 
+circ.lin.xpr.filename <- "clr.csv"
+write.csv(x = circ.lin.xpr, 
+          file = file.path(results.dir, circ.lin.xpr.filename), 
+          row.names = F)
+```
+
+Circular to linear expression ratios have been saved in file <a href="`r circ.lin.xpr.filename`">`r circ.lin.xpr.filename`</a>  
 
 ```{r, fig.width=3}
 ggplot(circ.lin.xpr, aes(x = "", y = log2(CLR))) +
