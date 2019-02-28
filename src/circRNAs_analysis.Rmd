@@ -485,22 +485,31 @@ circByMethod.barplot + guides(fill=FALSE) +
 
 shared.counts.table <- crossprod(x = table(circ.per.method[
   , `:=`(N = NULL, method = V2, V2 = NULL)]))
+## order rows and columns alphabetically
+shared.counts.table <- 
+    shared.counts.table[sort(colnames(shared.counts.table)), 
+                        sort(colnames(shared.counts.table))]
+
 ## save table
 write.csv(x = data.frame(shared.counts.table), 
           file = file.path(results.dir, "methods_shared_circRNA_counts.csv"), 
           row.names = F)
 
-kable(data.frame(shared.counts.table), caption = "")
+kshow <- data.frame(shared.counts.table)
+colnames(kshow) <- sub("_", " ", colnames(kshow))
+rownames(kshow) <- sub("_", " ", rownames(kshow))
+datatable(kshow, caption = "")
 ```
 
 ```{r, echo=FALSE, include=TRUE, fig.height = 6}
-# if(nrow(shared.counts.table) > 2){
-#     pheatmap(as.matrix(shared.counts.table), 
-#              cellwidth = 20, cellheight = 20, 
-#              color = viridis(255), 
-#              cluster_rows = T, cluster_cols = T,
-#              main = "Shared # circRNAs")
-# }
+if(nrow(shared.counts.table) > 2){
+    pheatmap(log2(as.matrix(shared.counts.table)+1),
+             cellwidth = 20, cellheight = 20,
+             color = viridis(255),
+             cluster_rows = F, 
+             cluster_cols = F,
+             main = "Shared # circRNAs (log2 scale)")
+}
 ```
 
 ```{r, echo=FALSE, include=TRUE}
