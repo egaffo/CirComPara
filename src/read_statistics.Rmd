@@ -106,7 +106,7 @@ read_stats_collect[paired == T,
 
 ## merge table
 read.processing.table <- merge(unique(read_stats_collect[is.preprocessor == TRUE, 
-                                                         .(Sample, `Raw reads`, `Clean reads`, Dropped)]),
+                                                         .(Sample, `Raw reads`, `Clean reads`, Dropped)])[!is.na(`Raw reads`)],
                                read_stats_collect[is.mapper == TRUE, ][!is.na(`Linearly unmapped`), 
                                                                        .(Sample, `Linearly unmapped`)])
 read.processing.table[, `Linearly mapped` := `Clean reads`-`Linearly unmapped`]
@@ -356,11 +356,13 @@ circrna.mappings.table.m <- rbind(circrna.mappings[, .(Sample, `CircRNA method`,
                                                           .(Sample, `CircRNA method` = `Processing step`, 
                                                             `Mapped reads` = `Read count`)], use.names = T, fill = T)
 
-circrna.mappings.table.perc.m <- merge(circrna.mappings[, .(Sample, `CircRNA method`, `Mapped reads`)], 
-                                  read.processing.table.m[`Processing step` == "Linearly unmapped", 
-                                                          .(Sample, `Linearly unmapped` = `Read count`)], 
-                                  by = "Sample")[, .("Linearly unmapped %" = `Mapped reads`*100/`Linearly unmapped`), 
-                                                 by = .(Sample, `CircRNA method`)]
+circrna.mappings.table.perc.m <- 
+    merge(circrna.mappings[, .(Sample, `CircRNA method`, `Mapped reads`)],
+          read.processing.table.m[`Processing step` == "Linearly unmapped", 
+                                  .(Sample, 
+                                    `Linearly unmapped` = `Read count`)], 
+          by = "Sample")[, .("Linearly unmapped %" = `Mapped reads`*100/`Linearly unmapped`), 
+                         by = .(Sample, `CircRNA method`)]
 ```
 
 ```{r circrna aligned reads table, echo=FALSE}
