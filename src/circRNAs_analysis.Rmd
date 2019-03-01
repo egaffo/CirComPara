@@ -224,21 +224,23 @@ colClasses <- c("factor", "factor", "character", "integer",
                 "integer", "integer", "factor", "character", "character")
 circrnas.gtf <- fread(circrnas.gtf.file, data.table = T, 
                       colClasses = colClasses)
-V9pattern <- '.*gene_id "([^"]*)".*transcript_id "([^"]*)".*'
-V9newCols <- c("gene_id", "transcript_id")
+# V9pattern <- '.*gene_id "([^"]*)".*transcript_id "([^"]*)".*'
+# V9newCols <- c("gene_id", "transcript_id")
 exists_circrnas <- FALSE
 if(nrow(circrnas.gtf[V6 >= min_reads]) > 0){
   exists_circrnas <- TRUE
-  circrnas.gtf[, `:=` (sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9))
-               ][, (V9newCols) := tstrsplit(sub(V9pattern, 
-                                                "\\1@\\2", V9), "@", fixed=TRUE)
-                 ][, V9 := NULL]
-  if(!stranded.lib){
-      ## sumup expression by circ_id 
-      circrnas.gtf <- 
-          circrnas.gtf[, .(V6 = sum(V6)), 
-                       by = .(V1, V2, V3, V4, V5, V7, V8, sample_id, gene_id, transcript_id)]
-  }
+  # circrnas.gtf[, `:=` (sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9))
+  #              ][, (V9newCols) := tstrsplit(sub(V9pattern, 
+  #                                               "\\1@\\2", V9), "@", fixed=TRUE)
+  #                ][, V9 := NULL]
+  circrnas.gtf[, `:=` (sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9),
+                       gene_id = paste0(V1, ":", V4, "-", V5))
+               ][, V9 := NULL]
+  
+  ## sumup expression by circ_id 
+  circrnas.gtf <- 
+      circrnas.gtf[, .(V6 = sum(V6)), 
+                   by = .(V1, V2, V4, V5, sample_id, gene_id)]
   
   ## >= min_reads circrnas
   xpr.filtered.circ.ids <- circrnas.gtf[V6 >= min_reads, unique(gene_id)]
@@ -258,7 +260,7 @@ if(nrow(circrnas.gtf[V6 >= min_reads]) > 0){
   ## make wide expression table circ ~ method
   circrna.rpms <- 
       dcast(data = circrnas.gtf, fun.aggregate = sum,
-            formula = sample_id + gene_id + V1 + V4 + V5 + V7 ~ V2, 
+            formula = sample_id + gene_id + V1 + V4 + V5 ~ V2, 
             value.var = "V6", fill = 0)
   
   circrna.rpms <- merge(circrna.rpms, 
@@ -270,7 +272,7 @@ if(nrow(circrnas.gtf[V6 >= min_reads]) > 0){
   circrna.rpms.genes <- circrna.rpms
   circrna.rpms.genes[, `:=`(circ_id="", gene_ids="", gene_names="", label="", 
                             sample_id="", chr="", V1="", start="", V4="", 
-                            end="", V5="", strand="", V7="", median.reads="")]
+                            end="", V5="", strand="", median.reads="")]
 }
 
 ```
@@ -284,72 +286,81 @@ if(nrow(circrnas.gtf[V6 >= min_reads]) > 0){
 #                    character = c(5, 11))
 #colToDrop <- c("V3", "V8", "V11", "V12", "V15", "V17")
 #combined_gtf <- fread(paste0('zcat ', combined_gtf_file), data.table = T, colClasses = colClasses, drop = colToDrop)
-combined_gtf <- fread(cmd = paste0('zcat ', combined_gtf_file), data.table = T, 
-                      # colClasses = colClasses, 
-                      drop = c(2,3,
-                               4,5,
-                               6,8,11,15,17))
-exists_gene_overlaps <- FALSE
-if(nrow(combined_gtf) > 0){
-  exists_gene_overlaps <- TRUE
-  # if(fix_testrealign){
-  #   setkey(combined_gtf, V2)
-  #   combined_gtf["testrealign", V4 := V4-1]
-  # }
-  combined_gtf[, `:=`(circ_id = sub('.*gene_id "([^"]*)".*', '\\1', V9),
-                      gene_id = sub('.*gene_id "([^"]*)".*', "\\1", V18), 
-                      gene_name = ifelse(grepl('gene_name', V18, fixed = T), 
-                                         sub('.*gene_name "([^"]*)".*', "\\1", 
-                                             V18), "."),
-                      # sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9),
-                      chr = V1, 
-                      # circ_start = as.integer(V4), 
-                      # circ_end = as.integer(V5), 
-                      strand = V7,
-                      gene_chr = V10, 
-                      exon_start = as.integer(V13), 
-                      exon_end = as.integer(V14), 
-                      exon_strand = V16)
-               ][, `:=`(V1 = NULL, 
-                        # V4 = NULL, V5 = NULL, 
-                        V7 = NULL, V9 = NULL, 
-                        V10 = NULL, V13 = NULL, V14 = NULL, V16 = NULL, V18 = NULL)]
-  # combined_gtf[, `:=`(gene_start = min(exon_start), 
-  #                     gene_end = max(exon_end)), 
-  #              by = gene_id]
-  combined_gtf[V12 == ".", V12 := "intergenic"]
-  
-  # circ_to_gene <- combined_gtf[, .(counts = .N), by = .(chr, circ_start, circ_end, strand, 
-  #                                                       exon_start, exon_end, gene_id, gene_name, 
-  #                                                       gene_start, gene_end)][, counts := NULL]
-  # 
-  # 
-  # 
-  # circ_to_gene[, rowId := .I]
-  # circ_to_gene[, label := label.backsplice(c(circ_start, circ_end), 
-  #                                          c(exon_start, exon_end), 
-  #                                          c(gene_start, gene_end), 
-  #                                          flank = 1),
-  #              by = rowId]
-  # circ_to_gene[, `:=` (rowId = NULL)]
-  # 
-  # ## keep order of labels the same of the order of genes
-  # circ_to_genes <- circ_to_gene[, .(circ_id = paste0(chr, ":", circ_start, "-", circ_end, ":", strand), 
-  #                                   gene_id, gene_name, label)][
-  #                                     , .(label = refine_label(label)), by = .(circ_id, gene_id, gene_name)][
-  #                                       , .(gene_ids = paste0(unique(gene_id), collapse = "|"),
-  #                                           gene_names = paste0(unique(gene_name), collapse = "|"),
-  #                                           label = paste0(unique(label), collapse = "|")), 
-  #                                       by = circ_id]
-  
-  circ_to_gene <- combined_gtf[, .(features = paste(sort(unique(V12)), collapse = ",")),
-                                by = .(circ_id, gene_id, gene_name)]
-  circ_to_genes <- circ_to_gene[, .(label = paste0(sort(unique(features)), collapse = "|"),
-                                    gene_ids = paste0(gene_id, collapse = "|"),
-                                    gene_names = paste0(gene_name, collapse = "|")), 
-                                by = .(circ_id)]
-}
 
+circ_to_genes <- fread(circ_to_genes.file)
+circ_to_gene <- fread(gene_to_circ.file)
+
+# combined_gtf <- fread(cmd = paste0('zcat ', combined_gtf_file), data.table = T, 
+#                       # colClasses = colClasses, 
+#                       drop = c(2,3,
+#                                4,5,
+#                                6,8,11,15,17))
+exists_gene_overlaps <- FALSE
+if(nrow(circ_to_genes) > 0){
+  exists_gene_overlaps <- TRUE
+}
+# if(nrow(combined_gtf) > 0){
+#   exists_gene_overlaps <- TRUE
+#   # if(fix_testrealign){
+#   #   setkey(combined_gtf, V2)
+#   #   combined_gtf["testrealign", V4 := V4-1]
+#   # }
+#   combined_gtf[, `:=`(circ_id = sub('.*gene_id "([^"]*)".*', '\\1', V9),
+#                       gene_id = sub('.*gene_id "([^"]*)".*', "\\1", V18), 
+#                       gene_name = ifelse(grepl('gene_name', V18, fixed = T), 
+#                                          sub('.*gene_name "([^"]*)".*', "\\1", 
+#                                              V18), "."),
+#                       # sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9),
+#                       chr = V1, 
+#                       # circ_start = as.integer(V4), 
+#                       # circ_end = as.integer(V5), 
+#                       strand = V7,
+#                       gene_chr = V10, 
+#                       exon_start = as.integer(V13), 
+#                       exon_end = as.integer(V14), 
+#                       exon_strand = V16)
+#                ][, `:=`(V1 = NULL, 
+#                         # V4 = NULL, V5 = NULL, 
+#                         V7 = NULL, V9 = NULL, 
+#                         V10 = NULL, V13 = NULL, V14 = NULL, V16 = NULL, V18 = NULL)]
+#   # combined_gtf[, `:=`(gene_start = min(exon_start), 
+#   #                     gene_end = max(exon_end)), 
+#   #              by = gene_id]
+#   combined_gtf[V12 == ".", V12 := "intergenic"]
+#   
+#   # circ_to_gene <- combined_gtf[, .(counts = .N), by = .(chr, circ_start, circ_end, strand, 
+#   #                                                       exon_start, exon_end, gene_id, gene_name, 
+#   #                                                       gene_start, gene_end)][, counts := NULL]
+#   # 
+#   # 
+#   # 
+#   # circ_to_gene[, rowId := .I]
+#   # circ_to_gene[, label := label.backsplice(c(circ_start, circ_end), 
+#   #                                          c(exon_start, exon_end), 
+#   #                                          c(gene_start, gene_end), 
+#   #                                          flank = 1),
+#   #              by = rowId]
+#   # circ_to_gene[, `:=` (rowId = NULL)]
+#   # 
+#   # ## keep order of labels the same of the order of genes
+#   # circ_to_genes <- circ_to_gene[, .(circ_id = paste0(chr, ":", circ_start, "-", circ_end, ":", strand), 
+#   #                                   gene_id, gene_name, label)][
+#   #                                     , .(label = refine_label(label)), by = .(circ_id, gene_id, gene_name)][
+#   #                                       , .(gene_ids = paste0(unique(gene_id), collapse = "|"),
+#   #                                           gene_names = paste0(unique(gene_name), collapse = "|"),
+#   #                                           label = paste0(unique(label), collapse = "|")), 
+#   #                                       by = circ_id]
+#   
+#   circ_to_gene <- combined_gtf[, .(features = paste(sort(unique(V12)), collapse = ",")),
+#                                 by = .(circ_id, gene_id, gene_name)]
+#   circ_to_genes <- circ_to_gene[, .(label = paste0(sort(unique(features)), collapse = "|"),
+#                                     gene_ids = paste0(gene_id, collapse = "|"),
+#                                     gene_names = paste0(gene_name, collapse = "|")), 
+#                                 by = .(circ_id)]
+# }
+```
+
+```{r}
 if(exists_circrnas & exists_gene_overlaps){
   setkey(circrna.rpms, gene_id)
   setkey(circ_to_genes, circ_id)
@@ -370,7 +381,7 @@ if(exists_circrnas & exists_gene_overlaps){
                                     FUN = save.sample.table, 
                                     outdir = results.dir)
 }else{
-  sample.table.file.names <- "No circRNAs detected"
+  sample.table.file.names <- "No circRNAs or no known genes overalp"
 }
 ```
 
@@ -413,9 +424,10 @@ setkey(circrnas.morethan2methods, gene_id, sample_id)
 circrnas.morethan2methods.medrpm <- 
     unique(circrna.rpms.genes[circrnas.morethan2methods][median.reads > 0, 
                                                   .(circ_id, gene_ids, gene_names, 
-                                                    label, sample_id, chr = V1, 
+                                                    label = simple_gene_region, 
+                                                    sample_id, chr = V1, 
                                                     start = V4, end = V5, 
-                                                    strand = V7, median.reads)])
+                                                    strand, median.reads)])
 
 circrnas.morethan2methods.medrpm.table <- circrnas.morethan2methods
 if(nrow(circrnas.morethan2methods) > 0 ){
@@ -919,7 +931,7 @@ _intergenic_ circRNAs were not considered.
 #                                                gene_id, gene_name, label)], 
 #                             circ_id %in% circrnas.morethan2methods.medrpm[
 #                                 , .N ,by = circ_id][, circ_id])[label != "intergenic_spanning_gene"]
-circRNAs.to.gene <- subset(circ_to_gene[gene_id != "."], 
+circRNAs.to.gene <- subset(circ_to_gene[gene_region != "intergenic"], 
                            circ_id %in% circrnas.morethan2methods.medrpm.table$circ_id)
 
 ## count circRNAs per gene and set the list of circRNAs of the gene
@@ -1026,7 +1038,7 @@ circRNAs.per.gene.per.sample <-
 ```
 
 ```{r}
-fig.height <- max(meta[, .N], 2)*1.5
+fig.height <- max(ceiling(meta[, .N]/3), 2)*1.5
 ```
 
 ```{r, echo=FALSE, include=TRUE, fig.width=12, fig.height=fig.height}
@@ -1244,6 +1256,9 @@ if("V1" %in% colnames(bks_linear_counts.tab.gz)){
                                              basename(sample_id)),
                                     circ_id = sub('.*"([^"]+)".*', "\\1", V9))]
     bks_linear_counts.tab.gz[, V1 := NULL]
+    ## remove strand info from circ_id
+    bks_linear_counts.tab.gz[, circ_id := sub(":[-+.]", "", circ_id)]
+    
     bks_linear_counts.tab.gz.m <- 
         bks_linear_counts.tab.gz[, .(lin.reads = sum(V10)), 
                                  by = .(sample_id, circ_id)]
@@ -1256,9 +1271,9 @@ if("V1" %in% colnames(bks_linear_counts.tab.gz)){
     ## DCC uses BED coordinates, we need to convert
     bks_linear_counts.tab.gz[, circ_id := paste0(chr, ":", start+1, "-", end)]
     if("strand" %in% colnames(bks_linear_counts.tab.gz)){
-        bks_linear_counts.tab.gz[, circ_id := paste0(circ_id, ":", strand)]
+        # bks_linear_counts.tab.gz[, circ_id := paste0(circ_id, ":", strand)]
     }else{
-        bks_linear_counts.tab.gz[, circ_id := paste0(circ_id, ":", c("+", "-"))]
+        # bks_linear_counts.tab.gz[, circ_id := paste0(circ_id, ":", c("+", "-"))]
         bks_linear_counts.tab.gz <- 
             bks_linear_counts.tab.gz[circ_id %in% circrnas.gtf[, unique(gene_id)],
                                      c("circ_id", sort(meta$sample_id)), 

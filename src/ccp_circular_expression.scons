@@ -55,7 +55,7 @@ circrna_analyze_dir = 'circrna_analyze'
 env_circrna_analyze = env.Clone()
 env_circrna_analyze['META'] = File(env['META']).abspath
 env_circrna_analyze['CIRCRNAS'] = circrna_collect[1]
-env_circrna_analyze['CIRCGENES'] = circrna_collect[0]
+env_circrna_analyze['CIRCGENES'] = circrna_collect[4]
 env_circrna_analyze['BKS_LIN_COUNTS'] = circrna_linexp
 if int(env_circrna_analyze['MIN_METHODS']) > len(env['CIRCRNA_METHODS']):
     env_circrna_analyze['MIN_METHODS'] = len(env['CIRCRNA_METHODS'])

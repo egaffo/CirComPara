@@ -41,12 +41,13 @@ if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
 
 circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                         '''circrnas.gtf.file <- "${SOURCES[0].abspath}"; '''\
-                        '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
+                        '''circ_to_genes.file <- "${SOURCES[1].abspath}"; '''\
+                        '''gene_to_circ.file  <- "${SOURCES[2].abspath}"; '''\
                         '''min_methods <- ${MIN_METHODS}; '''\
                         '''min_reads <- ${MIN_READS}; '''\
-                        '''meta_file <- "${SOURCES[4].abspath}"; '''\
-                        '''bks_linear_counts.tab.gz.file <- "${SOURCES[2].abspath}"; '''\
-                        '''read_stats_collect.file <- "${SOURCES[3].abspath}"; '''\
+                        '''meta_file <- "${SOURCES[5].abspath}"; '''\
+                        '''bks_linear_counts.tab.gz.file <- "${SOURCES[3].abspath}"; '''\
+                        '''read_stats_collect.file <- "${SOURCES[4].abspath}"; '''\
                         '''stranded.lib <- $STRANDED; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
@@ -54,7 +55,7 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
 
 circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
 circrnas_analysis_sources = [env['CIRCRNAS'], 
-                             env['CIRCGENES'], 
+                             env['CIRCGENES'][0], env['CIRCGENES'][1], 
                              env['BKS_LIN_COUNTS'], 
                              env['PROCESSING_READ_STATS'],
                              env['META']]
