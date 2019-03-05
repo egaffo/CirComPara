@@ -77,9 +77,11 @@ for s in env['RUNS_DICT'].keys():
         res = env['RUNS_DICT'][s]['CIRCULAR_EXPRESSION']['CIRC_METHODS'][m]
         if res:
             circular_reads_bed_gz_txt_sources.append(res['CIRC_READS'])
+
 circular_reads_bed_gz_txt_target = os.path.join(ccp_counts_dir,
                                                 'circular.reads.bed.gz.txt')
-circular_reads_bed_gz_txt_cmd = 'find samples/ -name "*circular.reads.bed.gz" > $TARGET'
+#circular_reads_bed_gz_txt_cmd = 'find samples/ -name "*circular.reads.bed.gz" > $TARGET'
+circular_reads_bed_gz_txt_cmd = '''echo -e "${'\\\\n'.join([str(f.abspath) for f in SOURCES])}" > $TARGET'''
 circular_reads_bed_gz_txt = env.Command(circular_reads_bed_gz_txt_target, 
                                         circular_reads_bed_gz_txt_sources,
                                         circular_reads_bed_gz_txt_cmd)
