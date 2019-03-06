@@ -46,7 +46,20 @@ def get_matching_nodes(nodelist, rexpression, abspath = False):
             files.append(node)
     return files
 
+## Define an action to write text lines in a file
+def writeLines(target, source, env):
+    ''' Generate a text file with sources file absolute paths as lines. 
+    :param source: the source nodes to be listed in the target file.
+    :param target: the output file.'''
+    
+    with open(target[0].path, 'w') as txtfile:
+        for line in source:
+            txtfile.write(line.abspath)
+            txtfile.write('\n')
 
+    return None
+
+WriteLinesInTxt = Builder(action = writeLines, suffix = '.txt')
 
 ## GET PROGRAM ARGUMENTS
 vars = Variables('vars.py')
@@ -182,6 +195,8 @@ unknown = vars.UnknownVariables()
 if unknown:
     print "Run sample: unknown variables", unknown.keys()
     Exit(1)
+
+env.Append(BUILDERS = {'WriteLinesInTxt' : WriteLinesInTxt})
 
 env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
