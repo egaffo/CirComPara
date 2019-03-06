@@ -174,29 +174,21 @@ if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
     trx_raw_counts_list = gene_exp
 
 ## REPORT GENE EXPRESSION
-gene_xpr_files_list = env.Command(os.path.join(geneexp_dir,
+gene_xpr_files_list = env.WriteLinesInTxt(os.path.join(geneexp_dir,
                                           'samples_expression_files.txt'), 
-                                  gene_exp, 
-                             '''echo '${','.join([str(f.abspath) for f in '''\
-                             '''SOURCES])}' > $TARGET''')
+                                  gene_exp)
 
-transcripts_gtf_files_list = env.Command(os.path.join(geneexp_dir,
+transcripts_gtf_files_list = env.WriteLinesInTxt(os.path.join(geneexp_dir,
                                           'samples_trxexp_files.txt'), 
-                                  trx_exp, 
-                             '''echo '${','.join([str(f.abspath) for f in '''\
-                             '''SOURCES])}' > $TARGET''')
+                                  trx_exp)
 
-gene_raw_counts_files_list = env.Command(os.path.join(geneexp_dir,
+gene_raw_counts_files_list = env.WriteLinesInTxt(os.path.join(geneexp_dir,
                                           'samples_generawc_files.txt'), 
-                                  gene_raw_counts_list, 
-                             '''echo '${','.join([str(f.abspath) for f in '''\
-                             '''SOURCES])}' > $TARGET''')
+                                  gene_raw_counts_list)
 
-trx_raw_counts_files_list = env.Command(os.path.join(geneexp_dir,
+trx_raw_counts_files_list = env.WriteLinesInTxt(os.path.join(geneexp_dir,
                                           'samples_trxrawc_files.txt'), 
-                                  trx_raw_counts_list, 
-                             '''echo '${','.join([str(f.abspath) for f in '''\
-                             '''SOURCES])}' > $TARGET''')
+                                  trx_raw_counts_list)
 
 gene_exp_analysis_template = os.path.join("$SCONSCRIPT_HOME", "gene_expression_analysis.Rmd")
 gene_exp_analysis_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[0].abspath}"); '''\
