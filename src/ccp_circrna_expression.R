@@ -55,8 +55,8 @@ fwrite(x = circrnas.gtf[, .(sample_id, circ_id = gene_id, chr = V1,
        file = file.path(results.path, "unfiltered_circrnas.csv"),
        showProgress = F)
 
-## circrna ids detected with >= 'min_reads' reads
-xpr.filtered.circ.ids <- circrnas.gtf[V6 >= min_reads, unique(gene_id)]
+# ## circrna ids detected with >= 'min_reads' reads
+# xpr.filtered.circ.ids <- circrnas.gtf[V6 >= min_reads, unique(gene_id)]
 
 ## compute median read count, counting also methods that detected the circRNA
 ## with less than 'min_reads' reads
@@ -152,10 +152,20 @@ circ.meth.tab <-
                                                       -overall.n.methods, circ_id),
                                                 .(circ_id)]]
 
+## save
 fwrite(x = circ.meth.tab,
        file = file.path(results.path, "ccp_circrna_methods.csv"),
        quote = T,
        showProgress = F)
 
-## TODO: save expression matrix for each circrna method
+## save expression matrix for each circrna method
+circ.meth.xpr.mats <-
+    lapply(split(circrnas.gtf[, .(circ.method = V2, circ_id = gene_id, sample_id,
+                              reads = V6)],
+             by = "circ.method"),
+       dcast, formula = circ_id ~ sample_id, value.var = "reads", fill = 0)
 
+circ.meth.xpr.mats.files <-
+    sapply(names(circ.meth.xpr.mats),
+           function(x)fwrite(circ.meth.xpr.mats[[x]],
+                             file = file.path(results.path, paste0(x, "_raw_xpr.csv"))))
