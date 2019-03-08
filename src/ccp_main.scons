@@ -300,7 +300,8 @@ with open(env['META']) as csvfile:
         samples[row['sample']].append(os.path.abspath(row['file']))
         conditions[row['condition']].add(row['sample'])
 	try:
-	        adapters[row['sample']] = row['adapter'] ##NB:last sample adapter row overwrites the previous
+	        adapters[row['sample']] = row['adapter'].strip()
+            ##NB:last sample adapter row overwrites the previous
 	except KeyError as ke:
 		#adapters[row['sample']] = ''
 		print str(ke) + ' not defined for file' + row['file'] + ', sample ' +\
