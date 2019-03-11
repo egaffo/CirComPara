@@ -436,7 +436,7 @@ expressed_genes$sample_id <- factor(expressed_genes$sample_id,
 
 gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes, 
                                       mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
-  geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
+  geom_boxplot(notch = F, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
   ggtitle("Gene expression\nper sample") + theme_bw()
 gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + guides(fill=FALSE) + 
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 
