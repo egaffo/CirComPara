@@ -280,86 +280,14 @@ if(nrow(circrnas.gtf[V6 >= min_reads]) > 0){
 ```
 
 ```{r load_circrna_gene_overlaps, echo=FALSE, include=FALSE}
-## retrieve and attach gene symbols and gene_ids: use only exons hit by the backsplice coordinates 
-# colClasses <- c("factor", "factor", "character", "integer", "integer", "integer", "factor", "character", "character",
-#                 "factor", "factor", "character", "integer", "integer", "character", "factor", "character", "character")
-# colClasses <- list(factor = c(1, 4, 6, 7, 10), 
-#                    integer = c(2L, 3L, 8L, 9L), 
-#                    character = c(5, 11))
-#colToDrop <- c("V3", "V8", "V11", "V12", "V15", "V17")
-#combined_gtf <- fread(paste0('zcat ', combined_gtf_file), data.table = T, colClasses = colClasses, drop = colToDrop)
-
+## retrieve and attach gene symbols and gene_ids
 circ_to_genes <- fread(circ_to_genes.file)
 circ_to_gene <- fread(gene_to_circ.file)
 
-# combined_gtf <- fread(cmd = paste0('zcat ', combined_gtf_file), data.table = T, 
-#                       # colClasses = colClasses, 
-#                       drop = c(2,3,
-#                                4,5,
-#                                6,8,11,15,17))
 exists_gene_overlaps <- FALSE
 if(nrow(circ_to_genes) > 0){
   exists_gene_overlaps <- TRUE
 }
-# if(nrow(combined_gtf) > 0){
-#   exists_gene_overlaps <- TRUE
-#   # if(fix_testrealign){
-#   #   setkey(combined_gtf, V2)
-#   #   combined_gtf["testrealign", V4 := V4-1]
-#   # }
-#   combined_gtf[, `:=`(circ_id = sub('.*gene_id "([^"]*)".*', '\\1', V9),
-#                       gene_id = sub('.*gene_id "([^"]*)".*', "\\1", V18), 
-#                       gene_name = ifelse(grepl('gene_name', V18, fixed = T), 
-#                                          sub('.*gene_name "([^"]*)".*', "\\1", 
-#                                              V18), "."),
-#                       # sample_id = sub('.*sample_id "([^"]*)".*', "\\1", V9),
-#                       chr = V1, 
-#                       # circ_start = as.integer(V4), 
-#                       # circ_end = as.integer(V5), 
-#                       strand = V7,
-#                       gene_chr = V10, 
-#                       exon_start = as.integer(V13), 
-#                       exon_end = as.integer(V14), 
-#                       exon_strand = V16)
-#                ][, `:=`(V1 = NULL, 
-#                         # V4 = NULL, V5 = NULL, 
-#                         V7 = NULL, V9 = NULL, 
-#                         V10 = NULL, V13 = NULL, V14 = NULL, V16 = NULL, V18 = NULL)]
-#   # combined_gtf[, `:=`(gene_start = min(exon_start), 
-#   #                     gene_end = max(exon_end)), 
-#   #              by = gene_id]
-#   combined_gtf[V12 == ".", V12 := "intergenic"]
-#   
-#   # circ_to_gene <- combined_gtf[, .(counts = .N), by = .(chr, circ_start, circ_end, strand, 
-#   #                                                       exon_start, exon_end, gene_id, gene_name, 
-#   #                                                       gene_start, gene_end)][, counts := NULL]
-#   # 
-#   # 
-#   # 
-#   # circ_to_gene[, rowId := .I]
-#   # circ_to_gene[, label := label.backsplice(c(circ_start, circ_end), 
-#   #                                          c(exon_start, exon_end), 
-#   #                                          c(gene_start, gene_end), 
-#   #                                          flank = 1),
-#   #              by = rowId]
-#   # circ_to_gene[, `:=` (rowId = NULL)]
-#   # 
-#   # ## keep order of labels the same of the order of genes
-#   # circ_to_genes <- circ_to_gene[, .(circ_id = paste0(chr, ":", circ_start, "-", circ_end, ":", strand), 
-#   #                                   gene_id, gene_name, label)][
-#   #                                     , .(label = refine_label(label)), by = .(circ_id, gene_id, gene_name)][
-#   #                                       , .(gene_ids = paste0(unique(gene_id), collapse = "|"),
-#   #                                           gene_names = paste0(unique(gene_name), collapse = "|"),
-#   #                                           label = paste0(unique(label), collapse = "|")), 
-#   #                                       by = circ_id]
-#   
-#   circ_to_gene <- combined_gtf[, .(features = paste(sort(unique(V12)), collapse = ",")),
-#                                 by = .(circ_id, gene_id, gene_name)]
-#   circ_to_genes <- circ_to_gene[, .(label = paste0(sort(unique(features)), collapse = "|"),
-#                                     gene_ids = paste0(gene_id, collapse = "|"),
-#                                     gene_names = paste0(gene_name, collapse = "|")), 
-#                                 by = .(circ_id)]
-# }
 ```
 
 ```{r}
