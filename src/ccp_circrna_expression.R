@@ -5,7 +5,7 @@ suppressPackageStartupMessages(library(data.table))
 
 option_list <- list(
     make_option(c("-c", "--circrnas_gtf"), action = "store", type = "character",
-                help="comma separated list of circrnas.gtf files"),
+                help="A circrnas.gtf file or a text file listing circrnas.gtf file paths to merge"),
     make_option(c("-r", "--min_reads"), action = "store", type = "integer",
                 default = 2,
                 help="The minimum detection read threshold for a circRNA  (in at least one sample)"),
@@ -28,14 +28,16 @@ min_methods <- arguments$min_methods
 results.path <- arguments$outdir
 dir.create(path = results.path, recursive = T, showWarnings = F)
 
-# circrnas.gtf.files <- "/blackhole/circrna/analyses/PB_2019/circular_expression/circRNA_collection/circrnas.gtf,/blackhole/circrna/analyses/ALL_PDX/circular_expression/circRNA_collection/circrnas.gtf"
-circrnas.gtf.files <- strsplit(x = circrnas.gtf.files, split = ",", fixed = T)[[1]]
+if(ncol(fread(circrnas.gtf.files, showProgress = F, nrows = 1)) == 1){
+    ## case: text file listing circrnas.gtf files
+    circrnas.gtf.files <- readLines(circrnas.gtf.files)
+}
 
 ## read circRNA results: filter low expressed (less than min_reads reads) circRNAs
 colClasses <- c("factor", "factor", "character", "integer",
                 "integer", "integer", "factor", "character", "character")
 circrnas.gtf <- rbindlist(lapply(circrnas.gtf.files, fread, data.table = T,
-                                 colClasses = colClasses),
+                                 colClasses = colClasses, showProgress = F),
                           use.names = T)
 
 
