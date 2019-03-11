@@ -170,8 +170,9 @@ get.color.hues <- function(meta){
     intgroup.dt <- meta[, .(.N), by = .(sample_id = sample, 
                                         condition)][order(sample_id), 
                                                     .(sample_id), by = condition]
-    samples.per.condition <- data.frame(intgroup.dt[, .N, by = .(condition)], 
-                                        row.names = "condition")
+    samples.per.condition <- data.frame(intgroup.dt[, .N, by = .(condition)])
+    rownames(samples.per.condition) <- as.character(samples.per.condition$condition)
+    samples.per.condition$condition <- NULL
     n.conditions <- nrow(samples.per.condition)
     hues <- brewer_pal(palette = "Set2")(n.conditions)
     
