@@ -62,7 +62,8 @@ def writeLines(target, source, env):
 WriteLinesInTxt = Builder(action = writeLines, suffix = '.txt')
 
 ## GET PROGRAM ARGUMENTS
-vars = Variables('vars.py')
+variables_file = 'vars.py'
+vars = Variables(variables_file)
 
 # basic parameters
 vars.Add('META', 'The metadata table file where you specify the project samples, etc.', 'meta.csv')
@@ -198,6 +199,7 @@ if unknown:
 
 env.Append(BUILDERS = {'WriteLinesInTxt' : WriteLinesInTxt})
 
+env['VARS'] = File(variables_file)
 env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
 
