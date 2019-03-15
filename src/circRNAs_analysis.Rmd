@@ -234,7 +234,16 @@ if(nrow(circrna.rpms) > 0) exists_circrnas <- T
 ```{r load_circrna_gene_overlaps, echo=FALSE, include=FALSE}
 ## retrieve and attach gene symbols and gene_ids
 circ_to_genes <- fread(circ_to_genes.file)
+if(ncol(circ_to_genes) == 1){
+    ## case: text file listing circ_to_genes.csv files
+    circ_to_genes <- unique(rbindlist(lapply(readLines(circ_to_genes.file), fread)))
+}
+
 circ_to_gene <- fread(gene_to_circ.file)
+if(ncol(circ_to_gene) == 1){
+    ## case: text file listing gene_to_circ.csv files
+    circ_to_gene <- unique(rbindlist(lapply(readLines(gene_to_circ.file), fread)))
+}
 
 exists_gene_overlaps <- FALSE
 if(nrow(circ_to_genes) > 0){
@@ -247,22 +256,6 @@ if(exists_circrnas & exists_gene_overlaps){
   setkey(circrna.rpms, circ_id)
   setkey(circ_to_genes, circ_id)
   circrna.rpms.genes <- circ_to_genes[circrna.rpms]
-  
-  ## split results per sample
-  ## NB: use split function from data.table >= 1.9.7
-  # circrnas_expression.samples <- split(circrna.rpms.genes, by = "sample_id", 
-  #                                      keep.by = F, drop = T)
-  # 
-  # ## save tables: one per sample
-  # save.sample.table <- function(sample, outdir){
-  #   table.file <- file.path(outdir, paste0(sample, "_circrna_norm_expression.csv"))
-  #   write.csv(x = circrnas_expression.samples[[sample]], file = table.file, row.names = F)
-  #   table.file
-  # }
-  # 
-  # sample.table.file.names <- sapply(X = names(circrnas_expression.samples), 
-  #                                   FUN = save.sample.table, 
-  #                                   outdir = results.dir)
 }else{
   sample.table.file.names <- "No circRNAs or no known genes overalp"
 }
