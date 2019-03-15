@@ -24,14 +24,12 @@ CirComPara analysis results are presented in this page. Different sections displ
 # gene_to_circ.file
 # ccp_circrna_raw_xpr.csv.file
 # bks_linear_counts.tab.gz.file
-# read_stats_collect.file
 # meta_file
 # vars.py.filepath
 # ccp_circrna_methods.csv.file
 # ccp_circrna_n_methods.csv.file
 # min_methods
 # min_reads
-# stranded.lib
 
 dir.create(path = results.dir, showWarnings = F, recursive = T)
 knitr::opts_chunk$set(fig.width = 6, 
