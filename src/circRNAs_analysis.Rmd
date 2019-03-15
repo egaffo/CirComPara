@@ -282,8 +282,14 @@ colnames(vars.df) <- c("Variable", "Value")
 ```
 
 ```{r}
-methods <- strsplit(vars.df[Variable == "CIRCRNA_METHODS", Value], 
-                    ",", fixed = T)[[1]]
+if(any("CIRCRNA_METHODS" == vars.df$Variable)){
+    methods <- strsplit(vars.df[Variable == "CIRCRNA_METHODS", Value], 
+                        ",", fixed = T)[[1]]
+}else{
+    ## CIRCRNA_METHODS maybe not overriden in vars.py, for instance 
+    ## when default value is left
+    methods <- circrnas.gtf[, unique(method)]
+}
 ```
 
 Backsplices were detected by `r length(unique(methods))` different methods: `r paste0(sort(methods), collapse = ", ")`
