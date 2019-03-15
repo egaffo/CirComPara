@@ -5,25 +5,32 @@ suppressPackageStartupMessages(library(data.table))
 
 option_list <- list(
     make_option(c("-c", "--circrnas_gtf"), action = "store", type = "character",
-                help="A circrnas.gtf file or a text file listing circrnas.gtf file paths to merge"),
+                help = "A circrnas.gtf file or a text file listing circrnas.gtf file paths to merge"),
     make_option(c("-r", "--min_reads"), action = "store", type = "integer",
                 default = 2,
-                help="The minimum detection read threshold for a circRNA  (in at least one sample)"),
+                help = "The minimum detection read threshold for a circRNA  (in at least one sample)"),
     make_option(c("-m", "--min_methods"), action = "store", type = "integer",
                 default = 2,
-                help="Keep circRNAs commonly detected by >= m circRNA detection methods (in at least one sample)"),
+                help = "Keep circRNAs commonly detected by >= m circRNA detection methods (in at least one sample)"),
+    make_option(c("-l", "--lin_reads"), action = "store", type = "character",
+                default = "",
+                help = "The backsplice linear expression read count file or text file listing bks_linear_counts.tab.gz file paths to merge"),
     make_option(c("-o", "--outdir"), action = "store", type = "character",
                 default = "./",
-                help="Output directory")
+                help = "Output directory")
 )
 
-parser <- OptionParser(usage="%prog -c analysis_A/circular_expression/circRNA_collection/circrnas.gtf,analysis_B/circular_expression/circRNA_collection/circrnas.gtf -r 2 -m 2 -o merged/circRNA_expression",
+parser <- OptionParser(usage = paste0("%prog -c analysis_A/circular_expression/circRNA_collection/circrnas.gtf,",
+                                      "analysis_B/circular_expression/circRNA_collection/circrnas.gtf -r 2 -m 2 ",
+                                      "-o merged/circRNA_expression"),
                        option_list = option_list)
-arguments <- parse_args(parser, positional_arguments=F)
+arguments <- parse_args(parser, positional_arguments = F)
 
 circrnas.gtf.files <- arguments$circrnas_gtf
 min_reads <- arguments$min_reads
 min_methods <- arguments$min_methods
+lin_reads <- arguments$lin_reads
+
 ## prepare result dir
 results.path <- arguments$outdir
 dir.create(path = results.path, recursive = T, showWarnings = F)
@@ -171,3 +178,66 @@ circ.meth.xpr.mats.files <-
     sapply(names(circ.meth.xpr.mats),
            function(x)fwrite(circ.meth.xpr.mats[[x]],
                              file = file.path(results.path, paste0(x, "_raw_xpr.csv"))))
+
+if(lin_reads != ""){
+
+    ## linear expression
+    first.line.dt <- fread(lin_reads, showProgress = F, nrows = 1, header = F)
+    if(ncol(first.line.dt) == 1){
+        ## case: text file listing circrnas.gtf files
+        lin_reads <- readLines(lin_reads)
+    }
+
+    first.line.dt <- fread(lin_reads[1], showProgress = F, nrows = 1, header = F)
+    if(first.line.dt$V1 == "chr"){
+        ## DCC input: samples in various tables need to be merged
+        bks_linear_counts.tab.gz.tables <-
+            lapply(lin_reads, fread, data.table = T,
+                   showProgress = F, header = T)
+
+        melt.dcc.linexp.tab <- function(x){
+            ## DCC uses BED coordinates, we need to convert
+            x[, circ_id := paste0(chr, ":", start+1, "-",
+                                  end)][, `:=`(chr = NULL,
+                                               start = NULL,
+                                               end = NULL)]
+            melt(x,
+                 id.vars = "circ_id",
+                 variable.name = "sample_id",
+                 value.name = "lin.reads")
+        }
+
+        bks_linear_counts.tab.gz.m <-
+            rbindlist(lapply(bks_linear_counts.tab.gz.tables,
+                             melt.dcc.linexp.tab),
+                      use.names = T)
+    }else{
+        ## CCP input
+        bks_linear_counts.tab.gz <- rbindlist(lapply(lin_reads, fread, data.table = T,
+                                                     showProgress = F),
+                                              use.names = T)
+        bks_linear_counts.tab.gz[, c("sample_id", "chr") := (tstrsplit(V1, ":"))]
+        bks_linear_counts.tab.gz[, `:=`(sample_id = sub("_bks_linear_counts.tab$", "",
+                                                        basename(sample_id)),
+                                        circ_id = sub('.*"([^"]+)".*', "\\1", V9))]
+        bks_linear_counts.tab.gz[, V1 := NULL]
+        ## remove strand info from circ_id
+        bks_linear_counts.tab.gz[, circ_id := sub(":[-+.]", "", circ_id)]
+
+        bks_linear_counts.tab.gz.m <-
+            bks_linear_counts.tab.gz[, .(lin.reads = sum(V10)),
+                                     by = .(sample_id, circ_id)]
+    }
+    ## save
+    bks_linear_counts.tab.gz.filename <- file.path(results.path, "ccp_bks_linexp.csv")
+    fwrite(x = bks_linear_counts.tab.gz.m,
+           file = bks_linear_counts.tab.gz.filename,
+           showProgress = F)
+
+    # library(R.utils)
+    # gzip(bks_linear_counts.tab.gz.filename,
+    #      destname = paste0(bks_linear_counts.tab.gz.filename, '.gz'))
+
+}
+
+
