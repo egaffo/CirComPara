@@ -7,53 +7,90 @@ Import('*')
 
 try:
     env = env_circrna_analyze.Clone()
+
+    ## collect circrnas.gtf files into a filelist
+    circrnas_gtf_list_sources = env['CIRCRNAS']
+    circrnas_gtf_list_targets = ['circrnas.gtf.list.txt']
+    circrnas_gtf_list = env.WriteLinesInTxt(circrnas_gtf_list_targets,
+                                            circrnas_gtf_list_sources)
+    
+    ## collect bks_linear_counts.tab files into a filelist
+    bks_linear_counts_list_sources = env['BKS_LIN_COUNTS']
+    bks_linear_counts_list_targets = ['bks_linear_counts.tab.list.txt']
+    bks_linear_counts_list = env.WriteLinesInTxt(bks_linear_counts_list_targets,
+                                                 bks_linear_counts_list_sources)
+
 except NameError, ne:
     vars = Variables('vars.py')
-    vars.Add('CIRCRNAS', 'A GTF file with circRNA predictions', '')
-    vars.Add('CIRCGENES', 'A 18 fields GTF file with genes intersections with '\
-            'circRNAs', '')
-    vars.Add('BKS_LIN_COUNTS', 'The file with linear gene expression for '\
-                               'each circRNA', '')
-    vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
-                            ' define the circRNA as reliable', 2)
-    vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
-    vars.Add('DIFF_EXP', 'Enable circRNA differential expression reporting', 'False')
-    vars.Add('META', 'Table specifying sample condition', 'meta.csv')
+    vars.Add('CIRCRNAS', 
+             'A GTF file with circRNA predictions or a text file with a'\
+             'list of circrnas.gtf file paths, one per row', 
+             'circrnas.gtf.list.txt')
+    vars.Add('CIRC2GENES', 
+             'circ_to_genes.tsv file as output of gene_annotation.R or '\
+             'a text file with a list of circ_to_genes.tsv file paths, '\
+             'one per row', 
+             'circ_to_genes.tsv.list.txt')
+    vars.Add('GENE2CIRC', 
+             'gene_to_circ.tsv file as output of gene_annotation.R or '\
+             'a text file with a list of gene_to_circ.tsv file paths, '\
+             'one per row', 
+             'gene_to_circ.tsv.list.txt')
+    #vars.Add('CIRCGENES', 
+    #         'A 18 fields GTF file with genes intersections with circRNAs', 
+    #         '')
+    vars.Add('BKS_LIN_COUNTS', 
+             'The file with linear gene expression for each circRNA or '\
+             'a text file with a list of bks_linear_counts.tab file paths, one per row', 
+             'bks_linear_counts.tab.list.txt')
+    vars.Add('MIN_METHODS', 
+             'Number of methods that commmonly detect a circRNA to '\
+             ' define the circRNA as reliable', 
+             2)
+    vars.Add('MIN_READS', 
+             'Number of reads to consider a circRNA as expressed', 
+             2)
+    vars.Add('DIFF_EXP', 
+             'Enable circRNA differential expression reporting', 
+             'False')
+    vars.Add('META', 
+             'Table specifying sample condition', 
+             'meta.csv.list.txt')
+    vars.Add('VARS', 
+             'vars.py or a text file with a list of vars.py file paths, '\
+             'one per row', 
+             'vars.py.list.txt')
 
-
-    env = Environment(ENV=os.environ, SHELL = '/bin/bash',
-                      variables=vars)
+    env = Environment(ENV = os.environ, 
+                      SHELL = '/bin/bash',
+                      variables = vars)
     Help(vars.GenerateHelpText(env))
     unknown = vars.UnknownVariables()
     if unknown:
         print "Run sample: unknown variables", unknown.keys()
         Exit(1)
 
-env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 
-## set strandness to set circRNA if stranded library
-## check by HISAT parameters
-env['STRANDED'] = 'F'
-strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
-if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
-    if not env['UNSTRANDED_CIRCS']:
-        env['STRANDED'] = 'T'
+    #from ccp_utils import writeLines    
+    #WriteLinesInTxt = Builder(action = writeLines, suffix = '.txt')
+    #env.Append(BUILDERS = {'WriteLinesInTxt' : WriteLinesInTxt})
 
-## collect circrnas.gtf files into a filelist
-circrnas_gtf_list_sources = env['CIRCRNAS']
-circrnas_gtf_list_targets = ['circrnas.gtf.list.txt']
-circrnas_gtf_list = env.WriteLinesInTxt(circrnas_gtf_list_targets,
-                                        circrnas_gtf_list_sources)
+    env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 
-## collect bks_linear_counts.tab files into a filelist
-bks_linear_counts_list_sources = env['BKS_LIN_COUNTS']
-bks_linear_counts_list_targets = ['bks_linear_counts.tab.list.txt']
-bks_linear_counts_list = env.WriteLinesInTxt(bks_linear_counts_list_targets,
-                                             bks_linear_counts_list_sources)
+    circrnas_gtf_list = File(env['CIRCRNAS'])
+    bks_linear_counts_list = File(env['BKS_LIN_COUNTS'])
+    env['CIRCGENES'] = [File(env['CIRC2GENES']), 
+                        File(env['GENE2CIRC'])]
+
+    if env['DIFF_EXP'].lower() == 'true':
+        env['DIFF_EXP'] = True
+    else:
+        env['DIFF_EXP'] = False
 
 ## get circrna raw expression
 circrnas_xpr_sources = [circrnas_gtf_list, 
                         bks_linear_counts_list]
+
 circrnas_xpr_targets = ['unfiltered_circrnas.csv', 
                         'ccp_circrna_raw_xpr.csv', 
                         'ccp_circrna_n_methods.csv', 
@@ -65,6 +102,7 @@ circrnas_xpr_command = '''ccp_circrna_expression.R '''\
                        '''-c ${SOURCES[0]} -l ${SOURCES[1]} '''\
                        '''-r ${MIN_READS} -m ${MIN_METHODS} '''\
                        '''-o ${TARGETS[0].dir}'''
+
 circrnas_xpr = env.Command(circrnas_xpr_targets,
                            circrnas_xpr_sources,
                            circrnas_xpr_command)
@@ -115,6 +153,4 @@ if env['CIRC_DIFF_EXP']:
                                    circrnas_diffexp_sources, 
                                    circrnas_diffexp_cmd)
       
-
-
 Return('circrnas_analysis')

@@ -217,9 +217,40 @@ get.color.hues <- function(meta){
 }
 ```
 
+```{r}
+vars.to.df <- function(vars.py.filepath){
+    vars <- readChar(vars.py.filepath, nchars = file.info(vars.py.filepath)$size)
+    ## revert multi-line strings into one-line and remove all blank chars
+    a <- gsub(" ", "", gsub("['\"]\\\\[ ]*\n[ ]*['\"]", "", vars))
+    ## set multi-line vector values into one-line
+    b <- gsub(",[ ]*\n", ",", a)
+    b <- gsub(",#.*\n'", ",'", b)
+    ## skip comment lines
+    c <- grep(pattern = "^#", invert = T, 
+              x = strsplit(b, "\n", fixed = T)[[1]], 
+              value = T)
+    ## skip blank lines
+    d <- paste0(c[c != ""], collapse = "\n")
+    ## transform into a data.frame
+    vars.df <- data.table(read.table(text = d, sep = "=", header = F, stringsAsFactors = F))
+    colnames(vars.df) <- c("Variable", "Value")
+    # rownames(vars.df) <- as.character(vars.df$Variable) ## TODO: handle duplicated parameters
+    vars.df
+}
+```
+
+
 ```{r, echo=FALSE}
 if(meta_file != ""){
-    meta <- unique(fread(meta_file)[, .(sample_id = sample, condition)])
+    if(!"sample" %in% colnames(fread(meta_file))){
+        ## merge meta.csv file list
+        meta <- rbindlist(lapply(readLines(meta_file), fread), 
+                          use.names = T, fill = T)
+    }else{
+        ## single meta.csv file
+        meta <- fread(meta_file)
+    }
+    meta <- unique(meta[, .(sample_id = sample, condition)])
     intgroup.dt <- get.color.hues(meta)
 }
 ```
@@ -237,12 +268,33 @@ circ_to_genes <- fread(circ_to_genes.file)
 if(ncol(circ_to_genes) == 1){
     ## case: text file listing circ_to_genes.csv files
     circ_to_genes <- unique(rbindlist(lapply(readLines(circ_to_genes.file), fread)))
+    ## intergenic clusters can have different names for different runs of CCP,
+    ## we must merge them
+    circ_to_genes <- circ_to_genes[, lapply(.SD, function(x)paste0(sort(unique(x)), 
+                                                                   collapse = "|")), 
+                  by = circ_id]
 }
 
 circ_to_gene <- fread(gene_to_circ.file)
 if(ncol(circ_to_gene) == 1){
     ## case: text file listing gene_to_circ.csv files
     circ_to_gene <- unique(rbindlist(lapply(readLines(gene_to_circ.file), fread)))
+    
+    intergenic.circ_to_gene <- 
+        circ_to_gene[gene_region == "intergenic", 
+                     lapply(.SD, function(x)paste0(sort(unique(x)), 
+                                                   collapse = "|")), 
+                     by = .(circ_id)]
+    
+    circ_to_gene <- circ_to_gene[gene_region != "intergenic", 
+                                 lapply(.SD, function(x)paste0(sort(unique(x)), 
+                                                                   collapse = "|")), 
+                  by = .(circ_id, gene_name, gene_id)]
+    
+    circ_to_gene <- unique(rbindlist(list(circ_to_gene,
+                                          intergenic.circ_to_gene), 
+                                     use.names = T))
+    
 }
 
 exists_gene_overlaps <- FALSE
@@ -264,27 +316,22 @@ if(exists_circrnas & exists_gene_overlaps){
 ```{r}
 ## read vars.py file and parse the text
 vars <- readChar(vars.py.filepath, nchars = file.info(vars.py.filepath)$size)
-
-## revert multi-line strings into one-line and remove all blank chars
-a <- gsub(" ", "", gsub("'\\\\[ ]*\n[ ]*'", "", vars))
-## set multi-line vector values into one-line
-b <- gsub(",[ ]*\n", ",", a)
-## skip comment lines
-c <- grep(pattern = "^#", invert = T, 
-          x = strsplit(b, "\n", fixed = T)[[1]], 
-          value = T)
-## skip blank lines
-d <- paste0(c[c != ""], collapse = "\n")
-## transform into a data.frame
-vars.df <- data.table(read.table(text = d, sep = "=", header = F, stringsAsFactors = F))
-colnames(vars.df) <- c("Variable", "Value")
-# rownames(vars.df) <- as.character(vars.df$Variable) ## TODO: handle duplicated parameters
+if(!grepl("=", vars)){
+    ## merge vars.py files
+    vars <- rbindlist(lapply(readLines(vars.py.filepath), 
+                     function(x)as.data.table(vars.to.df(x))), 
+                     use.names = T)
+    vars.df <- vars[, lapply(.SD, function(x)paste0(unique(x), collapse = ",")), 
+                    by = Variable]
+}else{
+    vars.df <- vars.to.df(vars.py.filepath)
+}
 ```
 
 ```{r}
 if(any("CIRCRNA_METHODS" == vars.df$Variable)){
-    methods <- strsplit(vars.df[Variable == "CIRCRNA_METHODS", Value], 
-                        ",", fixed = T)[[1]]
+    methods <- unique(strsplit(vars.df[Variable == "CIRCRNA_METHODS", Value], 
+                        ",", fixed = T)[[1]])
 }else{
     ## CIRCRNA_METHODS maybe not overriden in vars.py, for instance 
     ## when default value is left
@@ -700,9 +747,9 @@ datatable(data = circrna.classes.tab.ext,
 
 ```{r circrnas_per_gene, echo=FALSE, include=TRUE}
 ## Number of circRNAs per gene
-
-circRNAs.to.gene <- subset(circ_to_gene[gene_region != "intergenic"], 
-                           circ_id %in% circrnas.morethan2methods.medrpm.table$circ_id)
+circRNAs.to.gene <- 
+    circ_to_gene[gene_region != "intergenic" & 
+                     circ_id %in% as.character(circrnas.morethan2methods.medrpm.table$circ_id)]
 
 ## count circRNAs per gene and set the list of circRNAs of the gene
 n.circ.per.gene <- circRNAs.to.gene[, .(n_circRNAs = .N, 
@@ -752,7 +799,7 @@ ggplot(data = circRNAs.per.gene,
 circRNAs.to.gene.per.sample <- 
     merge(circrnas.morethan2methods.medrpm[, .(circ_id, sample_id)], 
           circRNAs.to.gene[, .(circ_id, gene_id, gene_name)], 
-          by = "circ_id", all.x = T, all.y = F)
+          by = "circ_id", all.x = T, all.y = F, allow.cartesian = T)
 
 n.circ.per.gene.per.sample <- 
     circRNAs.to.gene.per.sample[, .(n_circRNAs = .N, 
