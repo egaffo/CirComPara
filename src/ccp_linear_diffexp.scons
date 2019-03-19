@@ -35,6 +35,8 @@ env['SAMPLES'] = Flatten([list(s) for s in conditions.values()])
 diffexp = None
 report  = None
 
+env['DIFF_EXP'] = env['DIFF_EXP'].lower()
+
 if len(conditions.keys()) > 1:
     
     ## PREPARE VARIABLES FOR BALLGOWN
