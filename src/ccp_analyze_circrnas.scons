@@ -2,7 +2,7 @@
 Analyze circRNA predictions and set up a report
 '''
 
-import os
+import os,re
 Import('*')
 
 try:
@@ -12,12 +12,8 @@ except NameError, ne:
     vars.Add('CIRCRNAS', 'A GTF file with circRNA predictions', '')
     vars.Add('CIRCGENES', 'A 18 fields GTF file with genes intersections with '\
             'circRNAs', '')
-    vars.Add('GENEEXP', 'The file with gene expression: '\
-                        'genes.read_group_tracking when multisample; '\
-                        'genes.fpkm_tracking when sigle sample', '')
-    vars.Add('GENEMETA', 'A meta file of gene expression results: '\
-                        'genes.fpkm_tracking when multisample; '\
-                        'leave empty when single sample', '')
+    vars.Add('BKS_LIN_COUNTS', 'The file with linear gene expression for '\
+                               'each circRNA', '')
     vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
                             ' define the circRNA as reliable', 2)
     vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
@@ -35,27 +31,34 @@ except NameError, ne:
 
 env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 
-if not env['GENEMETA'] == "":
-    env['GENEMETA'] = File(env['GENEMETA']).abspath
+## set strandness to set circRNA if stranded library
+## check by HISAT parameters
+env['STRANDED'] = 'F'
+strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
+    if not env['UNSTRANDED_CIRCS']:
+        env['STRANDED'] = 'T'
 
 circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                         '''circrnas.gtf.file <- "${SOURCES[0].abspath}"; '''\
-                        '''combined_gtf_file <- "${SOURCES[1].abspath}"; '''\
-                        '''gene_meta_file <- "$GENEMETA"; '''\
-                        '''gene_fpkm_file <- "${SOURCES[2].abspath}"; '''\
+                        '''circ_to_genes.file <- "${SOURCES[1].abspath}"; '''\
+                        '''gene_to_circ.file  <- "${SOURCES[2].abspath}"; '''\
                         '''min_methods <- ${MIN_METHODS}; '''\
                         '''min_reads <- ${MIN_READS}; '''\
-                        '''meta_file <- "$META"; '''\
+                        '''meta_file <- "${SOURCES[5].abspath}"; '''\
                         '''bks_linear_counts.tab.gz.file <- "${SOURCES[3].abspath}"; '''\
                         '''read_stats_collect.file <- "${SOURCES[4].abspath}"; '''\
+                        '''stranded.lib <- $STRANDED; '''\
                         '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
 circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
-circrnas_analysis_sources = [env['CIRCRNAS'], env['CIRCGENES'], 
-                             env['GENEEXP'], env['BKS_LIN_COUNTS'],
-                             env['PROCESSING_READ_STATS']]
+circrnas_analysis_sources = [env['CIRCRNAS'], 
+                             env['CIRCGENES'][0], env['CIRCGENES'][1], 
+                             env['BKS_LIN_COUNTS'], 
+                             env['PROCESSING_READ_STATS'],
+                             env['META']]
 circrnas_analysis = env.Command(circrnas_analysis_targets, 
                                 circrnas_analysis_sources, 
                                 circrnas_analysis_cmd)

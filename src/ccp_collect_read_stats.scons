@@ -19,11 +19,23 @@ except NameError, ne:
 runs = env['RUNS']
 
 ## COLLECT AND REPORT READ PROCESSING STATISTICS
+## case: Trimmomatic preprocessing
 clean_reads_stats_files = get_matching_nodes(runs, '.*preprocess.*trimmomatic\.log')
+if len(clean_reads_stats_files) > 0:
+    reads_stats_collect_cmd = '''grep --with-filename Input ''' +\
+                              ' '.join(f.path for f in clean_reads_stats_files)
+
+else:
+    ## case: no read preprocessing
+    clean_reads_stats_files = get_matching_nodes(runs,
+                                                 '.*read_statistics.*fastqc_data\.txt')
+    reads_stats_collect_cmd = '''grep --with-filename "Total Sequences" ''' +\
+                              ' '.join(f.path for f in clean_reads_stats_files)
+
 mapped_reads_linear_stats_files = get_matching_nodes(runs, '.*processings.*hisat2\.log')
+
 read_stats_collect_dir = 'read_stats_collect'
-reads_stats_collect_cmd = '''grep --with-filename Input ''' +\
-                          ' '.join(f.path for f in clean_reads_stats_files) +\
+reads_stats_collect_cmd = reads_stats_collect_cmd +\
                           ''' > $TARGET && grep --with-filename "." ''' +\
                           ' '.join(f.path for f in mapped_reads_linear_stats_files) +\
                           ''' >> $TARGET'''
@@ -47,6 +59,11 @@ CIRCexplorerSEG_pattern = '.*.ce2seg.bks.reads'
 CIRCexplorerSTR_pattern = '.*.ce2star.bks.reads'
 # CIRCexplorer2 tophat reads
 CIRCexplorerTPH_pattern = '.*.ce2th.bks.reads'
+# DCC reads
+dcc_pattern = '.*.dcc.bks.reads'
+# CircRNA_finder reads
+cfinder_pattern = '.*.cfinder.bks.reads'
+
 
 ## testrealign mapped reads
 #testrealign_mappings_pattern = '.*segemehl_mapped_reads_count\.txt'
@@ -65,6 +82,8 @@ CIRCexplorerBWA_reads = get_matching_nodes(runs, CIRCexplorerBWA_pattern)
 CIRCexplorerSEG_reads = get_matching_nodes(runs, CIRCexplorerSEG_pattern)
 CIRCexplorerSTR_reads = get_matching_nodes(runs, CIRCexplorerSTR_pattern)
 CIRCexplorerTPH_reads = get_matching_nodes(runs, CIRCexplorerTPH_pattern)
+dcc_reads          = get_matching_nodes(runs, dcc_pattern)
+cfinder_reads      = get_matching_nodes(runs, cfinder_pattern)
 
 #bwa_mappings          = get_matching_nodes(runs, BWA_mappings_pattern)
 #star_mappings         = get_matching_nodes(runs, STAR_mappings_pattern)
@@ -76,7 +95,9 @@ collect_circrna_maps_counts_sources = [testrealign_reads,
                                        CIRCexplorerBWA_reads,
                                        CIRCexplorerSEG_reads,
                                        CIRCexplorerSTR_reads,
-                                       CIRCexplorerTPH_reads]
+                                       CIRCexplorerTPH_reads,
+                                       dcc_reads,
+                                       cfinder_reads]
 				       #bwa_mappings, star_mappings, 
 				       #tophat_mappings]
 

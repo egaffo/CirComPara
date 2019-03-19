@@ -4,11 +4,11 @@
 #
 #install.packages(prepacks, repos="http://cran.r-project.org", dependencies = T)
 
-packs <- c("BH", "svglite", "optparse", "plyr", 
-	   "scales", "reshape2", "DT",
-           "ggplot2", "ggthemes",
+packs <- c("BH", "svglite", "optparse", "plyr",
+           "scales", "reshape2", "DT",
+           "ggplot2", "ggthemes", "viridis",
            "RSvgDevice", "rmarkdown", "knitr", "VennDiagram",
-	   "tidyr")
+           "tidyr", "bedr")
 
 install.packages(packs, repos="http://cran.r-project.org", dependencies = T)
 

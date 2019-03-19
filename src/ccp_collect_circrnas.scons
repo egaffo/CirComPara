@@ -7,7 +7,7 @@ Currently supported/implemented for:
     * testrealign (segemehl)
 '''
 
-import os
+import os, re
 Import('*')
 
 try:
@@ -41,8 +41,19 @@ methods = {'CIRI': 'ciri',
        'CIRCEXPLORER2_STAR': 'circexplorer2_star',
        'CIRCEXPLORER2_BWA': 'circexplorer2_bwa',
        'CIRCEXPLORER2_SEGEMEHL': 'circexplorer2_segemehl',
-       'CIRCEXPLORER2_TOPHAT': 'circexplorer2_tophat'
+       'CIRCEXPLORER2_TOPHAT': 'circexplorer2_tophat',
+       'DCC': 'dcc',
+       'CFINDER': 'circrna_finder'
        }
+
+## intersect circRNAs with gene annotation: use exon-intron GTF
+## set strandness to set circRNA if stranded library
+## check by HISAT parameters
+env['STRANDED'] = ''
+strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
+    if not env['UNSTRANDED_CIRCS']:
+        env['STRANDED'] = '-s'
 
 ## collect circRNAs in a single GTF annotation file
 circ_gtf_sources = []
@@ -50,12 +61,39 @@ circ_gtf_cmd = '''{ '''
 for k,v in env['CSVS'].iteritems():
     if v:
 	circ_gtf_sources.append(v)
-        circ_gtf_cmd = circ_gtf_cmd + '''convert_circrna_collect_tables.py -p ''' +\
+        circ_gtf_cmd = circ_gtf_cmd + \
+                       '''convert_circrna_collect_tables.py $STRANDED -p ''' +\
                        methods[k] + ''' ''' + v[0].path + ''' ; '''
 circ_gtf_cmd = circ_gtf_cmd + '''} | sort -k1,1 -k4,4n > ${TARGETS[0]}'''
 
 circ_gtf_target = 'circrnas.gtf'
 circ_gtf = env.Command(circ_gtf_target, circ_gtf_sources, circ_gtf_cmd)
+
+## compute CirComPara merged read counts
+ccp_counts_dir = 'ccp_counts'
+circular_reads_bed_gz_txt_sources = []
+for s in env['RUNS_DICT'].keys():
+    for m in env['RUNS_DICT'][s]['CIRCULAR_EXPRESSION']['CIRC_METHODS'].keys():
+        res = env['RUNS_DICT'][s]['CIRCULAR_EXPRESSION']['CIRC_METHODS'][m]
+        if res:
+            circular_reads_bed_gz_txt_sources.append(res['CIRC_READS'])
+circular_reads_bed_gz_txt_target = os.path.join(ccp_counts_dir,
+                                                'circular.reads.bed.gz.txt')
+   
+circular_reads_bed_gz_txt = env.WriteLinesInTxt(circular_reads_bed_gz_txt_target, 
+                                                circular_reads_bed_gz_txt_sources)   
+
+ccp_counts_targets = [os.path.join(ccp_counts_dir, f) for f in
+                                ['bks.counts.intersect.csv', 
+                                 'bks.counts.union.csv', 
+                                 'bks.counts.union.intersected.csv']]
+ccp_counts_cmd = 'get_circompara_counts.R -i ${SOURCES[0]} '\
+                 '-q $MIN_METHODS -o ${TARGETS[0].dir}'\
+                 + os.path.sep + 'bks.counts.'
+ccp_counts = env.Command(ccp_counts_targets, 
+                         [circular_reads_bed_gz_txt,
+                          circular_reads_bed_gz_txt_sources], 
+                         ccp_counts_cmd)
 
 ## compute gene introns
 merge_exons_cmd = '''grep -w exon ${SOURCES[0]} | '''\
@@ -97,6 +135,9 @@ unique_circ = env.Command('unique_circ_ids.gtf.gz',
                           unique_circ_cmd)
 
 ## translate backsplice intervals into start and stop single nucleotide intervals
+## mind that we are writing a newline at the end of the file that will end up
+## in the head of the sorted final file. This breaks bedtools intersect with
+## -sorted option. Thus, we need to get rid of the newline by using grep -v '^$'
 snp_unique_circ_cmd = '''zcat ${SOURCES[0]} | '''\
                       '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
                                 '''([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
@@ -107,14 +148,13 @@ snp_unique_circ_cmd = '''zcat ${SOURCES[0]} | '''\
                                        '''\\1\\t\\2\\tstop\\t'''\
                                        '''$$((\\5))\\t\\5\\t\\6\\t'''\
                                        '''\\7\\t\\8\\tgene_id @\\9@;"/e' | '''\
-                                       '''sed -r 's/@/"/g' | '''\
-                                       '''sort -k1,1 -k4,4n -k5,5n | gzip -c > $TARGET '''
+                      '''sed -r 's/@/"/g' | sort -k1,1 -k4,4n -k5,5n | '''\
+                      '''grep -v '^$' | gzip -c > $TARGET '''
 snp_unique_circ = env.Command('sn_unique_circ.gtf.gz',
                               [unique_circ], 
                               snp_unique_circ_cmd)
 
-## intersect circRNAs with gene annotation: use exon-intron GTF
-circ_gene_combine_cmd = '''bedtools intersect -s -loj -sorted -wa -wb '''\
+circ_gene_combine_cmd = '''bedtools intersect $STRANDED -loj -sorted -wa -wb '''\
                         '''-a ${SOURCES[0]} -b ${SOURCES[1]} | '''\
                         '''gzip -c > $TARGET'''
 circ_gene_combine_sources = [snp_unique_circ, 
@@ -124,4 +164,14 @@ circ_gene_combine = env.Command(circ_gene_combine_target,
                                 circ_gene_combine_sources, 
                                 circ_gene_combine_cmd)
 
-Return('circ_gene_combine circ_gtf snp_unique_circ')
+## generate circrna gene annotation files
+circ_gene_ann_targets = [os.path.join('circrna_gene_annotation', f) for 
+                            f in ['circ_to_genes.tsv', 'gene_to_circ.tsv']]
+circ_gene_ann_sources = circ_gene_combine
+circ_gene_ann_cmd = '''gene_annotation.R -c $SOURCE -o ${TARGETS[0].dir}'''
+circ_gene_ann = env.Command(circ_gene_ann_targets, 
+                            circ_gene_ann_sources,
+                            circ_gene_ann_cmd)
+
+
+Return('circ_gene_combine circ_gtf snp_unique_circ unique_circ circ_gene_ann')

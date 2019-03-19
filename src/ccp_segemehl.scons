@@ -58,32 +58,54 @@ except NameError:
 segemehl_mapping_dir = 'segemehl'
 
 ## MAP READS
-sam_sort_cmd = ''' samtools view -u $(-@ $CPUS '''\
-               '''$) - | samtools sort -@$( $CPUS '''\
-               '''$) -O 'sam' -T $(segemehl_${SAMPLE}'''\
-               '''$) | gzip > ${TARGETS[0]}'''
+#sam_sort_cmd = '''samtools view -u $(-@ $CPUS '''\
+#               '''$) - | samtools sort $( -m $SAM_SORT_MM $) -@$( $CPUS '''\
+#               '''$) -O 'sam' -T $( ${TARGETS[0].dir}_tmp_$SAMPLE '''\
+#               '''$) | gzip > ${TARGETS[0].abspath} '''
 
+## do not sort to prevent samtools failures to fail SAM output file
+sam_sort_cmd = '''gzip > ${TARGETS[0].abspath} '''
+
+segemehl_map_cmd = 'cd ${TARGETS[0].dir} && '
 if len(env['READS']) > 1:
-    segemehl_map_cmd = '''segemehl.x -s $SEGEMEHL_PARAMS '''\
-                       ''' -i $SEGEMEHL_INDEX -d $GENOME_FASTA '''\
-                       ''' -q ${SOURCES[0]} -p ${SOURCES[1]} -S''' +\
-                       ''' $(-t ${CPUS} $) '''\
-                       '''-u ${TARGETS[1].base} | ''' + sam_sort_cmd
+    segemehl_map_cmd = segemehl_map_cmd +\
+                       '''segemehl.x $SEGEMEHL_PARAMS '''\
+                       '''-i $SEGEMEHL_INDEX -d $GENOME_FASTA '''\
+                       '''-q ${SOURCES[0].abspath} '''\
+                       '''-p ${SOURCES[1].abspath} -S ''' +\
+                       '''$(-t $CPUS $) '''\
+                       '''-u ${TARGETS[1].filebase} | ''' + \
+                       sam_sort_cmd
 else:
-    segemehl_map_cmd = '''segemehl.x -s $SEGEMEHL_PARAMS '''\
-                       ''' -i $SEGEMEHL_INDEX -d $GENOME_FASTA '''\
-                       ''' -q $SOURCE -S $(-t ${CPUS} $) '''\
-                       '''-u ${TARGETS[1].base} | ''' + sam_sort_cmd
+    segemehl_map_cmd = segemehl_map_cmd +\
+                       '''segemehl.x $SEGEMEHL_PARAMS '''\
+                       '''-i $SEGEMEHL_INDEX -d $GENOME_FASTA '''\
+                       '''-q ${SOURCES[0].abspath} -S '''\
+                       '''$(-t $CPUS $) '''\
+                       '''-u ${TARGETS[1].filebase} | ''' + \
+                       sam_sort_cmd
+
+segemehl_map_cmd = ' && '.join([segemehl_map_cmd, 
+                                'cd ' + Dir('#').abspath, 
+                                'gzip ${TARGETS[1].base}'])
 
 segemehl_unmatched_target = "{}_unmatched.fastq.gz".format(env['SAMPLE'])
-segemehl_map_cmd = segemehl_map_cmd + ''' && gzip ${TARGETS[1].base}'''
 
-segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, "{}.sam.gz".format(env['SAMPLE'])), 
-                            os.path.join(segemehl_mapping_dir, segemehl_unmatched_target)],
-                           [env['READS']], 
+segemehl_map = env.Command([os.path.join(segemehl_mapping_dir, 
+                                         "{}.unsorted.sam.gz".format(env['SAMPLE'])), 
+                            os.path.join(segemehl_mapping_dir, 
+                                         segemehl_unmatched_target),
+                            os.path.join(segemehl_mapping_dir,
+                                         '${SOURCES[0].filebase}.sngl.bed'),
+                            os.path.join(segemehl_mapping_dir, 
+                                         '${SOURCES[0].filebase}.mult.bed'),
+                            os.path.join(segemehl_mapping_dir, 
+                                         '${SOURCES[0].filebase}.trns.txt')],
+                           env['READS'], 
                            segemehl_map_cmd)
 
-env.Precious(segemehl_map[0]) # do not delete old alignment file untill the new one has been computed
+# do not delete old alignment file untill the new one has been computed
+env.Precious(segemehl_map[0]) 
 
 ## COUNT AND REPORT MAPPED READS
 mapped_reads_target = os.path.join(segemehl_mapping_dir, 
@@ -94,4 +116,11 @@ mapped_reads        = env.Command(mapped_reads_target, segemehl_map[0], mapped_r
 
 Clean('.', segemehl_mapping_dir)
 
-Return('segemehl_map mapped_reads')
+results = {'ALIGNMENTS':      segemehl_map[0],
+           'UNALIGNED_READS': segemehl_map[1],
+           'SINGLE_SPLITS':   segemehl_map[2],
+           'MULTI_SPLITS':    segemehl_map[3],
+           'TRANS_SPLIT':     segemehl_map[4],
+           'MAPPED_READS':    mapped_reads}
+
+Return('results')

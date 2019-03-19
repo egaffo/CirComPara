@@ -59,11 +59,17 @@ out_dir = 'find_circ_out'
 
 env.SetDefault(FINDCIRC_EXTRA_PARAMS = '')
 
+best_qual_val = 40
+if '--best-qual' in env['FINDCIRC_EXTRA_PARAMS']:
+    best_qual_idx = env['FINDCIRC_EXTRA_PARAMS'].index('--best-qual') + 1
+    best_qual_val = env['FINDCIRC_EXTRA_PARAMS'].pop(best_qual_idx)
+    env['FINDCIRC_EXTRA_PARAMS'].remove('--best-qual')
+
 cat_cmd = 'cat'
 if File(env['READS'][0]).path.endswith('.gz'):
     cat_cmd = 'zcat'
 
-find_circ_cmd = 'unmapped2anchors.py -Q <( ' + cat_cmd + ' ${SOURCES} | trim_read_header.py - ) |' + \
+find_circ_cmd = 'unmapped2anchors.py -Q <( ' + cat_cmd + ' ${SOURCES} ) |' + \
                 ' bowtie2 --reorder --score-min=C,-15,0 -q -x ' + \
                 ' $BOWTIE2_INDEX -U - 2> ${TARGETS[2]} | find_circ.py ' + \
                 ' -G $GENOME_FASTA -p ${SAMPLE}_ -s ${TARGETS[3]}' + \
@@ -81,11 +87,13 @@ find_circ = env.Command([os.path.join(out_dir, 'sites.bed'),
 # and length are not performed
 # NB: the commands within curly braces are to prevent grep to return error status
 # when no match and/or no input
-filter_circ_cmd = "grep CIRCULAR ${SOURCES[0]} | " +\
-                  " { grep UNAMBIGUOUS_BP || true; } | "+\
-                  " { grep ANCHOR_UNIQUE || true; } > ${TARGET}"
+#filter_circ_cmd = "grep CIRCULAR ${SOURCES[0]} | " +\
+#                  " { grep UNAMBIGUOUS_BP || true; } | "+\
+#                  " { grep ANCHOR_UNIQUE || true; } > ${TARGET}"
+filter_circ_cmd = 'filter_findcirc_res.R -i $SOURCE -o $TARGET -q ' +\
+                  str(best_qual_val)
 filter_circ = env.Command([os.path.join(out_dir, 'circ_candidates.bed')], 
-                          [find_circ[0]], 
+                          find_circ[0], 
                           filter_circ_cmd)
 
 Clean('.', out_dir)
@@ -95,22 +103,30 @@ Clean('.', out_dir)
 ## in which it is reported the read name as a second field
 ## with attached an underscore and a number
 ## N.B.: count only circRNAs in circ_candidates.bed
-bks_reads_cmd = '''grep ">" ${SOURCES[0]} | '''\
-                '''grep -f <(cut -f 4 ${SOURCES[1]}) | '''\
-                '''sed -E "s/>[^ ]+ ([^_]+)_[0-9]+/\\1/g" | '''\
-                '''sort | uniq -c | '''\
-                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
-                '''sort -k1,1nr > ${TARGETS[0]} '''
+#bks_reads_cmd = '''grep ">" ${SOURCES[0]} | '''\
+#                '''grep -f <(cut -f 4 ${SOURCES[1]}) | '''\
+#                '''sed -E "s/>[^ ]+ ([^_]+)_[0-9]+/\\1/g" | '''\
+#                '''sort | uniq -c | '''\
+#                '''sed -E "s/[^0-9]*([0-9]+)[ ]+([^ ]+)[ ]*/\\1\\t\\2/g" | '''\
+#                '''sort -k1,1nr > ${TARGETS[0]} '''
+#
+#bks_reads = env.Command([os.path.join(out_dir, env['SAMPLE'] + '.fc.bks.reads')], 
+#                        [find_circ[1], filter_circ], 
+#                        bks_reads_cmd)
 
-bks_reads = env.Command([os.path.join(out_dir, env['SAMPLE'] + '.fc.bks.reads')], 
-                        [find_circ[1], filter_circ], 
+bks_reads_tagets = [os.path.join(out_dir, f) for f in 
+                                ['${SAMPLE}.circular.reads.bed.gz', 
+                                 '${SAMPLE}.fc.bks.reads']]
+bks_reads_cmd = 'get_findcirc_bks_reads.R -s ${SOURCES[0]} '\
+                '-c ${SOURCES[1]} -r ${TARGETS[0]} -l ${TARGETS[1]}'
+bks_reads = env.Command(bks_reads_tagets, 
+                        [find_circ[1], filter_circ[0]], 
                         bks_reads_cmd)
 
+results = {'CIRCRNAS':    filter_circ[0],
+           #'CIRC_SN_BED': bed,
+           'BKS_READS':   bks_reads[1],
+           'CIRC_READS':  bks_reads[0]}
 
-## Collect mapped reads count
-mapped_reads_target = os.path.join(out_dir, 'find_circ_mapped_reads_count.txt')
-mapped_reads_cmd    = '''sed "s@.*circ_reads': \([0-9]*\).*@\\1@g" $SOURCE > $TARGET'''
-mapped_reads        = env.Command(mapped_reads_target, find_circ[3], mapped_reads_cmd)
-
-
-Return('find_circ filter_circ mapped_reads bks_reads')
+#Return('find_circ filter_circ mapped_reads bks_reads')
+Return('results')

@@ -376,7 +376,10 @@ When enabled, the fusion gene analysis will generate "synthetic" chromosomes ...
 
 In a freshly installed Ubuntu Server 16.04 LTS (x64) you need to install the dependency packages listed below (you need root system rights, or ask your system administrator):
 
-    sudo apt-get install python2.7 python-pip python-numpy zlib1g-dev unzip pkg-config libncurses5-dev default-jre r-base-core libcurl4-openssl-dev libxml2-dev libssl-dev libcairo2-dev pandoc
+    ## the repository is to install GDAL >= v2.0 required by the R 'sf' package
+    sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
+    sudo apt-get update
+    sudo apt-get install python2.7 python-pip python-numpy zlib1g-dev unzip pkg-config libncurses5-dev default-jre r-base-core libcurl4-openssl-dev libxml2-dev libssl-dev libcairo2-dev pandoc cargo libgdal-dev
 
 (pandoc >= 1.12.3 is required, try install latest packages from http://github.com/jgm/pandoc/releases/)  
 You also need to upgrade `pip` version (`pip v8.1.1` has an issue with the `--install-option` parameter; tested working with `pip v9.0.1`): 

@@ -65,6 +65,11 @@ intgroup.dt <- merge(intgroup.dt,
 
 
 ```{r load data, include=FALSE}
+gene.xpr.file           <- readLines(gene.xpr.file)
+transcripts.gtf.files   <- readLines(transcripts.gtf.files)
+gene_raw_counts_list    <- readLines(gene_raw_counts_list)
+trx_raw_counts_list     <- readLines(trx_raw_counts_list)
+
 ## use only the first method in the list
 method <- strsplit(linear.method, ",")[[1]][1]
 if(method == "cufflinks"){
@@ -148,10 +153,9 @@ if(method == "cufflinks"){
     }
 }
 if(method == "stringtie"){
-    gene.xpr.file.paths <- strsplit(gene.xpr.file, ",")[[1]]
-    gene.xpr.list <- lapply(gene.xpr.file.paths, fread)
+    gene.xpr.list <- lapply(gene.xpr.file, fread)
     names(gene.xpr.list) <- sub("_gene_abund.tab", "", 
-                                sapply(gene.xpr.file.paths, basename, 
+                                sapply(gene.xpr.file, basename, 
                                        USE.NAMES = F))
     gene.xpr <- rbindlist(gene.xpr.list, use.names = T, idcol = "sample")
 
@@ -188,10 +192,9 @@ if(method == "stringtie"){
               row.names = F)
 
     ## merge trx_raw_counts_list
-    trx_raw_counts_list.paths <- strsplit(trx_raw_counts_list, ",")[[1]]
-    trx_raw_counts <- lapply(trx_raw_counts_list.paths, fread)
+    trx_raw_counts <- lapply(trx_raw_counts_list, fread)
     names(trx_raw_counts) <- sub("_transcript_expression_rawcounts.csv", "",
-                                              sapply(trx_raw_counts_list.paths, basename,
+                                              sapply(trx_raw_counts_list, basename,
                                                      USE.NAMES = F))
     trx_raw_counts <- rbindlist(trx_raw_counts, use.names = T, idcol = "sample_id")
     
@@ -205,11 +208,10 @@ if(method == "stringtie"){
 
 ```{r}
 if(method == "htseq_count"){
-    gene.xpr.file.paths <- strsplit(gene.xpr.file, ",")[[1]]
     
     sampleTable <- gene_meta
     sampleTable$file <- sapply(sampleTable$sample_id, grep, 
-                               x = gene.xpr.file.paths, value = T, fixed = T)
+                               x = gene.xpr.file, value = T, fixed = T)
     
     dds <- DESeqDataSetFromHTSeqCount(sampleTable = as.data.frame(sampleTable[, .(sample_id, file, condition)]),
                                       directory = "",

@@ -6,14 +6,94 @@ def SymLink(target, source, env):
 env = Environment(ENV=os.environ, SHELL = '/bin/bash')
 tools_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'tools')
 ccp_bin_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin')
+python_lib_dir = os.path.join(tools_dir, 'lib', 'python2.7','site-packages')
+
+#env.PrependENVPath('PYTHONUSERBASE', tools_dir)
+env.PrependENVPath('PYTHONUSERBASE', tools_dir)
+env.PrependENVPath('PYTHONPATH', python_lib_dir)
+
+## PIP
+pip_file = 'get-pip.py'
+pip_url = 'https://bootstrap.pypa.io/' + pip_file
+pip_targets = [os.path.join(tools_dir, pip_file),
+               os.path.join(tools_dir, 'bin', 'pip')]
+pip_cmd = ' && '.join(['wget -O ${TARGETS[0]} ' + pip_url, 
+                       'python ${TARGETS[0]} --user'])
+pip = env.Command(pip_targets, 
+                  [], 
+                  pip_cmd)
+
 
 # BIOPYTHON
-BIOPYTHON_dir = os.path.join(tools_dir, 'biopython')
-BIOPYTHON_target = [os.path.join(BIOPYTHON_dir, 'lib', 'python2.7','site-packages','Bio','SeqIO','FastaIO.py')]
-BIOPYTHON = env.Command(BIOPYTHON_target, [], 
-                           ['pip install --install-option="--prefix=' +\
-                           os.path.abspath(BIOPYTHON_dir) +\
-                           '" biopython'])
+BIOPYTHON_dir = os.path.join(python_lib_dir, 'Bio')
+BIOPYTHON_target = [os.path.join(BIOPYTHON_dir, 'SeqIO', 'FastaIO.py')]
+BIOPYTHON = env.Command(BIOPYTHON_target, [pip], 
+                        #['pip install --install-option="--prefix=' +\
+                        #os.path.abspath(BIOPYTHON_dir) +\
+                        #'" biopython'])
+                        ['pip install --ignore-installed --user biopython'])
+
+# HTSeq
+#HTSeq_dir = os.path.join(tools_dir, 'HTSeq')
+HTSeq_dir = os.path.join(python_lib_dir, 'HTSeq')
+#HTSeq_target = [os.path.join(HTSeq_dir, 'lib','python2.7','site-packages',
+#                'HTSeq', '__init__.py'),
+HTSeq_target = [os.path.join(HTSeq_dir, '__init__.py'),
+                os.path.join(tools_dir, 'bin', 'htseq-count')]
+HTSeq = env.Command(HTSeq_target, [pip], 
+                           #['pip install --ignore-installed --install-option="--prefix=' +\
+                           #os.path.abspath(HTSeq_dir) +\
+                           #'" HTSeq'])
+                    ['pip install --ignore-installed --user HTSeq'])
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[1], SymLink)
+
+# CIRCEXPLORER2
+#CIRCEXPLORER2_dir = os.path.join(tools_dir, 'CIRCexplorer2')
+CIRCEXPLORER2_dir = os.path.join(python_lib_dir, 'circ2')
+CIRCEXPLORER2_target = [os.path.join(tools_dir, 'bin', 'CIRCexplorer2')]#, 
+#                       os.path.join(CIRCEXPLORER2_dir, 'bin', 'fast_circ.py')]
+CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [pip, HTSeq], 
+                           #['pip install --install-option="--prefix=' +\
+                           #os.path.abspath(CIRCEXPLORER2_dir) +\
+                           #'" -Iv circexplorer2==2.3.3'])
+                           ['pip install --ignore-installed --user -Iv circexplorer2==2.3.3'])
+env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLink)
+#env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
+
+## DCC
+#env_dcc = env.Clone()
+#dcc_dir = os.path.join(tools_dir, 'DCC-0.4.6')
+#dcc_python_sitepkg = os.path.join(dcc_dir, "lib", "python2.7", "site-packages")
+#env_dcc.PrependENVPath('PYTHONPATH', dcc_python_sitepkg)
+
+### PANDAS (DCC dependency)
+#env_dcc.PrependENVPath('PYTHONUSERBASE', dcc_dir)
+
+#pandas = env.Command([os.path.join(dcc_python_sitepkg, 'pandas', '__init__.py')], 
+pandas_dir = os.path.join(python_lib_dir, 'pandas')
+pandas = env.Command([os.path.join(pandas_dir, '__init__.py')], 
+                         [pip, HTSeq], 
+                         "pip install --ignore-installed --user pandas")
+
+#dcc_dir = os.path.join(python_lib_dir, 'DCC-0.4.6')
+dcc_dir = os.path.join(tools_dir, 'DCC-0.4.6')
+dcc_tar = 'v0.4.6.tar.gz'
+dcc_url = 'https://github.com/dieterich-lab/DCC/archive/' + dcc_tar
+dcc_target = [os.path.join(tools_dir, dcc_tar),
+		      os.path.join(tools_dir, 'bin', 'DCC'),
+              #os.path.join(dcc_python_sitepkg, "site.py")]
+              os.path.join(python_lib_dir, 'DCC-0.4.6-py2.7.egg')]
+dcc = env.Command(dcc_target, 
+			         [pandas], 
+          	         ['wget -O ${TARGETS[0]} ' + dcc_url,
+			          'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                      'cd ' + dcc_dir +\
+                      #' && python setup.py install --prefix ' + dcc_dir,
+                      ' && python setup.py install --user',
+                      'cd ' + Dir('#').abspath]
+			         )
+
+dcc_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), dcc[1], SymLink)
 
 # HISAT2
 HISAT2_zip = 'hisat2-2.0.4-Linux_x86_64.zip'
@@ -52,27 +132,48 @@ BWAMEM = env.Command(BWAMEM_target, [], ['wget -O ${TARGETS[0]}  ' + BWAMEM_link
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), BWAMEM[1], SymLink)
 
 # STAR
-STAR_tar = '2.5.2a.tar.gz'
+STAR_tar = '2.6.1d.tar.gz'
 STAR_link = 'https://github.com/alexdobin/STAR/archive/' + STAR_tar
 STAR_target = [os.path.join(tools_dir, 'STAR_' + STAR_tar), 
-               os.path.join(tools_dir, 'STAR-2.5.2a', 'bin', 'Linux_x86_64_static', 'STAR')]
+               os.path.join(tools_dir, 'STAR-2.6.1d', 'bin', 'Linux_x86_64_static', 'STAR')]
 #STAR_source = 
 STAR = env.Command(STAR_target, [], ['wget -O ${TARGETS[0]} ' + STAR_link,
                                      'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), STAR[1], SymLink)
 
+# HTSLIB (required by Segemehl)
+HTSLIB_dir = os.path.join(tools_dir, 'htslib-1.9')
+HTSLIB_tar = 'htslib-1.9.tar.bz2'
+HTSLIB_target = [os.path.join(tools_dir, HTSLIB_tar),
+                 os.path.join(HTSLIB_dir, 'lib', 'pkgconfig', 'htslib.pc')]
+HTSLIB_link = 'https://github.com/samtools/htslib/releases/download/1.9/' +\
+              HTSLIB_tar
+HTSLIB = env.Command(HTSLIB_target,
+                     [],
+                     ['wget -O $TARGET  ' + HTSLIB_link,
+                      'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                      ' && '.join(['cd ' + HTSLIB_dir, 
+                                   './configure --prefix=`pwd`',
+                                   'make', 'make install',
+                                   'cd ' + Dir('.').abspath])
+                      ])
+
 # SEGEMEHL
-SEGEMEHL_tar = 'segemehl_0_2_0.tar.gz'
-SEGEMEHL_dir = os.path.join(tools_dir, 'segemehl_0_2_0', 'segemehl')
-SEGEMEHL_link = 'http://www.bioinf.uni-leipzig.de/Software/segemehl/' + SEGEMEHL_tar
+SEGEMEHL_tar = 'segemehl-0.3.4.tar.gz'
+SEGEMEHL_dir = os.path.join(tools_dir, 'segemehl-0.3.4')
+SEGEMEHL_link = 'http://www.bioinf.uni-leipzig.de/Software/segemehl/downloads/' + SEGEMEHL_tar
 SEGEMEHL_target = [os.path.join(tools_dir, SEGEMEHL_tar),
                    os.path.join(SEGEMEHL_dir, 'segemehl.x'),
-                   os.path.join(SEGEMEHL_dir, 'testrealign.x')]
-#SEGEMEHL_source = 
-SEGEMEHL = env.Command(SEGEMEHL_target, [], ['wget -O $TARGET  ' + SEGEMEHL_link,
-                                             'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
-                                             'cd ${TARGETS[1].dir} && make',
-                                             'cd ' + Dir('.').abspath])
+                   os.path.join(SEGEMEHL_dir, 'haarz.x')]
+
+env.PrependENVPath('PKG_CONFIG_PATH',
+                   os.path.dirname(HTSLIB[1].abspath))
+SEGEMEHL = env.Command(SEGEMEHL_target, 
+                       HTSLIB, 
+                       ['wget -O $TARGET  ' + SEGEMEHL_link,
+                       'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                       'cd ${TARGETS[1].dir} && make all',
+                       'cd ' + Dir('.').abspath])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), SEGEMEHL[1], SymLink)
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), SEGEMEHL[2], SymLink)
 
@@ -203,36 +304,6 @@ FASTXTOOLKIT = env.Command(FASTXTOOLKIT_target, [Value(libgtextutils_config_path
                             'cd ' + Dir('#').abspath])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FASTXTOOLKIT[1], SymLink)
 
-# HTSeq
-HTSeq_dir = os.path.join(tools_dir, 'HTSeq')
-HTSeq_target = [os.path.join(HTSeq_dir, 'lib','python2.7','site-packages',
-                'HTSeq', '__init__.py'),
-                os.path.join(HTSeq_dir, 'bin', 'htseq-count')]
-env.PrependENVPath('PYTHONPATH', os.path.join(HTSeq_dir, 'lib','python2.7','site-packages'))
-HTSeq = env.Command(HTSeq_target, [], 
-                           ['pip install --ignore-installed --install-option="--prefix=' +\
-                           os.path.abspath(HTSeq_dir) +\
-                           '" HTSeq'])
-
-env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[1], SymLink)
-
-#HTSeq_tar = 'HTSeq-0.6.1p1.tar.gz'
-#HTSeq_link = 'https://pypi.python.org/packages/3c/6e/'\
-#             'f8dc3500933e036993645c3f854c4351c9028b180c6dcececde944022992/' + HTSeq_tar
-#HTSeq_dir = os.path.join(tools_dir, 'HTSeq-0.6.1p1')
-#HTSeq_target = [os.path.join(tools_dir, HTSeq_tar), 
-#                os.path.join(HTSeq_dir, 'lib','python2.7','site-packages',
-#                'HTSeq-0.6.1p1-py2.7-linux-x86_64.egg', 'EGG-INFO','scripts','htseq-count'),
-#                os.path.join(HTSeq_dir, 'bin', 'htseq-count')]
-#env.PrependENVPath('PYTHONPATH', os.path.join(HTSeq_dir, 'lib','python2.7','site-packages'))
-#HTSeq = env.Command(HTSeq_target, [], 
-#                    ['wget -O $TARGET ' + HTSeq_link,
-#                    'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
-#                    'cd ' + HTSeq_dir +\
-#                    ' && python setup.py install --prefix ' + HTSeq_dir,
-#                    'cd ' + Dir('#').abspath])
-#env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[2], SymLink)
-
 # gtfToGenePred
 gtfToGenePred_link = 'http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred'
 gtfToGenePred_target = [os.path.join(tools_dir, 'gtfToGenePred')]
@@ -246,17 +317,6 @@ env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), gtfToGenePred, SymLink)
 env['ENV']['R_LIBS'] = os.path.join(tools_dir, "R_libs")
 R_libs_targets = [os.path.join(tools_dir, 'R_libs', 'DESeq2', 'R', 'DESeq2')]
 R_libs = env.Command(R_libs_targets, [], 'install_R_libs.R')
-
-# CIRCEXPLORER2
-CIRCEXPLORER2_dir = os.path.join(tools_dir, 'CIRCexplorer2')
-CIRCEXPLORER2_target = [os.path.join(CIRCEXPLORER2_dir, 'bin', 'CIRCexplorer2')]#, 
-#                       os.path.join(CIRCEXPLORER2_dir, 'bin', 'fast_circ.py')]
-CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [], 
-                           ['pip install --install-option="--prefix=' +\
-                           os.path.abspath(CIRCEXPLORER2_dir) +\
-                           '" -Iv circexplorer2==2.2.7'])
-env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLink)
-#env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
 
 # BOWTIE v1
 # v1.2.1.1, v1.2.1, and v1.2 do not work!
@@ -329,4 +389,39 @@ stringtie_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), string
 #                         )
 #
 #gffcompare_link = env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), gffcompare[1], SymLink)
+
+# CIRCRNA_FINDER
+cfinder_dir = os.path.join(tools_dir, 'circRNA_finder-1.1')
+cfinder_tar = 'v1.1.tar.gz'
+cfinder_url = 'https://github.com/orzechoj/circRNA_finder/archive/' + cfinder_tar
+cfinder_target = [os.path.join(tools_dir, cfinder_tar), 
+                  [os.path.join(cfinder_dir, f) for f in
+                                                ['postProcessStarAlignment.pl',
+                                                  'filterCirc.awk', 
+                                                  'filterSpliceSiteCircles.pl', 
+                                                  'nrForwardSplicedReads.pl', 
+                                                  'starCirclesToBed.pl']]
+                 ]
+cfinder = env.Command(cfinder_target,
+                      [],
+                      ['wget -O ${TARGETS[0]} ' + cfinder_url,
+                       'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
+for t in cfinder:
+    env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), t, SymLink)
+
+# SAMTOOLS <v1.0 is required by circrna_finder
+samtools0_dir = os.path.join(tools_dir, 'samtools-0.1.20')
+samtools0_tar = '0.1.20.tar.gz'
+samtools0_url = 'https://github.com/samtools/samtools/archive/' + samtools0_tar
+samtools0_target = [os.path.join(tools_dir, samtools0_tar), 
+                    os.path.join(samtools0_dir, 'samtools')]
+samtools0 = env.Command(samtools0_target, 
+                        [], 
+                        ['wget -O $TARGET  ' + samtools0_url,
+                        'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+                        ' && '.join(['cd ' + samtools0_dir, 
+                                     'make']) + 
+                        '; cd ' + Dir('.').abspath])
+env.Command(os.path.join(ccp_bin_dir, 'samtools_v0', "${SOURCE.file}"), samtools0[1], SymLink)
+
 
