@@ -8,7 +8,7 @@ packs <- c("BH", "svglite", "optparse", "plyr",
            "scales", "reshape2", "DT",
            "ggplot2", "ggthemes", "viridis",
            "RSvgDevice", "rmarkdown", "knitr", "VennDiagram",
-           "tidyr", "bedr")
+	   "tidyr", "bedr", "stringi", "pheatmap")
 
 install.packages(packs, repos="http://cran.r-project.org", dependencies = T)
 
