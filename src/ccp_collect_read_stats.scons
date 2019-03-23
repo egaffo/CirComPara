@@ -113,12 +113,18 @@ collect_circrna_maps_counts = env.Command(os.path.join(read_stats_collect_dir,
                                           collect_circrna_maps_counts_sources, 
                                           collect_circrna_maps_counts_cmd)
 
+if env['BYPASS'] == 'circular':
+   env['CIRCRNA_RMD'] = "_empty.Rmd"
+else:
+   env['CIRCRNA_RMD'] = "_circrna_read_stats.Rmd"
+
 ## report read processing statistics
 read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                         '''read_stats_collect.file <- "${SOURCES[0].abspath}"; '''\
                         '''linear.mapper <- "hisat2"; '''\
                         '''circrna.reads.stats.file <- "${SOURCES[1].abspath}"; '''\
                         '''meta_file <- "${SOURCES[2].abspath}"; '''\
+                        '''circrna_read_stats.Rmd <- file.path("$SCONSCRIPT_HOME", "$CIRCRNA_RMD"); '''\
                         '''rmarkdown::render(input = "$SCONSCRIPT_HOME/read_statistics.Rmd",'''\
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''

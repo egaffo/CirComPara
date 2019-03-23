@@ -3,8 +3,9 @@ import os
 Import('*')
 
 try:
-    env = env_linear_expression.Clone()
+    env = env_linear_quantexp.Clone()
 except NameError:
+    print 'ccp_linear_quantexp.scons: cannot import', ne, '. Assume command line script call.'
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)
     vars.Add('META', '', '')
@@ -32,8 +33,13 @@ geneexp_dir = 'geneexp'
 ballgown_dir = os.path.join(geneexp_dir, 'ballgown')
 ballgown_files = []
 
-env['LINEAR_ALIGNMENTS'] = get_matching_nodes(env['RUNS'],
-                                              '.*hisat2_out.*\.bam')
+#env['LINEAR_ALIGNMENTS'] = get_matching_nodes(env['RUNS'],
+#                                              '.*hisat2_out.*\.bam')
+
+env['LINEAR_ALIGNMENTS'] = []
+for sample,files in env['RUNS_DICT'].iteritems():
+    lin_alignments = files['LINEAR_ALIGNMENTS']
+    env['LINEAR_ALIGNMENTS'].append(File(lin_alignments))
 
 if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
     gene_meta = env['META']
@@ -42,7 +48,8 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
         gene_exp = []
         for sample_name in env['SAMPLES'].keys():
             
-            alignment = get_matching_nodes(env['LINEAR_ALIGNMENTS'], '.*' + sample_name + '.*')
+            #alignment = get_matching_nodes(env['LINEAR_ALIGNMENTS'], '.*' + sample_name + '.*')
+            alignment = env['RUNS_DICT'][sample_name]['LINEAR_ALIGNMENTS']
 
             if len(alignment) > 1: 
                 print 'Warning: multiple alignments matched for sample ' +\
@@ -94,7 +101,8 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
             gene_raw_counts_list.append(raw_counts[0])
             trx_raw_counts_list.append(raw_counts[1])
 
-    env.Replace(EXPRESSION_FILES = ballgown_files)
+    env.Replace(EXPRESSION_FILES = {'BG_TABS': ballgown_files,
+                                    'RAW_COUNTS': gene_raw_counts_list})
 
    
 if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
@@ -143,14 +151,15 @@ if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
 
     env.Replace(EXPRESSION_FILES = gene_exp)
 
-if 'htseq_count' in env['LINEAR_EXPRESSION_METHODS']:
+if 'htseq' in env['LINEAR_EXPRESSION_METHODS']:
     ## COMPUTE READ COUNTS FOR EACH ALIGNMENT FILE, ACCORDING TO THE GIVEN ANNOTATION
     htseq_counts = []
-    env_htseq_count = env.Clone()
     #for algn in get_matching_nodes(env['RUNS'], alignment_matching_regexp):
-    for algn in env['LINEAR_ALIGNMENTS']:
-        env_htseq_count['SAMPLE'] = os.path.splitext(File(algn).name)[0]
-        env_htseq_count['ALIGNMENTS'] = algn
+    #for algn in env['LINEAR_ALIGNMENTS']:
+    for sample,files in env['RUNS_DICT'].iteritems():
+        env_htseq_count = env.Clone()
+        env_htseq_count['SAMPLE'] = sample #os.path.splitext(File(algn).name)[0]
+        env_htseq_count['ALIGNMENTS'] = files['LINEAR_ALIGNMENTS'] #File(algn)
         env_htseq_count['STRANDED'] = 'no'
 
         if '--rna-strandness FR' in env['HISAT2_EXTRA_PARAMS']: 

@@ -1,4 +1,4 @@
-```{r, include=FALSE}
+```{r, include=FALSE, message=FALSE}
 library(ggplot2)
 library(RColorBrewer)
 library(scales)
@@ -15,7 +15,6 @@ knitr::opts_chunk$set(fig.height = 4*gene.de[, .N, by = contrast][, .N])
 
 
 ```{r}
-
 intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
 intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
 intgroup.dt <- merge(intgroup.dt, 

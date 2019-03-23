@@ -369,38 +369,39 @@ for sample in sorted(samples.keys()):
     Depends([f for f in runs_dict[sample]['LINEAR_MAPPING_RES'].values() if f], 
             indexes['INDEXES']['HISAT2'])
 
-    if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['SEGEMEHL_MAP']:
-        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['SEGEMEHL_MAP'].values(), 
-                indexes['INDEXES']['SEGEMEHL']) 
+    if not 'circular' == env['BYPASS']:
+        if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['SEGEMEHL_MAP']:
+            Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['SEGEMEHL_MAP'].values(), 
+                    indexes['INDEXES']['SEGEMEHL']) 
 
-    if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['STAR_MAP']:
-        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['STAR_MAP'], 
-                indexes['INDEXES']['STAR'])
+        if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['STAR_MAP']:
+            Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['STAR_MAP'], 
+                    indexes['INDEXES']['STAR'])
 
-    if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['BWA_MAP']:
-        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['BWA_MAP'], 
-                indexes['INDEXES']['BWA'])
+        if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['BWA_MAP']:
+            Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['BWA_MAP'], 
+                    indexes['INDEXES']['BWA'])
 
-    if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['TOPHAT_MAP']:
-        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['TOPHAT_MAP'].values(), 
-                indexes['INDEXES']['BOWTIE'])
+        if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['TOPHAT_MAP']:
+            Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['TOPHAT_MAP'].values(), 
+                    indexes['INDEXES']['BOWTIE'])
 
-    ## dependencies from processed gene annotation
-    if 'circexplorer2_bwa' in env['CIRCRNA_METHODS']:
-        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_BWA'].values(),
-                env['GENEPRED'])
+        ## dependencies from processed gene annotation
+        if 'circexplorer2_bwa' in env['CIRCRNA_METHODS']:
+            Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_BWA'].values(),
+                    env['GENEPRED'])
 
-    if 'circexplorer2_segemehl' in env['CIRCRNA_METHODS']:
-        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_SE'].values(),
-                env['GENEPRED'])
+        if 'circexplorer2_segemehl' in env['CIRCRNA_METHODS']:
+            Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_SE'].values(),
+                    env['GENEPRED'])
 
-    if 'circexplorer2_star' in env['CIRCRNA_METHODS']:
-        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_ST'].values(),
-                env['GENEPRED'])
+        if 'circexplorer2_star' in env['CIRCRNA_METHODS']:
+            Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_ST'].values(),
+                    env['GENEPRED'])
 
-    if'circexplorer2_tophat' in env['CIRCRNA_METHODS']:
-        Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_TH'].values(),
-                env['GENEPRED'])
+        if'circexplorer2_tophat' in env['CIRCRNA_METHODS']:
+            Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_METHODS']['CE2_TH'].values(),
+                    env['GENEPRED'])
 
 env['RUNS_DICT'] = runs_dict
 
@@ -413,6 +414,7 @@ if not env['BYPASS'] == 'linear':
     env_linear_expression = env.Clone()
     env_linear_expression['SAMPLES'] = samples
     env_linear_expression['RUNS'] = runs
+    env_linear_expression['RUNS_DICT'] = runs_dict
     linexp = env.SConscript(os.path.join(linexp_dir,
                                          'ccp_linear_expression.scons'),
                             src_dir = env['SCONSCRIPT_HOME'],

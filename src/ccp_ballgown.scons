@@ -3,7 +3,7 @@ import os
 Import('*')
 
 try:
-    env = env.Clone()
+    env = env_diffexp.Clone()
 except NameError:
     varfile = ARGUMENTS.get('VARS', 'vars.py')
     vars = Variables(varfile)

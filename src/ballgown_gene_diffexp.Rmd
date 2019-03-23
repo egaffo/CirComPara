@@ -41,7 +41,6 @@ knitr::opts_knit$set(root.dir = results.dir)
 ```
 
 ```{r load data}
-
 load(gene.de.file)
 
 gid2gn <- as.data.table(unique(texpr(bg, meas = "all")[, c("gene_id", "gene_name")]))

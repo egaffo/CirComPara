@@ -195,6 +195,7 @@ else:
 ## CIRCRNA DETECTION
 unmapped_dir = os.path.join(build_dir, 'unmapped_reads')
 
+circrnas = [None, None]
 if not env['BYPASS'] == 'circular':
     ## Extract unmapped reads in FASTQ format from BAM alignments
     unmapped_reads_target = ['singleton.fastq.gz']
