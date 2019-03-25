@@ -33,8 +33,11 @@ if(length(arguments$input) > 0){
 
 
   }, error = function(e){
-      writeLines(paste("DESeq failed with the following error:", e, sep = "\n"),
+      mess <- paste("DESeq failed with the following error:", e, sep = "\n")
+      writeLines(mess,
                  arguments$output)
+      writeChar(mess,
+                file.path(arguments$reportDirectory, "RNAseq_analysis_with_DESeq2.html"))
       NULL
   })
 
