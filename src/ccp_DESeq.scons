@@ -135,10 +135,12 @@ if len(env['EXPRESSION_FILES']) > 1:
     norm_count_matrix_plots_dir = 'plots'
     norm_count_matrix_cmd = os.path.join(env['SCONSCRIPT_HOME'], 
                                         '''normalize_DESeq2_counts.R -i ${SOURCES[0]} '''
-                                        '''-o ${TARGETS[0]} -s ${SOURCES[1]} -d ${TARGETS[1].dir}''')
-    norm_count_matrix = env.Command([norm_count_matrix_file, 
-                                    os.path.join(norm_count_matrix_plots_dir, 
-                                                 'pc_variation_plot.svg')], 
+                                        '''-o ${TARGETS[0]} -s ${SOURCES[1]}''')
+                                        #'''-o ${TARGETS[0]} -s ${SOURCES[1]} -d ${TARGETS[1].dir}''')
+    norm_count_matrix = env.Command([norm_count_matrix_file #, 
+                                    #os.path.join(norm_count_matrix_plots_dir, 
+                                    #             'pc_variation_plot.svg')
+                                    ], 
                                     [raw_count_matrix, deseq_sample_table],
                                     norm_count_matrix_cmd)
     
