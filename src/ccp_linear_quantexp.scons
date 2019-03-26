@@ -221,6 +221,12 @@ gene_exp_analysis_targets = [os.path.join(geneexp_dir,
                              os.path.join(geneexp_dir,
                                          "transcript_expression_rawcounts_table.csv")]
 
+if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
+    gene_exp_analysis_targets.append(os.path.join(geneexp_dir,
+                                                  'gene_expression_Nreads_table.csv'))
+    gene_exp_analysis_targets.append(os.path.join(geneexp_dir,
+                                                  'gene_expression_TPM_table.csv'))
+
 gene_exp_analysis_sources = [gene_meta, 
                              gene_xpr_files_list, 
                              transcripts_gtf_files_list, 
