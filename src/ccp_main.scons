@@ -153,7 +153,7 @@ vars.Add('DIFF_EXP', 'Set the method to and enable differential expression '\
      	 'Only available if more than one sample and more than one condition are given. '\
          'N.B: differential expression tests for circRNAs is not yet '\
          'implemented', '')
-vars.Add('DESEQ', '(Experimental) Set True to enable differential gene expression computation '\
+vars.Add('CIRC_DIFF_EXP', '(Experimental) Set True to enable differential gene expression computation '\
          'also with DESeq2. Only available if more than one sample and more than one condition are given', 
          'False')
 vars.Add('QRE_FIND', '(Experimental) Set True to toggle analysis of QKI response elements sequences', 
@@ -252,9 +252,9 @@ env.SetDefault(DIFF_EXP = False)
 if env['DIFF_EXP'].strip() == '':
     env.Replace(DIFF_EXP = False)
 
-env.SetDefault(DESEQ = False)
-if env['DESEQ'].lower() == 'true':
-    env.Replace(DESEQ = True)
+env.SetDefault(CIRC_DIFF_EXP = False)
+if env['CIRC_DIFF_EXP'].lower() == 'true':
+    env.Replace(CIRC_DIFF_EXP = True)
 
 env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
 
