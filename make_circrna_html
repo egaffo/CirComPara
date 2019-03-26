@@ -1,0 +1,14 @@
+#!/bin/bash
+
+export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))
+
+TOOLS_DIR=$CIRCOMPARA_HOME/tools
+
+export PATH=$CIRCOMPARA_HOME/bin:$PATH
+
+export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/lib/python2.7/site-packages/:$CIRCOMPARA_HOME/lib/"
+
+export R_LIBS="$CIRCOMPARA_HOME/tools/R_libs"
+
+scons -f $CIRCOMPARA_HOME/src/ccp_analyze_circrnas.scons $1 
+
