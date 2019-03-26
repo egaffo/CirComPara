@@ -124,7 +124,16 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
-circrnas_analysis_targets = ["circRNAs_analysis.html", "circRNA_expression_per_sample.csv"]
+circrnas_analysis_targets = ["circRNAs_analysis.html", 
+                             "circRNA_expression_per_sample.csv",
+                             "methods_shared_circRNA_counts.csv",
+                             "cmet_per_circ.csv",
+                             "circRNAs_per_gene.csv",
+                             "circRNAs_per_gene_per_sample.csv",
+                             "circRNAs_per_gene_per_condition.csv",
+                             "reliable.circrna.lin.xpr.csv",
+                             "reliable.circrna.clr.csv"]
+
 circrnas_analysis_sources = [circrnas_xpr[0], 
                              env['CIRCGENES'][0], 
                              env['CIRCGENES'][1], 
@@ -135,9 +144,12 @@ circrnas_analysis_sources = [circrnas_xpr[0],
                              env['VARS'],
                              circrnas_xpr[3],
                              circrnas_xpr[2]]
+
 circrnas_analysis = env.Command(circrnas_analysis_targets, 
                                 circrnas_analysis_sources, 
                                 circrnas_analysis_cmd)
+
+Clean(circrnas_analysis, 'Figs')
 
 if env['CIRC_DIFF_EXP']:
     circrnas_diffexp_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
