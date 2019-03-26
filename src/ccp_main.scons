@@ -255,6 +255,8 @@ if env['DIFF_EXP'].strip() == '':
 env.SetDefault(CIRC_DIFF_EXP = False)
 if env['CIRC_DIFF_EXP'].lower() == 'true':
     env.Replace(CIRC_DIFF_EXP = True)
+else:
+    env.Replace(CIRC_DIFF_EXP = False)
 
 env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
 
