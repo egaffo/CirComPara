@@ -20,6 +20,7 @@ except NameError, ne:
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
 cuffmerge_dir = 'new_transcriptome'
 transcript_sequences_dir = 'transcript_sequences'
+linexp_dir = 'linear_quantexp'
 
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
     ## MERGE THE TRANSCRIPTS PREDICTED IN THE VARIOUS SAMPLES
@@ -136,6 +137,7 @@ for met in env['LINEAR_EXPRESSION_METHODS']:
             #lindiffexp['DIFFEXP']
             #lindiffexp['REPORT']
             Clean('.', lindiffexp_dir)
+    Clean('.', linexp_dir)
 
 
 Clean('.', cuffmerge_dir)

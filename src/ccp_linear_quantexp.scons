@@ -238,5 +238,6 @@ Clean('.', cuffquant_dir)
 Clean('.', cuffdiff_dir)
 Clean('.', htseq_counts_dir)
 Clean('.', geneexp_dir)
+Clean('.', ballgown_dir)
 
 Return('env')

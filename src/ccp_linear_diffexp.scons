@@ -115,8 +115,10 @@ if len(conditions.keys()) > 1:
         	                '''output_file = "${TARGETS[0].abspath}", quiet=T,'''\
         	                '''intermediates_dir = "${TARGETS[0].dir}" )' '''
         report = env.Command(report_target, 
-                                    [gene_diffexp, gene_meta],
-                                    report_cmd)
+                             [gene_diffexp, gene_meta],
+                             report_cmd)
+
+        Clean('.', diffexp_dir)
         
 else:
     print "No conditions to contrast in differential linear expression analysis"
