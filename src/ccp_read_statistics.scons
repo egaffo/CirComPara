@@ -22,9 +22,9 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env.Clone()
-    readset = read_statistics_readset
-except NameError:
+    env = env_read_statistics.Clone()
+    readset = env['READSET']#read_statistics_readset
+except NameError, ne:
     vars = Variables('vars.py')
     vars.Add('READS', 'FASTQ read file to process, either in plain text or gzipped (.gz)', 
              'reads.fq')
@@ -91,11 +91,13 @@ ccp_fastqc = []
 if('fastqc' in env['READSTAT_METHODS'].split(',')):
     ## perform FASTQC analyses (default)
     fastqc_dir   = 'fastqc_stats'
-    fastqc_readset = File(readset)
+    env_fastqc = env.Clone()
+    #fastqc_readset = File(readset)
+    env_fastqc['READSET'] = File(readset)
     ccp_fastqc = env.SConscript(os.path.join(fastqc_dir, 'ccp_fastqc.scons'), 
                                   src_dir = SRC_DIR,
                                   variant_dir = fastqc_dir, duplicate = 0,
-                                  exports = 'env fastqc_readset')
+                                  exports = 'env_fastqc')
     Clean('.', fastqc_dir)
 
 Return('stats ccp_fastqc')
