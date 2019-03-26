@@ -11,6 +11,8 @@ output:
       collapsed: false
       smooth_scroll: true
     theme: "readable"
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r global_options, include=FALSE}
@@ -20,6 +22,7 @@ output:
 # gene.de.file <- "any"
 # gene.expr <- "any"
 # child.Rmd <- $SCONSCRIPT_HOME/_lindiffexp.Rmd
+sig.thr <- .1
 
 library(data.table)
 library(knitr)
@@ -39,10 +42,31 @@ knitr::opts_knit$set(root.dir = results.dir)
 ```
 
 ```{r load data}
-
-print("Report for DESeq2 differential expression analysis not yet implemented")
-
-# ```{r, child=child.Rmd}
-# ```
-
+if(!grepl("DESeq failed", readLines(gene.de.file, n = 1))){
+    gene.de <- fread(gene.de.file)[, gene_id := V1][, V1 := NULL]
+    
+    gene_meta <- unique(fread(meta.file)[, .(sample_id = sample, condition)])
+    
+    gene.de[, avgFPKM := baseMean]
+    
+    gene.de$contrast <- paste(unique(gene_meta$condition), collapse = " vs ")
+    
+    gene.de <- gene.de[, .(gene_id, 
+                           gene = gene_id,
+                           p_value = pvalue, 
+                           q_value = padj, 
+                           "log2(fold_change)" = log2FoldChange,
+                           significant = ifelse(padj <= sig.thr, "yes", "no"),
+                           contrast = "A vs B",
+                           avgFPKM)]
+}else{
+    child.Rmd <- file.path(dirname(child.Rmd), "_empty.Rmd")
+    gene.de.tab.filename <- file.path(results.dir, "DEG_tests_by_contrast.csv")
+    write.csv(data.frame(), file = gene.de.tab.filename, row.names = F)
+}
 ```
+
+```{r, child=child.Rmd}
+```
+
+

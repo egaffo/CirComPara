@@ -232,7 +232,7 @@ if(method == "stringtie"){
 ```
 
 ```{r}
-if(method == "htseq_count"){
+if(method == "htseq"){
     
     sampleTable <- gene_meta
     sampleTable$file <- sapply(sampleTable$sample_id, grep, 
@@ -282,7 +282,7 @@ if(meta.file != ""){
         
         expressed_genes <- merge(expressed_genes, gene_meta, by = "sample_id")
     }
-    if(method == "htseq_count"){
+    if(method == "htseq"){
         ## normalized expression
         gene.xpr.fpkm <- as.data.table(counts(dds, normalized = T), keep.rownames = "gene")
         warning("Using DESeq2 normalized values instead of FPKM since htseq-count was selected.")

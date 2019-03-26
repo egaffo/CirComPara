@@ -1,4 +1,4 @@
-```{r, include=FALSE}
+```{r, include=FALSE, message=FALSE}
 library(ggplot2)
 library(RColorBrewer)
 library(scales)
@@ -15,7 +15,6 @@ knitr::opts_chunk$set(fig.height = 4*gene.de[, .N, by = contrast][, .N])
 
 
 ```{r}
-
 intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
 intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
 intgroup.dt <- merge(intgroup.dt, 
@@ -78,12 +77,16 @@ The number of DEGs shared among the contrasts is reported below.
 
 ```{r DEG shared}
 ## de tab
-shared.counts.table <- dcast(gene.de[significant == "yes", ], 
-                             formula = gene_id ~ contrast, 
-                             value.var = "significant")[, -c("gene_id"), 
-                                                        with = F]
-kable(x = crossprod(!is.na(shared.counts.table)), row.names = T, 
-      caption = "Number of differentially expressed genes shared among contrasts")
+if(nrow(gene.de[significant == "yes", ]) > 0){
+    shared.counts.table <- dcast(gene.de[significant == "yes", ], 
+                                 formula = gene_id ~ contrast, 
+                                 value.var = "significant")[, -c("gene_id"), 
+                                                            with = F]
+    kable(x = crossprod(!is.na(shared.counts.table)), row.names = T, 
+          caption = "Number of differentially expressed genes shared among contrasts")
+}else{
+    print("No differentially expressed genes")
+}
 ```
 
 ```{r}
