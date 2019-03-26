@@ -50,7 +50,7 @@ except NameError, ne:
     vars.Add('MIN_READS', 
              'Number of reads to consider a circRNA as expressed', 
              2)
-    vars.Add('DIFF_EXP', 
+    vars.Add('CIRC_DIFF_EXP', 
              'Enable circRNA differential expression reporting', 
              'False')
     vars.Add('META', 
@@ -82,10 +82,10 @@ except NameError, ne:
     env['CIRCGENES'] = [File(env['CIRC2GENES']), 
                         File(env['GENE2CIRC'])]
 
-    if env['DIFF_EXP'].lower() == 'true':
-        env['DIFF_EXP'] = True
+    if env['CIRC_DIFF_EXP'].lower() == 'true':
+        env['CIRC_DIFF_EXP'] = True
     else:
-        env['DIFF_EXP'] = False
+        env['CIRC_DIFF_EXP'] = False
 
 ## get circrna raw expression
 circrnas_xpr_sources = [circrnas_gtf_list, 
