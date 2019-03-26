@@ -69,7 +69,7 @@ def format_cuffdiff_sample_arguments(conditions, cuffdiff_quantities):
 cuffdiff_parameters = {}
 
 try:
-    env = env.Clone()
+    env = env_diffexp.Clone()
     cuffdiff_labels = [get_node_condition(n, env['CONDITIONS']) for n in env['EXPRESSION_FILES']]
     cuffdiff_parameters = format_cuffdiff_sample_arguments(env['CONDITIONS'], env['EXPRESSION_FILES'])
 except NameError:

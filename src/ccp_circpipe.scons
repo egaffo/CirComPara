@@ -102,10 +102,12 @@ read_statistics_dir = 'read_statistics'
 raw_read_stats = []
 fastqc_data = []
 for readset in raw_reads:
-    read_statistics_readset = readset
+    env_read_statistics = env.Clone()
+    #read_statistics_readset = readset
+    env_read_statistics['READSET'] = readset
     stat = SConscript(os.path.join(read_statistics_dir, ccp_read_statistics), 
                       src_dir=SRC_DIR, variant_dir=read_statistics_dir, duplicate=0,
-                      exports='env read_statistics_readset')
+                      exports='env_read_statistics')
     raw_read_stats.append(stat)
     ## explicit list of fastqc_data.txt files
     if('fastqc' in env['READSTAT_METHODS'].split(',')):
@@ -195,6 +197,7 @@ else:
 ## CIRCRNA DETECTION
 unmapped_dir = os.path.join(build_dir, 'unmapped_reads')
 
+circrnas = [None, None]
 if not env['BYPASS'] == 'circular':
     ## Extract unmapped reads in FASTQ format from BAM alignments
     unmapped_reads_target = ['singleton.fastq.gz']

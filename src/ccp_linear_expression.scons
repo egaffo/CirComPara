@@ -20,6 +20,7 @@ except NameError, ne:
 ## MERGE SAMPLE TRANSCRIPTOMES IF TRANSCRIPTOMES WERE RECONSTRUCTED
 cuffmerge_dir = 'new_transcriptome'
 transcript_sequences_dir = 'transcript_sequences'
+linexp_dir = 'linear_quantexp'
 
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
     ## MERGE THE TRANSCRIPTS PREDICTED IN THE VARIOUS SAMPLES
@@ -83,33 +84,60 @@ transcript_sequences = SConscript(os.path.join(transcript_sequences_dir,
                                   variant_dir = transcript_sequences_dir, duplicate = 0,
                                   exports = '''env_transcript_fastas''')
 
+for met in env['LINEAR_EXPRESSION_METHODS']:
+    ## QUANTIFY EXPRESSION
+    linexp_dir = 'linear_quantexp_' + met
+    env_linear_quantexp = env.Clone()
+    env_linear_quantexp.Replace(LINEAR_EXPRESSION_METHODS = [met])
+    linquantexp = SConscript(os.path.join(linexp_dir, 'ccp_linear_quantexp.scons'),
+                                src_dir = env['SCONSCRIPT_HOME'],
+                                variant_dir = linexp_dir, duplicate = 0,
+                                exports = '''env_linear_quantexp SymLink get_matching_nodes''')
+    
+    #env['GENE_EXP'] = linquantexp['GENE_EXP']
+    #env['GENE_EXP_ANALYSIS'] = linquantexp['GENE_EXP_ANALYSIS']
+    #env['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']
+    env_linear_quantexp['GENE_EXP'] = linquantexp['GENE_EXP']
+    env_linear_quantexp['GENE_EXP_ANALYSIS'] = linquantexp['GENE_EXP_ANALYSIS']
+    env_linear_quantexp['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']
+    
+    ## DIFFERENTIAL LINEAR EXPRESSION
+    if env['DIFF_EXP']:
+        for de_met in env['DIFF_EXP'].split(','):
 
-## QUANTIFY EXPRESSION
-linexp_dir = 'linear_quantexp'
-env_linear_expression = env.Clone()
-linquantexp = SConscript(os.path.join(linexp_dir, 'ccp_linear_quantexp.scons'),
-                            src_dir = env['SCONSCRIPT_HOME'],
-                            variant_dir = linexp_dir, duplicate = 0,
-                            exports = '''env_linear_expression SymLink get_matching_nodes''')
-
-env['GENE_EXP'] = linquantexp['GENE_EXP']
-env['GENE_EXP_ANALYSIS'] = linquantexp['GENE_EXP_ANALYSIS']
-env['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']
-
-## DIFFERENTIAL LINEAR EXPRESSION
-if env['DIFF_EXP']:
-    lindiffexp_dir = 'linear_diffexp'
-    env_linear_diffexp = env.Clone()
-    #env_linear_diffexp['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']
-    lindiffexp = SConscript(os.path.join(lindiffexp_dir,
-                                         'ccp_linear_diffexp.scons'),
-                            src_dir = env['SCONSCRIPT_HOME'],
-                            variant_dir = lindiffexp_dir, duplicate = 0,
-                            exports = '''env_linear_diffexp SymLink get_matching_nodes''')
-
-    #lindiffexp['DIFFEXP']
-    #lindiffexp['REPORT']
-    Clean('.', lindiffexp_dir)
+            lindiffexp_dir = os.path.join(linexp_dir, 
+                                          'linear_diffexp_' + de_met)
+            env_linear_diffexp = env_linear_quantexp.Clone()
+            env_linear_diffexp['DIFF_EXP'] = de_met
+            ## some protocols are fixed:
+            ## HTseq-count -> DESeq
+            ## Cufflinks -> Cuffdiff
+            ## Stringtie -> {Ballgown,DESeq}
+            if met == 'htseq':
+                if not de_met == 'deseq':
+                    continue
+            if met == 'cufflinks':
+                if not de_met == 'cuffdiff':
+                    continue
+            if met == 'stringtie':
+                if de_met == 'deseq':
+                    env_linear_diffexp['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']['RAW_COUNTS']
+                elif de_met == 'ballgown':
+                    env_linear_diffexp['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']['BG_TABS']
+                elif not de_met in ['ballgown', 'deseq']:
+                    continue
+               
+            #env_linear_diffexp['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']
+            lindiffexp = SConscript(os.path.join(lindiffexp_dir,
+                                                 'ccp_linear_diffexp.scons'),
+                                    src_dir = env['SCONSCRIPT_HOME'],
+                                    variant_dir = lindiffexp_dir, duplicate = 0,
+                                    exports = '''env_linear_diffexp SymLink get_matching_nodes''')
+    
+            #lindiffexp['DIFFEXP']
+            #lindiffexp['REPORT']
+            Clean('.', lindiffexp_dir)
+    Clean('.', linexp_dir)
 
 
 Clean('.', cuffmerge_dir)

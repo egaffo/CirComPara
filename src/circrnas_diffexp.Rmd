@@ -40,8 +40,8 @@ suppressPackageStartupMessages(library(VennDiagram))
 ```
 
 ```{r load data, echo=FALSE, include=FALSE}
-non.value.columns <- c("circ_id", "gene_ids", "gene_names", 
-                       "label", "chr", "start", "end", "strand")
+non.value.columns <- c("circ_id", "strand", "gene_ids", "gene_names", 
+                       "gene_biotypes", "gene_region")
 circrnas.per.sample <- fread(circrnas.per.sample.file)
 circrnas.per.sample.matrix <- as.matrix(round(circrnas.per.sample[, -non.value.columns, 
                                                                   with = FALSE]))

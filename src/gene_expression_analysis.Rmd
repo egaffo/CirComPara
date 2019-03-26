@@ -28,7 +28,7 @@ knitr::opts_chunk$set(fig.width = 12,
                       fig.height = 6, 
                       dev = c('svglite', 'png'), 
                       fig.pos = "center",
-                      fig.path = file.path(results.dir, paste0('Figs_geneexp', .Platform$file.sep)),
+                      # fig.path = file.path(results.dir, paste0('Figs_geneexp', .Platform$file.sep)),
                       echo = FALSE, 
                       warning = FALSE, 
                       message = FALSE)
@@ -44,6 +44,36 @@ library(DESeq2)
 ```
 
 ```{r}
+## function to compute color hues and colors to give to each sample
+get.color.hues <- function(meta){
+    intgroup.dt <- meta[, .(.N), 
+                        by = .(sample_id, 
+                               condition)][order(sample_id), 
+                                           .(sample_id), by = condition]
+    samples.per.condition <- data.frame(intgroup.dt[, .N, by = .(condition)])
+    rownames(samples.per.condition) <- as.character(samples.per.condition$condition)
+    samples.per.condition$condition <- NULL
+    n.conditions <- nrow(samples.per.condition)
+    hues <- brewer_pal(palette = "Set2")(n.conditions)
+    
+    if(nrow(intgroup.dt) == 1){
+        intgroup.dt[, `:=`(color = hues[1],  hue = hues[1])]
+    }else{
+        for(i in 1:n.conditions){
+            n.hues <- samples.per.condition[i, "N"] + 2
+            col.hues <- colorRampPalette(colors = c(hues[i], 
+                                                    "white"))(n.hues)[1:(n.hues-2)]
+            
+            intgroup.dt[condition == rownames(samples.per.condition)[i], `:=`(color = col.hues,
+                                                                              hue = hues[i])]
+        }
+    }
+    intgroup.dt[]
+}
+```
+
+
+```{r}
 ##prepare meta file
 if(basename(meta.file) == "read_groups.info"){
     gene_meta <- fread(meta.file, colClasses = c("character", "factor", "character", 
@@ -54,13 +84,8 @@ if(basename(meta.file) == "read_groups.info"){
     ## prepare meta file and sample colors for plots
     gene_meta <- unique(fread(file = meta.file)[, .(sample_id = sample, condition)])
 }
-intgroup.dt <- gene_meta[, .(sample_id, condition)][order(sample_id)]
-intgroup.dt[, color_luminance := 100-(10*1:.N), by = condition]
-intgroup.dt <- merge(intgroup.dt, 
-                     intgroup.dt[, .(samples_per_condition = .N), 
-                                 by = condition][, hue := brewer.pal(8, 
-                                                                     "Set2")[1:length(condition)]][], 
-                     by = "condition")[, color := muted(hue, l = color_luminance)][]
+
+intgroup.dt <- get.color.hues(gene_meta[, .(sample_id, condition)][order(sample_id)])
 ```
 
 
@@ -207,7 +232,7 @@ if(method == "stringtie"){
 ```
 
 ```{r}
-if(method == "htseq_count"){
+if(method == "htseq"){
     
     sampleTable <- gene_meta
     sampleTable$file <- sapply(sampleTable$sample_id, grep, 
@@ -257,7 +282,7 @@ if(meta.file != ""){
         
         expressed_genes <- merge(expressed_genes, gene_meta, by = "sample_id")
     }
-    if(method == "htseq_count"){
+    if(method == "htseq"){
         ## normalized expression
         gene.xpr.fpkm <- as.data.table(counts(dds, normalized = T), keep.rownames = "gene")
         warning("Using DESeq2 normalized values instead of FPKM since htseq-count was selected.")
@@ -411,7 +436,7 @@ expressed_genes$sample_id <- factor(expressed_genes$sample_id,
 
 gene.xpr.per.sample.boxplot <- ggplot(data = expressed_genes, 
                                       mapping = aes(x = sample_id, y = FPKM, fill = sample_id)) + 
-  geom_boxplot(notch = T, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
+  geom_boxplot(notch = F, varwidth = T) + scale_y_log10(labels = scales::comma) + xlab(NULL) + ylab("FPKM") + 
   ggtitle("Gene expression\nper sample") + theme_bw()
 gene.xpr.per.sample.boxplot <- gene.xpr.per.sample.boxplot + guides(fill=FALSE) + 
   theme(text = element_text(size=default.font.size), axis.text.x = element_text(angle=45, hjust=1)) + 

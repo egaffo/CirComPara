@@ -31,7 +31,7 @@ knitr::opts_chunk$set(fig.width = 7,
                       fig.height = 4, 
                       dev = c('png'), 
                       fig.pos = "center",
-                      fig.path = file.path(results.dir, paste0('Figs_deg_ballgown', .Platform$file.sep)),
+                      # fig.path = file.path(results.dir, paste0('Figs_deg_ballgown', .Platform$file.sep)),
                       echo = FALSE, 
                       warning = FALSE, 
                       message = FALSE)
@@ -41,7 +41,6 @@ knitr::opts_knit$set(root.dir = results.dir)
 ```
 
 ```{r load data}
-
 load(gene.de.file)
 
 gid2gn <- as.data.table(unique(texpr(bg, meas = "all")[, c("gene_id", "gene_name")]))

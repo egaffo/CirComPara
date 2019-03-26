@@ -20,8 +20,8 @@ Import('*')
 
 try:
     # these are the variables passed with 'exports' from a calling SConscript
-    env = env.Clone()
-    fastqc_readset
+    env = env_fastqc.Clone()
+    #fastqc_readset
 except NameError:
     vars = Variables('vars.py')
     vars.Add('READS', 'FASTQ read file to process, either in plain text or gzipped (.gz)', 
@@ -43,6 +43,7 @@ except NameError:
 ## fastqc_readset must be a Scons.File object
 # FASTQC removes .gz, .fq, .fastq extensions (also recursively) from the input file name
 # to name the output HTML and ZIP files
+fastqc_readset = env['READSET']
 readset_basename = re.sub('\.fq$|\.fastq$', '', re.sub('\.gz$', '', fastqc_readset.name))
 fastqc_html_target = readset_basename + '_fastqc.html'
 fastqc_zip_target = readset_basename + '_fastqc.zip'
@@ -63,5 +64,14 @@ fastqc_quality = env.Command([fastqc_html_target,
                               fastqc_data_target],
                              fastqc_readset, 
                              fastqc_quality_cmd)
+
+## the following files comes from the unzipping of the zip'ed results
+additional_files_to_clean = [os.path.join(readset_basename, 
+                                          f) for f in ['fastqc.fo',
+                                                       'fastqc_report.html',
+                                                       'Icons', 
+                                                       'Images', 
+                                                       'summary.txt']]
+Clean(fastqc_quality, additional_files_to_clean)
 
 Return('fastqc_quality')
