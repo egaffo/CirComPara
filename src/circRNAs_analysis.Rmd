@@ -268,11 +268,35 @@ circ_to_genes <- fread(circ_to_genes.file)
 if(ncol(circ_to_genes) == 1){
     ## case: text file listing circ_to_genes.csv files
     circ_to_genes <- unique(rbindlist(lapply(readLines(circ_to_genes.file), fread)))
+    
     ## intergenic clusters can have different names for different runs of CCP,
-    ## we must merge them
-    circ_to_genes <- circ_to_genes[, lapply(.SD, function(x)paste0(sort(unique(x)), 
-                                                                   collapse = "|")), 
-                  by = circ_id]
+    ## we must merge them: re-run intergenic circrna clustering
+    intergenic_circs <- circ_to_genes[simple_gene_region == "intergenic"]
+    intergenic_circs[, c("chr", "coords"):=tstrsplit(circ_id, ":")]
+    intergenic_circs[, c("start", "end"):=tstrsplit(coords, "-", type.convert = T)]
+    
+    suppressPackageStartupMessages(library(bedr))
+    
+    circ.clusters <- 
+        data.table(cluster.region(unique(intergenic_circs[order(chr, start), 
+                                                          circ_id]),
+                                  distance = 5000,
+                                  check.chr = F, 
+                                  verbose = F))[, .(circ_id = index, 
+                                                    cluster = regionIndex)]
+    
+    intergenic_circs_clust <- 
+        merge(intergenic_circs,
+              circ.clusters, 
+              by = "circ_id")[, gene_names := paste0("CircClust", "_",
+                                                     chr, ":", min(start),
+                                                     "-", max(end)),
+                              by = cluster][, colnames(circ_to_genes), with = F]
+    
+    circ_to_genes <- 
+        rbindlist(list(circ_to_genes[simple_gene_region != "intergenic"],
+                       unique(intergenic_circs_clust)), 
+                  use.names = T)
 }
 
 circ_to_gene <- fread(gene_to_circ.file)
@@ -280,26 +304,24 @@ if(ncol(circ_to_gene) == 1){
     ## case: text file listing gene_to_circ.csv files
     circ_to_gene <- unique(rbindlist(lapply(readLines(gene_to_circ.file), fread)))
     
-    intergenic.circ_to_gene <- 
-        circ_to_gene[gene_region == "intergenic", 
-                     lapply(.SD, function(x)paste0(sort(unique(x)), 
-                                                   collapse = "|")), 
-                     by = .(circ_id)]
-    
-    circ_to_gene <- circ_to_gene[gene_region != "intergenic", 
-                                 lapply(.SD, function(x)paste0(sort(unique(x)), 
-                                                                   collapse = "|")), 
-                  by = .(circ_id, gene_name, gene_id)]
-    
-    circ_to_gene <- unique(rbindlist(list(circ_to_gene,
-                                          intergenic.circ_to_gene), 
-                                     use.names = T))
+    ## use intergenic clusters defined from the circ_to_genes list
+    circ_to_gene <- 
+        unique(rbindlist(list(circ_to_gene[gene_region != "intergenic"],
+                              intergenic_circs_clust[, .(circ_id,
+                                                         strand,
+                                                         gene_region,
+                                                         simple_gene_region,
+                                                         gene_strand,
+                                                         gene_id = gene_ids,
+                                                         gene_name = gene_names,
+                                                         gene_biotype = gene_biotypes)]), 
+                         use.names = T))
     
 }
 
 exists_gene_overlaps <- FALSE
 if(nrow(circ_to_genes) > 0){
-  exists_gene_overlaps <- TRUE
+    exists_gene_overlaps <- TRUE
 }
 ```
 
