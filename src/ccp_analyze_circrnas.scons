@@ -5,6 +5,41 @@ Analyze circRNA predictions and set up a report
 import os,re
 Import('*')
 
+def write_list_files(target, source, env):
+    ''' 
+    :param source: a text file with the list of directories
+    :param target: must be a 6 element list which will correspond to 
+                   - circrnas.gtf.list.txt
+                   - circ_to_genes.tsv.list.txt
+                   - gene_to_circ.tsv.list.txt
+                   - bks_linear_counts.tab.list.txt
+                   - meta.csv.list.txt
+                   - vars.py.list.txt
+    '''
+    basedirs = []
+    with open(source[0].path, 'r') as dirs:
+        for line in dirs:
+            basedirs.append(line.strip())
+
+    postfixes = [os.path.join('circular_expression', 'circRNA_collection', 
+                              'circrnas.gtf'), 
+                 os.path.join('circular_expression', 'circRNA_collection',
+                              'circrna_gene_annotation', 'circ_to_genes.tsv'), 
+                 os.path.join('circular_expression', 'circRNA_collection', 
+                              'circrna_gene_annotation', 'gene_to_circ.tsv'), 
+                 os.path.join('circular_expression', 'circrna_linexp', 
+                              'bks_linear_counts.tab'), 
+                 'meta.csv', 
+                 'vars.py']
+   
+    for outfile, postfix in zip(target, postfixes):
+       with open(outfile.path, "w") as out:
+           for basedir in basedirs:
+               out.write(os.path.join(basedir, postfix))
+               out.write('\n')
+
+    return None
+
 try:
     env = env_circrna_analyze.Clone()
 
@@ -60,6 +95,15 @@ except NameError, ne:
              'vars.py or a text file with a list of vars.py file paths, '\
              'one per row', 
              'vars.py.list.txt')
+    vars.Add('CCP_DIRS', 
+             'A text file with a list of directories of CirComPara analysis, '\
+             'one per row. Usin this option will automatically '\
+             'set CIRCRNAS, CIRC2GENES, GENE2CIRC, BKS_LIN_COUNTS, '\
+             'VARS, and META parameters by collecting the appropriate files '\
+             'form the listed directories. This will ease the merging of '\
+             'several runs of CirComPara. N.B: it assumes the meta.csv '\
+             'file is named as such and within the CirComPara run directory.', 
+             '')
 
     env = Environment(ENV = os.environ, 
                       SHELL = '/bin/bash',
@@ -86,6 +130,30 @@ except NameError, ne:
         env['CIRC_DIFF_EXP'] = True
     else:
         env['CIRC_DIFF_EXP'] = False
+
+    WriteListFiles = Builder(action = write_list_files)
+    env.Append(BUILDERS = {'WriteListFiles' : WriteListFiles})
+
+    if env['CCP_DIRS'] != '':
+        make_lists_targets = ['circrnas.gtf.list.txt', 
+                              'circ_to_genes.tsv.list.txt', 
+                              'gene_to_circ.tsv.list.txt', 
+                              'bks_linear_counts.tab.list.txt', 
+                              'meta.csv.list.txt', 
+                              'vars.py.list.txt']
+
+        make_lists = env.WriteListFiles(make_lists_targets, env['CCP_DIRS'])
+
+        #env['CIRCRNAS'] = make_lists[0] 
+        circrnas_gtf_list = make_lists[0] 
+        #env['CIRC2GENES'] = make_lists[1]
+        #env['GENE2CIRC'] = make_lists[2]
+        env['CIRCGENES'] = [make_lists[1], make_lists[2]]
+        #env['BKS_LIN_COUNTS'] = make_lists[3] 
+        bks_linear_counts_list = make_lists[3] 
+        env['META'] = make_lists[4]
+        env['VARS'] = make_lists[5] 
+                
 
 ## get circrna raw expression
 circrnas_xpr_sources = [circrnas_gtf_list, 
