@@ -795,9 +795,10 @@ circRNAs.per.gene <- circRNAs.to.gene[, .(circRNAs_per_gene = .N),
 
 ```
 
-`r n.circ.per.gene[, .N]` genes overlap the `r circrnas.morethan2methods.medrpm.table[, .N]` reliable circRNAs ( _intergenic_ circRNAs were not considered)  
+`r n.circ.per.gene[, .N]` genes overlap `r circrnas.morethan2methods.medrpm.table[gene_region != "intergenic", .N]` reliable circRNAs.   
+`r circrnas.morethan2methods.medrpm.table[gene_region == "intergenic", .N]` _intergenic_ circRNAs were clustered into `r circrnas.morethan2methods.medrpm.table[gene_region == "intergenic", .N, by = gene_names][, .N]` putative new genes.  
 
-Number of circRNAs expressed by each gene, with the respective circRNAs IDs, are reported in file <a href="`r basename(circRNAs_per_gene.file)`">`r basename(circRNAs_per_gene.file)`</a>.  
+Number of circRNAs expressed by each gene ( _intergenic_ circRNAs excluded) are reported in file <a href="`r basename(circRNAs_per_gene.file)`">`r basename(circRNAs_per_gene.file)`</a>.  
 
 ### Overall circRNAs per gene  
 
@@ -806,9 +807,9 @@ Number of circRNAs expressed by each gene, with the respective circRNAs IDs, are
 ggplot(data = circRNAs.per.gene, 
        mapping = aes(x = factor(circRNAs_per_gene))) + 
     geom_bar(stat = "count") +
-    geom_text(stat = "count", aes(label = ..count..),
-              vjust = -0.3, size = default.font.size*(5/14)) +
-    geom_text(stat = "count", aes(label = "", y = ..count..*1.1), vjust = -0.3, 
+    # geom_text(stat = "count", aes(label = ..count..),
+    #           vjust = -0.3, size = default.font.size*(5/14)) +
+    geom_text(stat = "count", aes(label = "", y = ..count..*1.1), vjust = -0.3,
               size = default.font.size*(5/14)) +
     scale_y_continuous(expand = c(0, 0)) + 
     ggtitle("CircRNAs per gene") + 
@@ -825,14 +826,19 @@ ggplot(data = circRNAs.per.gene,
 ```{r echo=FALSE, include=TRUE}
 ## Number of circRNA per gene, discriminating each sample
 circRNAs.to.gene.per.sample <- 
-    merge(circrnas.morethan2methods.medrpm[, .(circ_id, sample_id)], 
-          circRNAs.to.gene[, .(circ_id, gene_id, gene_name)], 
-          by = "circ_id", all.x = T, all.y = F, allow.cartesian = T)
+    merge(circrnas.morethan2methods.medrpm[sorted_label != "intergenic", 
+                                           .(circ_id, sample_id)], 
+          circRNAs.to.gene[, .(circ_id, gene_id, gene_name, simple_gene_region)], 
+          by = "circ_id", 
+          all.x = T, 
+          all.y = F, 
+          allow.cartesian = T)
 
 n.circ.per.gene.per.sample <- 
-    circRNAs.to.gene.per.sample[, .(n_circRNAs = .N, 
-                                    circ_ids = paste0(unique(circ_id), 
-                                                      collapse = "|")), 
+    circRNAs.to.gene.per.sample[simple_gene_region != "intergenic", 
+                                .(n_circRNAs = .N, 
+                                  circ_ids = paste0(unique(circ_id), 
+                                                    collapse = "|")), 
                                 by = .(sample_id, gene_id, 
                                        gene_name)][order(sample_id, -n_circRNAs)]
 
@@ -850,7 +856,7 @@ circRNAs.per.gene.per.sample <-
 ```
 
 ```{r}
-fig.height <- max(ceiling(meta[, .N]/3), 2)*1.5
+fig.height <- max(ceiling(meta[, .N]/2), 2)*1.5
 ```
 
 ```{r, echo=FALSE, include=TRUE, fig.width=12, fig.height=fig.height}
@@ -866,7 +872,7 @@ ggplot(data = circRNAs.per.gene.per.sample,
                      color = sample_id)) + 
     geom_bar(stat = "count") + 
     facet_wrap(facets = ~ sample_id, scales = "free", 
-               ncol = min(3, meta[, .N])) + 
+               ncol = min(2, meta[, .N])) + 
     scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) +
     scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id])) + 
     geom_text(stat = "count", aes(label = "", y = ..count..*1.1)) +
