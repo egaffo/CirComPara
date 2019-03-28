@@ -380,14 +380,20 @@ write.csv(x = circrnas.morethan2methods.medrpm.table,
 
 ## CircRNAs detected per method
 
+Select only circRNAs detected with >= `r min_reads` reads by at least one method. Keep also circRNAs detected with < `r min_reads` reads if they are detected with >= `r min_reads` reads by any method in any sample.  
+
 ```{r}
 circrnas.gtf <- fread(circrnas.gtf.file, showProgress = F)
 ```
 
-
 ```{r, echo=FALSE, include=TRUE}
-## select only circRNAs with >= 2 reads (not normalized values)
-circ.per.method <- circrnas.gtf[reads >= min_reads, .N, by = .(circ_id, method)]
+## Given that min_reads = 2, select only circRNAs with >= 2 reads 
+## (not normalized values) by at least one method. Keep also the circrnas 
+## detected by < 2 reads if another method detected them with >= 2 reads.
+
+detected_circ_ids <- circrnas.gtf[reads >= min_reads, unique(circ_id)]
+circ.per.method <- circrnas.gtf[circ_id %in% detected_circ_ids, 
+                                .N, by = .(circ_id, method)]
 
 non.redundant <- circ.per.method[, .N, by = circ_id][, .N]
 ## number of circRNAs per method
@@ -494,7 +500,7 @@ ggplot(data = circ.per.method[, .(shared_by = .N),
     scale_x_discrete(expand = c(0, 0)) +
     ylab("CircRNAs") +
     xlab(NULL) +
-    ggtitle("Proportions of commonly detected circRNAs") +
+    ggtitle("Proportions of commonly\ndetected circRNAs") +
     # coord_polar(theta = "y") +
     theme_bw() +
     theme(axis.ticks.x = element_blank(), plot.title = element_text(hjust = .5))
