@@ -856,7 +856,7 @@ circRNAs.per.gene.per.sample <-
 ```
 
 ```{r}
-fig.height <- max(ceiling(meta[, .N]/2), 2)*1.5
+fig.height <- max(ceiling(meta[, .N]/2), 2)*2
 ```
 
 ```{r, echo=FALSE, include=TRUE, fig.width=12, fig.height=fig.height}
