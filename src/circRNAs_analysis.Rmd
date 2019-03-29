@@ -257,11 +257,11 @@ if(meta_file != ""){
 
 ```{r}
 ## save datasets design matrix
-meta.file.out <- "sample_conditions.csv"
+meta.file.out <- file.path(results.dir, "sample_conditions.csv")
 fwrite(x = meta, file = meta.file.out, row.names = F)
 ```
 
-Samples' metadata have been saved in file <a href="`r meta.file.out`">`r meta.file.out`</a>.  
+Samples' metadata have been saved in file <a href="`r basename(meta.file.out)`">`r basename(meta.file.out)`</a>.  
 
 ```{r}
 circrna.rpms <- fread(ccp_circrna_raw_xpr.csv.file, showProgress = F)
@@ -315,11 +315,11 @@ if(nrow(circ_to_genes) > 0){
 
 ```{r}
 ## save merged host gene annotation
-merged.circ.to.genes.file <- "circ_to_genes.csv"
+merged.circ.to.genes.file <- file.path(results.dir, "circ_to_genes.csv")
 fwrite(circ_to_genes, merged.circ.to.genes.file, row.names = F)
 ```
 
-CircRNA host gene annotation (one row per circRNA) was saved in <a href="`r merged.circ.to.genes.file`">`r merged.circ.to.genes.file`</a>.  
+CircRNA host gene annotation (one row per circRNA) was saved in <a href="`r basename(merged.circ.to.genes.file)`">`r basename(merged.circ.to.genes.file)`</a>.  
 
 ```{r}
 circ_to_gene <- fread(gene_to_circ.file)
@@ -345,11 +345,11 @@ if(ncol(circ_to_gene) == 1){
 
 ```{r}
 ## save merged host gene annotation
-merged.circ.to.gene.file <- "gene_to_circ.csv"
+merged.circ.to.gene.file <- file.path(results.dir, "gene_to_circ.csv")
 fwrite(circ_to_gene, merged.circ.to.gene.file, row.names = F)
 ```
 
-Genes expressing circRNAs are listed in <a href="`r merged.circ.to.gene.file`">`r merged.circ.to.gene.file`</a>.  
+Genes expressing circRNAs are listed in <a href="`r basename(merged.circ.to.gene.file)`">`r basename(merged.circ.to.gene.file)`</a>.  
 
 ```{r}
 if(exists_circrnas & exists_gene_overlaps){
