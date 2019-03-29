@@ -75,7 +75,15 @@ get.circ.cluster <- function(intergenic.circs.bed, max.dist = 5000L){
 }
 
 ## get gene annotation
-gene.annotation <- fread(gene.annotation.file)
+if(ncol(fread(gene.annotation.file, showProgress = F, nrows = 1)) == 1){
+    ## case: text file listing combined_circrnas.gtf.gz files
+    gene.annotation.file <- readLines(gene.annotation.file)
+    gene.annotation <- unique(rbindlist(lapply(gene.annotation.file, fread,
+                                               showProgress = F),
+                                        use.names = T))
+}else{
+    gene.annotation <- fread(gene.annotation.file)
+}
 
 gene.annotation[, c("gene_id", "gene_name",
                     "gene_biotype"):=tstrsplit(V18, ";", fixed = T, fill = ".")]

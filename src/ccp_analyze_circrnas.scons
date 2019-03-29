@@ -24,9 +24,7 @@ def write_list_files(target, source, env):
     postfixes = [os.path.join('circular_expression', 'circRNA_collection', 
                               'circrnas.gtf'), 
                  os.path.join('circular_expression', 'circRNA_collection',
-                              'circrna_gene_annotation', 'circ_to_genes.tsv'), 
-                 os.path.join('circular_expression', 'circRNA_collection', 
-                              'circrna_gene_annotation', 'gene_to_circ.tsv'), 
+                              'combined_circrnas.gtf.gz'), 
                  os.path.join('circular_expression', 'circrna_linexp', 
                               'bks_linear_counts.tab'), 
                  'meta.csv', 
@@ -61,19 +59,21 @@ except NameError, ne:
              'A GTF file with circRNA predictions or a text file with a'\
              'list of circrnas.gtf file paths, one per row', 
              'circrnas.gtf.list.txt')
-    vars.Add('CIRC2GENES', 
-             'circ_to_genes.tsv file as output of gene_annotation.R or '\
-             'a text file with a list of circ_to_genes.tsv file paths, '\
-             'one per row', 
-             'circ_to_genes.tsv.list.txt')
-    vars.Add('GENE2CIRC', 
-             'gene_to_circ.tsv file as output of gene_annotation.R or '\
-             'a text file with a list of gene_to_circ.tsv file paths, '\
-             'one per row', 
-             'gene_to_circ.tsv.list.txt')
-    #vars.Add('CIRCGENES', 
-    #         'A 18 fields GTF file with genes intersections with circRNAs', 
-    #         '')
+    #vars.Add('CIRC2GENES', 
+    #         'circ_to_genes.tsv file as output of gene_annotation.R or '\
+    #         'a text file with a list of circ_to_genes.tsv file paths, '\
+    #         'one per row', 
+    #         'circ_to_genes.tsv.list.txt')
+    #vars.Add('GENE2CIRC', 
+    #         'gene_to_circ.tsv file as output of gene_annotation.R or '\
+    #         'a text file with a list of gene_to_circ.tsv file paths, '\
+    #         'one per row', 
+    #         'gene_to_circ.tsv.list.txt')
+    vars.Add('CIRCGENES', 
+             'A 18 fields GTF file with genes intersections with circRNAs '\
+             'or ext file with a list of combined_circrnas.gtf.gz file '\
+             'paths, one per row', 
+             'combined_circrnas.gtf.gz.list.txt')
     vars.Add('BKS_LIN_COUNTS', 
              'The file with linear gene expression for each circRNA or '\
              'a text file with a list of bks_linear_counts.tab file paths, one per row', 
@@ -123,8 +123,8 @@ except NameError, ne:
 
     circrnas_gtf_list = File(env['CIRCRNAS'])
     bks_linear_counts_list = File(env['BKS_LIN_COUNTS'])
-    env['CIRCGENES'] = [File(env['CIRC2GENES']), 
-                        File(env['GENE2CIRC'])]
+    #env['CIRCGENES'] = [File(env['CIRC2GENES']), 
+    #                    File(env['GENE2CIRC'])]
 
     if env['CIRC_DIFF_EXP'].lower() == 'true':
         env['CIRC_DIFF_EXP'] = True
@@ -136,24 +136,30 @@ except NameError, ne:
 
     if env['CCP_DIRS'] != '':
         make_lists_targets = ['circrnas.gtf.list.txt', 
-                              'circ_to_genes.tsv.list.txt', 
-                              'gene_to_circ.tsv.list.txt', 
+                              'combined_circrnas.gtf.gz.list.txt', 
                               'bks_linear_counts.tab.list.txt', 
                               'meta.csv.list.txt', 
                               'vars.py.list.txt']
 
+        ## generate source file path list text files
         make_lists = env.WriteListFiles(make_lists_targets, env['CCP_DIRS'])
+        
+        circrnas_gtf_list = make_lists[0] #env['CIRCRNAS']
+        env['CIRCGENES'] = make_lists[1] #gene annotation
+        bks_linear_counts_list = make_lists[2] #env['BKS_LIN_COUNTS']
+        env['META'] = make_lists[3]
+        env['VARS'] = make_lists[4] 
 
-        #env['CIRCRNAS'] = make_lists[0] 
-        circrnas_gtf_list = make_lists[0] 
-        #env['CIRC2GENES'] = make_lists[1]
-        #env['GENE2CIRC'] = make_lists[2]
-        env['CIRCGENES'] = [make_lists[1], make_lists[2]]
-        #env['BKS_LIN_COUNTS'] = make_lists[3] 
-        bks_linear_counts_list = make_lists[3] 
-        env['META'] = make_lists[4]
-        env['VARS'] = make_lists[5] 
-                
+    ## merge gene annotation 
+    merge_gene_annotation_targets = ['circ_to_genes.tsv', 
+                                     'gene_to_circ.tsv']
+    merge_gene_annotation_cmd = '''gene_annotation.R -c $SOURCE -o ${TARGETS[0].dir}'''
+    merge_gene_annotation = env.Command(merge_gene_annotation_targets,
+                                   env['CIRCGENES'],
+                                   merge_gene_annotation_cmd)
+    env['CIRCGENES'] = [merge_gene_annotation[0], #env['CIRC2GENES']
+                        merge_gene_annotation[1]] #env['GENE2CIRC']
+               
 
 ## get circrna raw expression
 circrnas_xpr_sources = [circrnas_gtf_list, 
