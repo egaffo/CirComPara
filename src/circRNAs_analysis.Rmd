@@ -256,6 +256,14 @@ if(meta_file != ""){
 ```
 
 ```{r}
+## save datasets design matrix
+meta.file.out <- "sample_conditions.csv"
+fwrite(x = meta, file = meta.file.out, row.names = F)
+```
+
+Samples' metadata have been saved in file <a href="`r meta.file.out`">`r meta.file.out`</a>.  
+
+```{r}
 circrna.rpms <- fread(ccp_circrna_raw_xpr.csv.file, showProgress = F)
 exists_circrnas <- F
 if(nrow(circrna.rpms) > 0) exists_circrnas <- T
