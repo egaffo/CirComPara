@@ -665,7 +665,7 @@ datatable(reliable.circ.tab,
           fillContainer = F, autoHideNavigation = T, options = list(searching = F))
 ```
 
-```{r plot_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE, fig.width=12}
+```{r}
 reliable.circ.tab.long <- melt(data = reliable.circ.tab, id.vars = "sample_id", 
                                variable.name = "Filter", value.name = "count")
 reliable.circ.tab.long.d <- merge(reliable.circ.tab.long, intgroup.dt, 
@@ -673,32 +673,73 @@ reliable.circ.tab.long.d <- merge(reliable.circ.tab.long, intgroup.dt,
 reliable.circ.tab.long.d$sample_id <- factor(reliable.circ.tab.long.d$sample_id, 
                                              levels =  unique(reliable.circ.tab.long.d$sample_id),
                                              ordered = T)
+```
+
+```{r, echo=FALSE, include=TRUE, fig.width=12}
+# ggplot(data = reliable.circ.tab.long.d, 
+#        mapping = aes(x = sample_id, y = count,
+#                      fill = sample_id)) + 
+#     geom_bar(stat = "identity", width = .7, aes(colour = sample_id), position = "dodge") + 
+#     geom_text(stat ='identity', aes(label = count), 
+#               vjust = -0.3, size = default.font.size*(5/14)) +
+#     geom_text(stat = 'identity', aes(label = "", y = count*1.1), 
+#               vjust = -0.3, size = default.font.size*(5/14))  + 
+#     scale_y_continuous(expand = c(0, 0)) + 
+#     scale_fill_manual(values = setNames(intgroup.dt[, color], 
+#                                         nm = intgroup.dt[, sample_id]), 
+#                       guide = F) +
+#     scale_color_manual(values = setNames(intgroup.dt[, hue], 
+#                                          nm = intgroup.dt[, sample_id]), 
+#                        guide = F) +
+#     facet_wrap(facets = ~ Filter) + 
+#     ggtitle("CircRNAs per sample") + 
+#     xlab("") + 
+#     ylab("Number of circRNAs") + 
+#     theme_bw() + 
+#     theme(plot.title = element_text(hjust = 0.5),
+#           text = element_text(size=default.font.size), 
+#           axis.text.x = element_text(angle=45, hjust=1))
+
+```
+
+```{r, echo=FALSE, include=TRUE, fig.width=12}
+reliable.circ.tab.long.d$sample_id <- 
+    factor(reliable.circ.tab.long.d$sample_id, 
+           levels = reliable.circ.tab.long.d[Filter == paste0("\u2265 ", 
+                                                              min_reads, 
+                                                              " reads")][order(-count),
+                                             sample_id], 
+           ordered = T)
 
 ggplot(data = reliable.circ.tab.long.d, 
        mapping = aes(x = sample_id, y = count,
-                     fill = sample_id)) + 
-    geom_bar(stat = "identity", width = .7, aes(colour = sample_id), position = "dodge") + 
-    geom_text(stat ='identity', aes(label = count), 
-              vjust = -0.3, size = default.font.size*(5/14)) +
+                     fill = Filter)) + 
+    geom_bar(stat = "identity", width = .7, 
+             # aes(colour = sample_id), 
+             position = "dodge") + 
+    geom_text(stat ='identity', 
+              aes(label = count, y = 0.1), 
+              hjust = -.1,
+              position = position_dodge(width = .7),
+              angle = 90, 
+              size = default.font.size*(5/14)) +
     geom_text(stat = 'identity', aes(label = "", y = count*1.1), 
               vjust = -0.3, size = default.font.size*(5/14))  + 
     scale_y_continuous(expand = c(0, 0)) + 
-    scale_fill_manual(values = setNames(intgroup.dt[, color], 
-                                        nm = intgroup.dt[, sample_id]), 
-                      guide = F) +
-    scale_color_manual(values = setNames(intgroup.dt[, hue], 
-                                         nm = intgroup.dt[, sample_id]), 
-                       guide = F) +
-    facet_wrap(facets = ~ Filter) + 
+    scale_fill_viridis_d(option = "D", begin = .35, end = .7, alpha = .8, name = NULL) +
+    facet_grid(facets = . ~ condition, scales = "free_x", drop = T, space = "free") + 
     ggtitle("CircRNAs per sample") + 
     xlab("") + 
     ylab("Number of circRNAs") + 
     theme_bw() + 
-    theme(plot.title = element_text(hjust = 0.5),
+    theme(plot.title = element_text(hjust = 0.5), 
+          panel.spacing.x = unit(.1, "lines"),
           text = element_text(size=default.font.size), 
+          legend.position = "top", 
           axis.text.x = element_text(angle=45, hjust=1))
 
 ```
+
 
 ## CircRNAs gene annotation
 
