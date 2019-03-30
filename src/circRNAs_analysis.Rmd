@@ -630,7 +630,7 @@ For each method, at least `r min_reads` reads were required to consider a circRN
 
 With at least `r min_reads` reads | With at least `r min_reads` reads and `r min_methods` methods
 ---------------: | -----------------------------------------:
-`r circrnas.gtf[reads >= min_reads, .N, by = .(circ_id)][, .N]` | `r circrnas.morethan2methods.medrpm.table[, .N]`
+`r length(detected_circ_ids)` | `r circrnas.morethan2methods.medrpm.table[, .N]`
 
 The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per_sample.csv.basename`">`r circRNA_expression_per_sample.csv.basename`</a>. Expression values represent the median of raw counts predicted by the methods.  
 
@@ -638,14 +638,14 @@ The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per
 
 ```{r show_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE}
 circ.2reads.at.least <- 
-    circrnas.gtf[reads >= min_reads , .N, 
+    circrnas.gtf[circ_id %in% detected_circ_ids, .N, 
                  by = .(sample_id, circ_id)][, .(above_min_reads = .N), 
                                              by = sample_id]
 colnames(circ.2reads.at.least)[colnames(circ.2reads.at.least) == "above_min_reads"] <- 
     paste0("\u2265 ", min_reads, " reads")
 
 circrnas.morethan2methods.medrpm <- 
-    melt(circrna.rpms[reliable.circrna == 1], 
+    melt(circrna.rpms[reliable.circrna == 1, c("circ_id", meta$sample_id), with = F], 
          id.vars = "circ_id", 
          variable.name = "sample_id", 
          value.name = "reads")[sample_id != "reliable.circrna"][reads > 0]
