@@ -676,6 +676,37 @@ With at least `r min_reads` reads | With at least `r min_reads` reads and `r min
 
 The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per_sample.csv.basename`">`r circRNA_expression_per_sample.csv.basename`</a>. Expression values represent the median of raw counts predicted by the methods.  
 
+## Reliable circRNAs for each method
+
+```{r}
+circ.per.method[, reliable.circ := "Non-reliable"]
+circ.per.method[circ_id %in% as.character(circrnas.morethan2methods.medrpm.table$circ_id), 
+                reliable.circ := "Reliable"]
+
+ggplot(data = circ.per.method[, .N, by = .(method, reliable.circ)], 
+       mapping = aes(x = method, y = N, fill = reliable.circ)) + 
+    geom_col(width = .7) + 
+    geom_text(aes(label = N), 
+              # vjust = -0.3, 
+              position = position_stack(vjust = .5),
+              size = default.font.size*(5/14)) + 
+    geom_text(aes(label = "", y = N*1.1), 
+              position = position_stack(vjust = .5),
+              size = default.font.size*(5/14)) + 
+    scale_y_continuous(expand = c(0, 0)) + 
+    scale_fill_viridis_d(name = "CircRNA",
+                         option = "D", begin = .35, end = .7, alpha = .8) +
+    xlab(NULL) + 
+    ylab("CircRNAs") +
+    # ggtitle(bquote("CircRNAs detected with " >= .(min_reads) ~ "reads by each method")) + 
+    theme_bw() + 
+    theme(text = element_text(size = default.font.size), 
+          plot.title = element_text(hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+```
+
+
 ## CircRNAs detected by sample
 
 ```{r show_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE}
@@ -781,7 +812,6 @@ ggplot(data = reliable.circ.tab.long.d,
           axis.text.x = element_text(angle=45, hjust=1))
 
 ```
-
 
 ## CircRNAs gene annotation
 
