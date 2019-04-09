@@ -1102,7 +1102,7 @@ bks_linear_counts.tab.gz.m <-
 bks_linear_counts.tab.gz <- 
     dcast(bks_linear_counts.tab.gz.m,
           formula = circ_id ~ sample_id,
-          value.var = "lin.reads")
+          value.var = "lin.reads", fill = 0)
 ```
 
 ```{r}
@@ -1143,8 +1143,17 @@ circ.lin.xpr <- merge(circ.lin.xpr,
 ```
 
 ```{r, fig.width=2}
-ggplot(circ.lin.xpr, aes(x = "", y = log2(CLR))) +
-    geom_boxplot() +
+plot.circ.lin.xpr <- copy(circ.lin.xpr)
+new.inf <- 2*max(plot.circ.lin.xpr[CLR != Inf, CLR])
+plot.circ.lin.xpr[CLR == Inf, CLR := new.inf]
+```
+
+NB: in plots, infinite CLRs (i.e. when no linear expression was detected for a circRNA) have been represented with double the maximum CLR detected.  
+
+```{r, fig.width=2}
+ggplot(plot.circ.lin.xpr, 
+       aes(x = NULL, y = log2(CLR))) +
+    geom_boxplot(outlier.size = .5) +
     xlab(NULL) +
     ylab(expression(Log[2](CLR))) +
     theme_bw() +
@@ -1152,9 +1161,9 @@ ggplot(circ.lin.xpr, aes(x = "", y = log2(CLR))) +
 ```
 
 ```{r}
-ggplot(circ.lin.xpr, 
+ggplot(plot.circ.lin.xpr, 
        aes(x = condition, y = log2(CLR), fill = condition)) +
-    geom_boxplot(varwidth = T) +
+    geom_boxplot(varwidth = T, outlier.size = .5) +
     xlab(NULL) +
     ylab(expression(Log[2](CLR))) +
     scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
@@ -1165,17 +1174,20 @@ ggplot(circ.lin.xpr,
 ```
 
 ```{r}
-ggplot(circ.lin.xpr, aes(x = sample_id, y = log2(CLR), fill = sample_id)) +
-    geom_boxplot(varwidth = T) +
-    facet_wrap(facets = ~ condition, drop = T, scales = "free_x", 
-               ncol = min(3, length(unique(meta$condition)))) +
+ggplot(plot.circ.lin.xpr, 
+       aes(x = sample_id, y = log2(CLR), fill = sample_id)) +
+    geom_boxplot(varwidth = T, outlier.size = .5) +
+    facet_grid(cols = vars(condition), space = "free",
+               drop = T, 
+               scales = "free_x") +
     xlab(NULL) +
     ylab(expression(Log[2](CLR))) +
     scale_fill_manual(values = setNames(intgroup.dt[, color], 
                                         nm = intgroup.dt[, sample_id]), 
                       guide = F) +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+          panel.spacing.x = unit(.1, "lines"))
 ```
 
 # Session info
