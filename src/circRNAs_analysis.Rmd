@@ -466,9 +466,9 @@ shared.counts.table <-
                         sort(colnames(shared.counts.table))]
 
 ## save table
-# write.csv(x = data.frame(shared.counts.table), 
-#           file = file.path(results.dir, "methods_shared_circRNA_counts.csv"), 
-#           row.names = F)
+write.csv(x = data.frame(shared.counts.table),
+          file = file.path(results.dir, "methods_shared_circRNA_counts.csv"),
+          row.names = F)
 
 kshow <- data.table(shared.counts.table, keep.rownames = "Method")
 colnames(kshow) <- sub("_", " ", colnames(kshow))
