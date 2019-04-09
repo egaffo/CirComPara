@@ -406,7 +406,7 @@ write.csv(x = circrnas.morethan2methods.medrpm.table,
 
 ## CircRNAs detected per method
 
-Select only circRNAs detected with >= `r min_reads` reads by at least one method. Keep also circRNAs detected with < `r min_reads` reads if they are detected with >= `r min_reads` reads by any method in any sample.  
+Select only circRNAs detected with >= `r min_reads` reads.  
 
 ```{r}
 circrnas.gtf <- fread(circrnas.gtf.file, showProgress = F)
@@ -414,11 +414,10 @@ circrnas.gtf <- fread(circrnas.gtf.file, showProgress = F)
 
 ```{r, echo=FALSE, include=TRUE}
 ## Given that min_reads = 2, select only circRNAs with >= 2 reads 
-## (not normalized values) by at least one method. Keep also the circrnas 
-## detected by < 2 reads if another method detected them with >= 2 reads.
+## (not normalized values) by at least one method. 
 
 detected_circ_ids <- circrnas.gtf[reads >= min_reads, unique(circ_id)]
-circ.per.method <- circrnas.gtf[circ_id %in% detected_circ_ids, 
+circ.per.method <- circrnas.gtf[reads >= min_reads,
                                 .N, by = .(circ_id, method)]
 
 non.redundant <- circ.per.method[, .N, by = circ_id][, .N]
@@ -467,9 +466,9 @@ shared.counts.table <-
                         sort(colnames(shared.counts.table))]
 
 ## save table
-write.csv(x = data.frame(shared.counts.table), 
-          file = file.path(results.dir, "methods_shared_circRNA_counts.csv"), 
-          row.names = F)
+# write.csv(x = data.frame(shared.counts.table), 
+#           file = file.path(results.dir, "methods_shared_circRNA_counts.csv"), 
+#           row.names = F)
 
 kshow <- data.table(shared.counts.table, keep.rownames = "Method")
 colnames(kshow) <- sub("_", " ", colnames(kshow))
@@ -491,7 +490,14 @@ if(nrow(shared.counts.table) > 2){
 ```{r, echo=FALSE, include=TRUE}
 ############# Barplot number of circRNAs shared by methods ###########
 ## "\u2265" is the unicode character for 'greater than or equal'
-plot.dt <- circ.per.method[, .(shared_by = .N), 
+# plot.dt <- circ.per.method[, .(shared_by = .N), 
+#                                   by = circ_id]
+
+plot.dt <-  
+    circrnas.gtf[reads >= min_reads,
+                 .(n_methods = .N),
+                 by = .(sample_id, 
+                        circ_id)][, .(shared_by = max(n_methods)), 
                                   by = circ_id]
 
 ggplot(data = plot.dt, 
@@ -513,8 +519,9 @@ ggplot(data = plot.dt,
 ```
 
 ```{r, fig.width=3}
-ggplot(data = circ.per.method[, .(shared_by = .N), 
-                              by = circ_id][, .N, by = shared_by], 
+# ggplot(data = circ.per.method[, .(shared_by = .N), 
+#                               by = circ_id][, .N, by = shared_by], 
+ggplot(data = plot.dt[, .N, by = shared_by], 
        mapping = aes(x = "", y = N,
                      fill = factor(shared_by))) + 
     geom_bar(stat = "identity", width = .7, 
@@ -532,31 +539,16 @@ ggplot(data = circ.per.method[, .(shared_by = .N),
     theme(axis.ticks.x = element_blank(), plot.title = element_text(hjust = .5))
 ```
 
-
-```{r}
-## save methods detecting each circRNA
-cmet_per_circ.file <- file.path(results.dir, "cmet_per_circ.csv")
-
-circ_met <- fread(ccp_circrna_methods.csv.file, showProgress = F)
-circ_n_met <- fread(ccp_circrna_n_methods.csv.file, showProgress = F)
-
-circ_met <- 
-    merge(circ_n_met[, .(circ_id, reliable.circrna, overall.n.methods)],
-          circ_met[, .(circ_id, reliable.circrna, overall.circ.methods)], 
-          by = c("circ_id", "reliable.circrna"))[order(-reliable.circrna, 
-                                                       -overall.n.methods)]
-
-write.csv(circ_met, cmet_per_circ.file, row.names = F)
-```
-
-Methods detecting each circRNAs are listed in  <a href="`r basename(cmet_per_circ.file)`">`r basename(cmet_per_circ.file)`</a>.
-
 ```{r}
 ## cumulative number of circrnas by number of methods
+# cum.met <- 
+#     circ.per.method[, .(n_methods = .N), 
+#                     by = circ_id][, .N, 
+#                                   by = n_methods][order(-n_methods)][
+#                                       , .(n_methods, cum.sum = cumsum(N))]
+
 cum.met <- 
-    circ.per.method[, .(n_methods = .N), 
-                    by = circ_id][, .N, 
-                                  by = n_methods][order(-n_methods)][
+    plot.dt[, .N, by = .(n_methods = shared_by)][order(-n_methods)][
                                       , .(n_methods, cum.sum = cumsum(N))]
 
 ggplot(cum.met, aes(x = factor(paste0("\u2265", n_methods)), 
@@ -573,8 +565,40 @@ ggplot(cum.met, aes(x = factor(paste0("\u2265", n_methods)),
     theme(plot.title = element_text(hjust = .5))
 ```
 
+```{r}
+# ## save methods detecting each circRNA
+# cmet_per_circ.file <- file.path(results.dir, "cmet_per_circ.csv")
+# 
+# circ_met <- fread(ccp_circrna_methods.csv.file, showProgress = F)
+# circ_met[, pass_min_reads_filter := 0]
+# circ_met[circ_id %in% detected_circ_ids, pass_min_reads_filter := 1]
+# 
+# circ_n_met <- fread(ccp_circrna_n_methods.csv.file, showProgress = F)
+# 
+# ## attach a column that tells how many methods (at max among the samples)
+# ## detected the circrna with >= min_reads. Other columns in circ_n_met count
+# ## a method if it detected the circrna with at least 1 read
+# circ_n_met <- 
+#     merge(circ_n_met,
+#           circrnas.gtf[reads >= min_reads,
+#                        .(n_methods = .N),
+#                        by = .(sample_id, 
+#                               circ_id)][, .(max.methods.w.min.reads = max(n_methods)), 
+#                                         by = circ_id], 
+#           by = c("circ_id"), all.x = T)
+# 
+# circ_met <- 
+#     merge(circ_n_met[, .(circ_id, reliable.circrna, overall.n.methods, max.methods.w.min.reads)],
+#           circ_met[, .(circ_id, reliable.circrna, pass_min_reads_filter, overall.circ.methods)], 
+#           by = c("circ_id", "reliable.circrna"))[order(-reliable.circrna,
+#                                                        -pass_min_reads_filter,
+#                                                        -overall.n.methods)]
+# 
+# write.csv(circ_met, cmet_per_circ.file, row.names = F)
+```
 
 ```{r}
+# analize which is the most numerous combination of methods
 reduce.cmeth.names <- function(x){
     x <- gsub("circexplorer2", "ce2", x)
     x <- gsub("segemehl", "se", x)
@@ -582,43 +606,61 @@ reduce.cmeth.names <- function(x){
     x
 }
 
-circ_met.to.plot <- 
-    circ_met[circ_id %in% unique(circ.per.method$circ_id), 
-             .(circ_id, n_methods = overall.n.methods, 
-               c_methods = reduce.cmeth.names(overall.circ.methods))]
+# circ_met.to.plot <-
+#     circ_met[circ_id %in% unique(circ.per.method$circ_id),
+#              .(circ_id, n_methods = overall.n.methods,
+#                c_methods = reduce.cmeth.names(overall.circ.methods))]
+
+circ_met.to.plot <-
+    circrnas.gtf[reads >= min_reads,
+                 .(n_methods = .N, 
+                   c_methods = reduce.cmeth.names(paste0(sort(unique(method)), 
+                                                         collapse = "|"))),
+                 by = .(sample_id, 
+                        circ_id)][, .N, 
+                                  by = .(circ_id, n_methods, c_methods)]
 
 circ_met.plot.height <- max(c(4, (circ_met.to.plot[, .N, by = c_methods][, .N]*0.5)/2.54))
 
-circ_met.to.plot <- 
-    circ_met.to.plot[, .N, 
-                     by = .(c_methods, 
+circ_met.to.plot <-
+    circ_met.to.plot[, .N,
+                     by = .(c_methods,
                             n_methods)][order(-N)]
 
-circ_met.to.plot$c_methods <- 
-    factor(circ_met.to.plot$c_methods, 
-           levels = circ_met.to.plot$c_methods, 
+circ_met.to.plot$c_methods <-
+    factor(circ_met.to.plot$c_methods,
+           levels = circ_met.to.plot$c_methods,
            ordered = T)
 ```
 
+```{r}
+## save methods detecting each circRNA
+cmet_per_circ.file <- file.path(results.dir, "cmet_per_circ.csv")
+write.csv(circ_met.to.plot, cmet_per_circ.file, row.names = F)
+```
+
+Methods detecting each circRNAs are listed in  <a href="`r basename(cmet_per_circ.file)`">`r basename(cmet_per_circ.file)`</a>.
+
 ```{r, fig.height=`circ_met.plot.height`, fig.width=7}
-ggplot(circ_met.to.plot, aes(x = c_methods, y = N)) + 
-    geom_bar(stat = "identity", color = "black", 
-             aes(fill = factor(n_methods))) + 
-    scale_fill_brewer(direction = 1) + 
-    guides(fill=FALSE) + 
+## method combinations plot
+ggplot(circ_met.to.plot, aes(x = c_methods, y = N)) +
+    geom_bar(stat = "identity", color = "black",
+             aes(fill = factor(n_methods))) +
+    scale_fill_brewer(direction = 1) +
+    guides(fill = FALSE) +
     geom_text(stat = 'identity', aes(label = N),
               size = default.font.size*(5/14),
-              hjust = -.05) + 
+              hjust = -.05) +
     geom_text(stat = 'identity', aes(label = "", y = N*1.1), hjust = -.05,
-              size = default.font.size*(5/14)) + 
-    scale_y_continuous(expand = c(0, 0)) + 
-    coord_flip() + 
+              size = default.font.size*(5/14)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    coord_flip() +
     facet_grid(facets = n_methods ~ ., scales = "free_y", space = "free") +
-    geom_text(stat = 'identity', aes(label = "", y = N * 1.1)) + 
+    geom_text(stat = 'identity', aes(label = "", y = N * 1.1)) +
     xlab("Method combinations") + ylab("CircRNAs") +
     ggtitle(paste("CircRNAs commonly\ndetected by the methods")) +
-    theme_bw() + 
-    theme(text = element_text(size = default.font.size), 
+    theme_bw() +
+    theme(text = element_text(size = default.font.size),
           plot.title = element_text(hjust = 0.5))
 
 ```
@@ -728,9 +770,9 @@ ggplot(data = reliable.circ.tab.long.d,
     scale_y_continuous(expand = c(0, 0)) + 
     scale_fill_viridis_d(option = "D", begin = .35, end = .7, alpha = .8, name = NULL) +
     facet_grid(facets = . ~ condition, scales = "free_x", drop = T, space = "free") + 
-    ggtitle("CircRNAs per sample") + 
+    # ggtitle("CircRNAs per sample") + 
     xlab("") + 
-    ylab("Number of circRNAs") + 
+    ylab("CircRNAs") + 
     theme_bw() + 
     theme(plot.title = element_text(hjust = 0.5), 
           panel.spacing.x = unit(.1, "lines"),
