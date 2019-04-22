@@ -85,14 +85,20 @@ if(ncol(fread(gene.annotation.file, showProgress = F, nrows = 1)) == 1){
     gene.annotation <- fread(gene.annotation.file)
 }
 
-gene.annotation[, c("gene_id", "gene_name",
-                    "gene_biotype"):=tstrsplit(V18, ";", fixed = T, fill = ".")]
+# gene.annotation[, c("gene_id", "gene_name",
+#                     "gene_biotype"):=tstrsplit(V18, ";", fixed = T, fill = ".")]
 gene.annotation[V12 == ".", V12 := "intergenic"]
 
 gene.annotation[, `:=`(circ_id = sub('.*gene_id "([^"]+)".*', "\\1", V9),
-                       gene_id = sub('.*gene_id "([^"]+)".*', "\\1", gene_id),
-                       gene_name = sub('.*gene_name "([^"]+)".*', "\\1", gene_name),
-                       gene_biotype = sub('.*gene_biotype "([^"]+)".*', "\\1", gene_biotype))]
+                       gene_id = sub('.*gene_id "([^"]+)".*', "\\1", V18),
+                       gene_name = sub('.*gene_name "([^"]+)".*', "\\1", V18))]
+
+if(grepl("gene_[bio]*type", gene.annotation$V18[1])){
+    gene.annotation[, gene_biotype := sub('.*gene_[bio]*type "([^"]+)".*', "\\1", V18)]
+}else{
+    gene.annotation[, gene_biotype := "."]
+}
+
 
 ## collapse/remove circ_id strand
 gene.annotation[, circ_id := sub(":[+-]$", "", circ_id)]
@@ -141,41 +147,43 @@ intergenic.circs <- intergenic.circs[, lapply(.SD, function(x)list(unique(unlist
 circ_to_genelist <- rbindlist(list(circ_to_genelist[simple_gene_region != "intergenic"],
                                    intergenic.circs), use.names = T)
 
-## convert into BED format
-intergenic.circs.bed <-
-    intergenic.circs[, c("chr", "coords") :=
-                         tstrsplit(circ_id,
-                                   ":")][, c("start",
-                                             "end") :=
-                                             tstrsplit(coords, "-",
-                                                       type.convert = T)][, .(chr,
-                                                                              start,
-                                                                              end,
-                                                                              circ_id)]
-intergenic.circs[, `:=`(chr = NULL, start = NULL, end = NULL, coords = NULL)]
+if(nrow(intergenic.circs) > 0){
+    ## convert into BED format
+    intergenic.circs.bed <-
+        intergenic.circs[, c("chr", "coords") :=
+                             tstrsplit(circ_id,
+                                       ":")][, c("start",
+                                                 "end") :=
+                                                 tstrsplit(coords, "-",
+                                                           type.convert = T)][, .(chr,
+                                                                                  start,
+                                                                                  end,
+                                                                                  circ_id)]
+    intergenic.circs[, `:=`(chr = NULL, start = NULL, end = NULL, coords = NULL)]
 
-## cluster circrnas irrespective of strand
-intergenic.circ.clusters <-
-    merge(intergenic.circs.bed,
-          get.circ.cluster(intergenic.circs.bed, max.dist = max.dist),
-          by = "circ_id")
-intergenic.circ.clusters[, cluster.coords := paste0("CircClust", "_",
-                                                    chr, ":", min(start),
-                                                    "-", max(end)),
-                         by = cluster]
+    ## cluster circrnas irrespective of strand
+    intergenic.circ.clusters <-
+        merge(intergenic.circs.bed,
+              get.circ.cluster(intergenic.circs.bed, max.dist = max.dist),
+              by = "circ_id")
+    intergenic.circ.clusters[, cluster.coords := paste0("CircClust", "_",
+                                                        chr, ":", min(start),
+                                                        "-", max(end)),
+                             by = cluster]
 
-## set cluster name as gene_name for intergenic circrnas
-circ_to_genelist <-
-    merge(circ_to_genelist,
-          intergenic.circ.clusters[, .(circ_id, cluster.coords)],
-          by = "circ_id",
-          all.x = T)[!is.na(cluster.coords),
-                     gene_names := as.list(cluster.coords)][, .(circ_id, circ_strand,
-                                                                gene_ids,
-                                                                gene_names, gene_biotypes,
-                                                                gene_region,
-                                                                simple_gene_region,
-                                                                gene_strand)]
+    ## set cluster name as gene_name for intergenic circrnas
+    circ_to_genelist <-
+        merge(circ_to_genelist,
+              intergenic.circ.clusters[, .(circ_id, cluster.coords)],
+              by = "circ_id",
+              all.x = T)[!is.na(cluster.coords),
+                         gene_names := as.list(cluster.coords)][, .(circ_id, circ_strand,
+                                                                    gene_ids,
+                                                                    gene_names, gene_biotypes,
+                                                                    gene_region,
+                                                                    simple_gene_region,
+                                                                    gene_strand)]
+}
 
 ### now, convert the gene lists to characters by separating genes with a bar char
 # ## faster, perhaps?
