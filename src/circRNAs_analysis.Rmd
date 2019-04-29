@@ -190,6 +190,11 @@ simplify_circrna_labels <- function(label){
 ```{r set custom color shades}
 ## set custom color shades
 ## function to compute color hues and colors to give to each sample
+gg_color_hue <- function(n) {
+    hues = seq(15, 375, length = n + 1)
+    hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
 get.color.hues <- function(meta){
     intgroup.dt <- meta[, .(.N), by = .(sample_id, 
                                         condition)][order(sample_id), 
@@ -199,7 +204,12 @@ get.color.hues <- function(meta){
     rownames(samples.per.condition) <- as.character(samples.per.condition$condition)
     samples.per.condition$condition <- NULL
     n.conditions <- nrow(samples.per.condition)
-    hues <- brewer_pal(palette = "Set2")(n.conditions)
+    
+    if(n.conditions > 8){
+        hues <- gg_color_hue(n.conditions)
+    }else{
+        hues <- brewer_pal(palette = "Set2")(n.conditions)
+    }
     
     if(nrow(intgroup.dt) == 1){
         intgroup.dt[, `:=`(color = hues[1],  hue = hues[1])]
