@@ -16,5 +16,10 @@ install.packages(packs, repos="http://cran.r-project.org", dependencies = T)
 #  install.packages(pack, repos="http://cran.r-project.org", dependencies = T)
 #}
 
-source("http://bioconductor.org/biocLite.R")
-biocLite(pkgs = c("DESeq2", "ReportingTools", "ballgown"))
+#source("http://bioconductor.org/biocLite.R")
+#biocLite(pkgs = c("DESeq2", "ReportingTools", "ballgown"))
+## Bioconductor >= v3.9 (with R >= 3.6)
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(c("DESeq2", "ReportingTools", "ballgown"))
+
