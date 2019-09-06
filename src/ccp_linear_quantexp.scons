@@ -33,30 +33,23 @@ geneexp_dir = 'geneexp'
 ballgown_dir = os.path.join(geneexp_dir, 'ballgown')
 ballgown_files = []
 
-#env['LINEAR_ALIGNMENTS'] = get_matching_nodes(env['RUNS'],
-#                                              '.*hisat2_out.*\.bam')
-
 env['LINEAR_ALIGNMENTS'] = []
 for sample,files in env['RUNS_DICT'].iteritems():
     lin_alignments = files['LINEAR_ALIGNMENTS']
     env['LINEAR_ALIGNMENTS'].append(File(lin_alignments))
 
 if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
+    gene_raw_counts_list = []
+    trx_raw_counts_list = []
     gene_meta = env['META']
     if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
         ## (RE)COMPUTE GENE ABUNDANCES USING MERGED ANNOTATION
         gene_exp = []
+        trx_exp  = []
         for sample_name in env['SAMPLES'].keys():
             
-            #alignment = get_matching_nodes(env['LINEAR_ALIGNMENTS'], '.*' + sample_name + '.*')
             alignment = env['RUNS_DICT'][sample_name]['LINEAR_ALIGNMENTS']
 
-            if len(alignment) > 1: 
-                print 'Warning: multiple alignments matched for sample ' +\
-                      sample_name + '. Will use only the first: ' +\
-                      alignment[0].path
-
-            alignment = alignment[0]
             
             gene_ab_targets = [sample_name + '_transcripts.gtf', 
                                sample_name + '_gene_abund.tab',
@@ -79,7 +72,31 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
                                   [alignment, env['ANNOTATION']], 
                                   gene_ab_cmd)
             gene_exp.append(gene_ab[1].abspath)
+            trx_exp.append(gene_ab[0].abspath)
             ballgown_files.append(gene_ab[3:])
+
+            ## N.B: this code should be wrapped in a SConscript since it is
+            ## used also in ccp_expression.scons !
+            ## compute read raw counts for StringTie
+            SAMPLE = sample_name
+            TRANSCRIPTS_GTF = gene_ab[0]
+            FASTQC_DATA = env['RUNS_DICT'][SAMPLE]['FASTQC_DATA']
+            raw_counts_sources = [TRANSCRIPTS_GTF,
+                                  FASTQC_DATA]
+            raw_counts_cmd = os.path.join(env['SCONSCRIPT_HOME'],
+                                     '''get_stringtie_rawcounts.R -g ${SOURCES[0]} '''\
+                                     '''-f ${','.join([str(s.abspath) for s in SOURCES[1:]])} '''\
+                                     '''-o ${TARGETS[0].dir}''' + os.path.sep +\
+                                     SAMPLE + '''_''')
+            raw_counts_targets = [os.path.join(SAMPLE + "_" + f) \
+                                  for f in ['gene_expression_rawcounts.csv',
+                                            'transcript_expression_rawcounts.csv']]
+            raw_counts = env.Command(raw_counts_targets, 
+                                     raw_counts_sources, 
+                                     raw_counts_cmd)
+        
+            gene_raw_counts_list.append(raw_counts[0])
+            trx_raw_counts_list.append(raw_counts[1])
 
     else:
         ## JUST COLLECT GENE ABUNDANCES ALREADY COMPUTED WITH GIVEN ANNOTATION
@@ -94,8 +111,6 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
         gene_exp = get_matching_nodes(env['RUNS'], '.*gene_abund\.tab')
         trx_exp = get_matching_nodes(env['RUNS'], '.*_transcripts\.gtf')
         ballgown_files = get_matching_nodes(env['RUNS'], '.*\.ctab')
-        gene_raw_counts_list = []
-        trx_raw_counts_list = []
         for sample_name in env['SAMPLES'].keys():
             raw_counts = env['RUNS_DICT'][sample_name]['LINEAR_EXPRESSION']['STRINGTIE']['RAW_COUNTS']
             gene_raw_counts_list.append(raw_counts[0])
