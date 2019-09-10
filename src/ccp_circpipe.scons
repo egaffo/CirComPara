@@ -247,6 +247,13 @@ if not env['BYPASS'] == 'circular':
         ## Environment is propagated to the Sconscript
         env_sample_circrna_methods.AppendUnique(FINDCIRC_EXTRA_PARAMS = ['--strandpref', '--stranded'])
         # env_sample_circrna_methods.AppendUnique(DCC_EXTRA_PARAMS = ['-ss']) ## default DCC is stranded
+        
+        ## set automatically and accordingly the other methods' strandness parameters
+        if 'RF' in env['HISAT2_EXTRA_PARAMS'].split():
+            env_sample_circrna_methods.AppendUnique(TOPHAT_PARAMS = ['--library-type', 'fr-firststrand'])
+        elif 'FR' in env['HISAT2_EXTRA_PARAMS'].split():
+            env_sample_circrna_methods.AppendUnique(TOPHAT_PARAMS = ['--library-type', 'fr-secondstrand'])
+            
     else:
         ## assume non-stranded library
          env_sample_circrna_methods.AppendUnique(DCC_EXTRA_PARAMS = ['-N'])
