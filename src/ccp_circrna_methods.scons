@@ -25,7 +25,7 @@ Imports:
 
 '''
 
-import os
+import os, re
 
 ccp_testrealign   = 'ccp_testrealign.scons'
 ccp_segemehl = 'ccp_segemehl.scons'
@@ -118,6 +118,30 @@ build_dir = 'circRNAs'
 if env['CIRC_PE_MAPPING']:
     env['READS'] = [File(f) for f in env['READS']]
 else:
+    if len(env['READS']) > 1:
+        ## if stranded reads we should handle the cases before concatenating
+        strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+        if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
+            if 'RF' in env['HISAT2_EXTRA_PARAMS'].split():
+                ## reverse complement first mate
+                mate_idx = 0
+
+            elif 'FR' in env['HISAT2_EXTRA_PARAMS'].split():
+                ## reverse complement second mate
+                mate_idx = 1
+            
+            revcomp_cmd = 'fastq_rev_comp -f $SOURCE | gzip -c > $TARGET'
+            revcomp = env.Command(os.path.join(build_dir, 
+                                               env['SAMPLE'] + 
+                                               '_' +
+                                               str(mate_idx+1) +
+                                               '.revcomp.fq.gz'), 
+                                  env['READS'][mate_idx], 
+                                  revcomp_cmd) 
+            
+            ## replace env variable
+            env['READS'][mate_idx] = revcomp
+
     ## collapse paired reads into single file
     ## indeed processing reads as they were single-end
     cat_reads_target = os.path.join(build_dir,  
@@ -125,7 +149,7 @@ else:
     
     ## we can concatenate gzipped files, no need to decompress
     cat_cmd = 'cat ${SOURCES} '
-
+    
     if env['FIX_READ_HEADER']:
         ## trim FASTQ header to the first white space, so
         ## that only the read ids are kept in FASTQ headers.
