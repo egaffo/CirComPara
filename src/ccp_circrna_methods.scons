@@ -130,7 +130,7 @@ else:
                 ## reverse complement second mate
                 mate_idx = 1
             
-            revcomp_cmd = 'fastq_rev_comp -f $SOURCE | gzip -c > $TARGET'
+            revcomp_cmd = 'fastq_rev_comp.py -f $SOURCE | gzip -c > $TARGET'
             revcomp = env.Command(os.path.join(build_dir, 
                                                env['SAMPLE'] + 
                                                '_' +
