@@ -146,7 +146,7 @@ else:
             elif 'FR' in env['HISAT2_EXTRA_PARAMS'].split():
                 ## reverse complement second mate
                 mate_idx = 1
-            
+
                 ## switch TopHat2 parameter
                 th2_lib_type = 'fr-firststrand'
 
