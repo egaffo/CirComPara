@@ -120,15 +120,20 @@ if env['CIRC_PE_MAPPING']:
 else:
     if len(env['READS']) > 1:
         ## if stranded reads we should handle the cases before concatenating
+        ## to have single-end reads from the opposite strand of the transcript.
+        ## In this way we won't change strandness parameters of the aligners.
+        ## For instance, if HISAT2 is set to RF, then TopHat2 would have been
+        ## set to fr-firststrand that assumes single-end reads as being the 
+        ## oppositestrand of the transcript
         strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
         if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
             if 'RF' in env['HISAT2_EXTRA_PARAMS'].split():
-                ## reverse complement first mate
-                mate_idx = 0
-
-            elif 'FR' in env['HISAT2_EXTRA_PARAMS'].split():
                 ## reverse complement second mate
                 mate_idx = 1
+
+            elif 'FR' in env['HISAT2_EXTRA_PARAMS'].split():
+                ## reverse complement first mate
+                mate_idx = 0
             
             revcomp_cmd = 'fastq_rev_comp.py -f $SOURCE | gzip -c > $TARGET'
             revcomp = env.Command(os.path.join(build_dir, 
