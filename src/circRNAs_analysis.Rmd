@@ -1051,7 +1051,7 @@ circRNAs.to.gene.per.sample <- merge(circRNAs.to.gene.per.sample,
                                      intgroup.dt[, .(sample_id, condition)], 
                                      by = "sample_id")
 
-if(intgroup.dt[, .N, by=condition][, .N] > 1){
+# if(intgroup.dt[, .N, by=condition][, .N] > 1){
     
     n.circ.per.gene.per.condition <- 
         unique(circRNAs.to.gene.per.sample[, .(circ_id, gene_id, gene_name, 
@@ -1071,11 +1071,11 @@ if(intgroup.dt[, .N, by=condition][, .N] > 1){
     write.csv(x = n.circ.per.gene.per.condition,
               file = circRNAs_per_gene.per.cond.file,
               row.names = F)
-}
+# }
 ```
 
 ```{r plot_circrnas_per_gene_per_condition, echo=FALSE, include=TRUE, fig.width=12, fig.height=fig.height}
-if(intgroup.dt[, .N, by=condition][, .N] > 1){
+# if(intgroup.dt[, .N, by=condition][, .N] > 1){
     ## barplot per condition
     ggplot(data = circRNAs.per.gene.per.condition, 
            mapping = aes(x = factor(circRNAs_per_gene), 
@@ -1096,7 +1096,7 @@ if(intgroup.dt[, .N, by=condition][, .N] > 1){
         theme(text = element_text(size=default.font.size), 
               axis.text.x = element_text(angle = 90, hjust = 1),
               plot.title = element_text(hjust = 0.5))
-}
+# }
 ```
 
 Number of circRNAs expressed per gene, grouping by condition, have been saved in file <a href="`r basename(circRNAs_per_gene.per.cond.file)`">`r basename(circRNAs_per_gene.per.cond.file)`</a>. 
