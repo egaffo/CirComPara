@@ -262,6 +262,13 @@ if not env['BYPASS'] == 'circular':
                             exports = '''env_sample_circrna_methods''')
     results.append(circrnas[0]) ## the list result format
 
+    if not env['BYPASS'] == 'linear':
+        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
+            ## could be improved by setting only the reconstructed 
+            ## transcriptome file as the dependency, f.i.
+            ## expression[1]['STRINGTIE']['TRANSCRIPTS_GTF'] if stringtie
+            Depends(circrnas[0], expression[0]) 
+
 results_dict = {'RAW_READ_STATS'        : raw_read_stats,
                 'PREPROCESSING'         : preprocess,
                 'LINEAR_EXPRESSION'     : expression[1],
