@@ -65,8 +65,15 @@ tophat_targets = [os.path.join(tophat_out_dir, f) for f in ['accepted_hits.bam',
                                                             'deletions.bed',
                                                             'unmapped.bam']]
 
-tophat = env.Command(tophat_targets, READS, 
-                    tophat_cmd)
+tophat_src = READS
+## update source file dependencies for TopHat:
+## annotation (file content) may change
+if '--GTF' in env['TOPHAT_PARAMS']:
+    tophat_src.append(File(env['TOPHAT_PARAMS'][env['TOPHAT_PARAMS'].index('--GTF')+1]))
+
+tophat = env.Command(tophat_targets, 
+                     tophat_src, 
+                     tophat_cmd)
 
 
 # do not delete old alignment file untill the new one has been computed
