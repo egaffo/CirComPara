@@ -55,6 +55,8 @@ star_cmd = '''STAR --outSAMstrandField intronMotif '''\
 
 READS = [File(f) for f in env['READS']]
 
+star_src = READS
+
 if len(READS)>1:
     star_cmd = star_cmd + ''' --readFilesIn ${SOURCES[0].abspath} ${SOURCES[1].abspath} '''
 else:
@@ -65,6 +67,7 @@ if READS[0].abspath.endswith('.gz'):
 
 if not env['ANNOTATION'] == '':
     star_cmd = star_cmd + ''' --sjdbGTFfile $ANNOTATION'''
+    star_src.append(env['ANNOTATION'])
 
 chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
@@ -75,9 +78,11 @@ star_targets = [os.path.join(star_out_dir, f) for f in ['Aligned.sortedByCoord.o
                                                         'SJ.out.tab',
                                                         'Chimeric.out.sam']]
 
-star = env.Command(star_targets, READS, [chdir_working_cmd + ' && '+\
-                                             star_cmd + ' && ' +\
-                                             chdir_parent_cmd])
+star = env.Command(star_targets, 
+                   star_src, 
+                   [chdir_working_cmd + ' && '+\
+                    star_cmd + ' && ' +\
+                    chdir_parent_cmd])
 
 env.Precious(star[0]) # do not delete old alignment file untill the new one has been computed
 
