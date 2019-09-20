@@ -183,10 +183,15 @@ if not env['BYPASS'] == 'linear':
         results.append(expression[1]['STRINGTIE']['RAW_COUNTS'])
         # the ALL_TARGETS is a temporary hack. It will be removed when SConscript
         # results are passed as dictionaries/custom-objects and handled accordingly
+        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
+            env.Replace(ANNOTATION =
+            expression[1]['STRINGTIE']['TRANSCRIPTS_GTF'].abspath)
     if 'htseq' in env['LINEAR_EXPRESSION_METHODS']:
         results.append(expression[1]['HTSEQ'])
     if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
         results.append(expression[1]['CUFFLINKS'])
+        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
+            env.Replace(ANNOTATION = expression[1]['CUFFLINKS'][0])
 
 else:
 	expression = [None, 
