@@ -169,7 +169,7 @@ if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_bwa', 'circexplorer
                                                                '${SOURCES[0].filebase}.genePred.wgn']]
         genePred = env.Command(genePred_targets, File(env['ANNOTATION']),
                                ['gtfToGenePred -infoOut=${TARGETS[0]} ${SOURCES[0]} ${TARGETS[1]}',
-                                'cut -f9 ${TARGETS[0]} | grep -v geneName | '\
+                                'cut -f2 ${TARGETS[0]} | grep -v geneId | '\
                                 'paste - ${TARGETS[1]} | sed "s_^\t\([^\t]*\)\t\(.*\)_\1\t\1\t\2_" '\
     			    '> ${TARGETS[2]}']
                               )
