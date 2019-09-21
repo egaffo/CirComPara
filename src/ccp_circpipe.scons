@@ -184,14 +184,28 @@ if not env['BYPASS'] == 'linear':
         # the ALL_TARGETS is a temporary hack. It will be removed when SConscript
         # results are passed as dictionaries/custom-objects and handled accordingly
         if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
-            env.Replace(ANNOTATION =
-            expression[1]['STRINGTIE']['TRANSCRIPTS_GTF'].abspath)
+            env.Replace(ANNOTATION = expression[1]['STRINGTIE']['TRANSCRIPTS_GTF'].abspath)
+
     if 'htseq' in env['LINEAR_EXPRESSION_METHODS']:
         results.append(expression[1]['HTSEQ'])
+
     if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
         results.append(expression[1]['CUFFLINKS'])
         if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
             env.Replace(ANNOTATION = expression[1]['CUFFLINKS'][0])
+
+    ## if transcriptome was reconstructed, then update the genePred
+    ## annoation file required by CIRCexplorer2
+    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
+        env_check_indexes = env.Clone()
+        env_check_indexes['GENEPRED'] = ''
+        genepred = env.SConscript(os.path.join(build_dir,
+                                               'ccp_check_indexes.scons'),
+                                  variant_dir = build_dir, 
+                                  src_dir = SRC_DIR,
+                                  duplicate = 0,
+                                  exports = '''env_check_indexes''')
+        env.Replace(GENEPRED = genepred['GENEPRED'])
 
 else:
 	expression = [None, 
