@@ -87,9 +87,13 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
                                                                                 't_data.ctab']]
                             )
 
-    stringtie_cmd = 'stringtie $( -p $CPUS $) -o ${TARGETS[0]} -A ${TARGETS[1]} '\
+    stringtie_cmd = 'stringtie $( -p $CPUS $) -A ${TARGETS[1]} '\
                     '-l $SAMPLE -C ${TARGETS[2]} -b ${TARGETS[3].dir} -e '\
-                    '-G $ANNOTATION ${SOURCES[0]}'
+                    '-G $ANNOTATION ${SOURCES[0]} | '\
+                    'grep -P "([^\\t]+\\t){6}[+-]\\t" > ${TARGETS[0]}'
+                    ## the last piped grep removes from the output the 
+                    ## features with unknown strand, which would break 
+                    ## TopHat2 runs
     stringtie = env.Command(stringtie_targets,
                             stringtie_sources, 
                             stringtie_cmd)
