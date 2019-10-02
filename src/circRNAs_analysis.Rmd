@@ -190,6 +190,11 @@ simplify_circrna_labels <- function(label){
 ```{r set custom color shades}
 ## set custom color shades
 ## function to compute color hues and colors to give to each sample
+gg_color_hue <- function(n) {
+    hues = seq(15, 375, length = n + 1)
+    hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
 get.color.hues <- function(meta){
     intgroup.dt <- meta[, .(.N), by = .(sample_id, 
                                         condition)][order(sample_id), 
@@ -199,7 +204,12 @@ get.color.hues <- function(meta){
     rownames(samples.per.condition) <- as.character(samples.per.condition$condition)
     samples.per.condition$condition <- NULL
     n.conditions <- nrow(samples.per.condition)
-    hues <- brewer_pal(palette = "Set2")(n.conditions)
+    
+    if(n.conditions > 8){
+        hues <- gg_color_hue(n.conditions)
+    }else{
+        hues <- brewer_pal(palette = "Set2")(n.conditions)
+    }
     
     if(nrow(intgroup.dt) == 1){
         intgroup.dt[, `:=`(color = hues[1],  hue = hues[1])]
@@ -217,12 +227,51 @@ get.color.hues <- function(meta){
 }
 ```
 
+```{r}
+vars.to.df <- function(vars.py.filepath){
+    vars <- readChar(vars.py.filepath, nchars = file.info(vars.py.filepath)$size)
+    ## revert multi-line strings into one-line and remove all blank chars
+    a <- gsub(" ", "", gsub("['\"]\\\\[ ]*\n[ ]*['\"]", "", vars))
+    ## set multi-line vector values into one-line
+    b <- gsub(",[ ]*\n", ",", a)
+    b <- gsub(",#.*\n'", ",'", b)
+    ## skip comment lines
+    c <- grep(pattern = "^#", invert = T, 
+              x = strsplit(b, "\n", fixed = T)[[1]], 
+              value = T)
+    ## skip blank lines
+    d <- paste0(c[c != ""], collapse = "\n")
+    ## transform into a data.frame
+    vars.df <- data.table(read.table(text = d, sep = "=", header = F, stringsAsFactors = F))
+    colnames(vars.df) <- c("Variable", "Value")
+    # rownames(vars.df) <- as.character(vars.df$Variable) ## TODO: handle duplicated parameters
+    vars.df
+}
+```
+
+
 ```{r, echo=FALSE}
 if(meta_file != ""){
-    meta <- unique(fread(meta_file)[, .(sample_id = sample, condition)])
+    if(!"sample" %in% colnames(fread(meta_file))){
+        ## merge meta.csv file list
+        meta <- rbindlist(lapply(readLines(meta_file), fread), 
+                          use.names = T, fill = T)
+    }else{
+        ## single meta.csv file
+        meta <- fread(meta_file)
+    }
+    meta <- unique(meta[, .(sample_id = sample, condition)])
     intgroup.dt <- get.color.hues(meta)
 }
 ```
+
+```{r}
+## save datasets design matrix
+meta.file.out <- file.path(results.dir, "sample_conditions.csv")
+fwrite(x = meta, file = meta.file.out, row.names = F)
+```
+
+Samples' metadata have been saved in file <a href="`r basename(meta.file.out)`">`r basename(meta.file.out)`</a>.  
 
 ```{r}
 circrna.rpms <- fread(ccp_circrna_raw_xpr.csv.file, showProgress = F)
@@ -237,19 +286,80 @@ circ_to_genes <- fread(circ_to_genes.file)
 if(ncol(circ_to_genes) == 1){
     ## case: text file listing circ_to_genes.csv files
     circ_to_genes <- unique(rbindlist(lapply(readLines(circ_to_genes.file), fread)))
-}
-
-circ_to_gene <- fread(gene_to_circ.file)
-if(ncol(circ_to_gene) == 1){
-    ## case: text file listing gene_to_circ.csv files
-    circ_to_gene <- unique(rbindlist(lapply(readLines(gene_to_circ.file), fread)))
+    
+    ## intergenic clusters can have different names for different runs of CCP,
+    ## we must merge them: re-run intergenic circrna clustering
+    intergenic_circs <- circ_to_genes[simple_gene_region == "intergenic"]
+    intergenic_circs[, c("chr", "coords"):=tstrsplit(circ_id, ":")]
+    intergenic_circs[, c("start", "end"):=tstrsplit(coords, "-", type.convert = T)]
+    
+    suppressPackageStartupMessages(library(bedr))
+    
+    circ.clusters <- 
+        data.table(cluster.region(unique(intergenic_circs[order(chr, start), 
+                                                          circ_id]),
+                                  distance = 5000,
+                                  check.chr = F, 
+                                  verbose = F))[, .(circ_id = index, 
+                                                    cluster = regionIndex)]
+    
+    intergenic_circs_clust <- 
+        merge(intergenic_circs,
+              circ.clusters, 
+              by = "circ_id")[, gene_names := paste0("CircClust", "_",
+                                                     chr, ":", min(start),
+                                                     "-", max(end)),
+                              by = cluster][, colnames(circ_to_genes), with = F]
+    
+    circ_to_genes <- 
+        rbindlist(list(circ_to_genes[simple_gene_region != "intergenic"],
+                       unique(intergenic_circs_clust)), 
+                  use.names = T)
 }
 
 exists_gene_overlaps <- FALSE
 if(nrow(circ_to_genes) > 0){
-  exists_gene_overlaps <- TRUE
+    exists_gene_overlaps <- TRUE
 }
 ```
+
+```{r}
+## save merged host gene annotation
+merged.circ.to.genes.file <- file.path(results.dir, "circ_to_genes.csv")
+fwrite(circ_to_genes, merged.circ.to.genes.file, row.names = F)
+```
+
+CircRNA host gene annotation (one row per circRNA) was saved in <a href="`r basename(merged.circ.to.genes.file)`">`r basename(merged.circ.to.genes.file)`</a>.  
+
+```{r}
+circ_to_gene <- fread(gene_to_circ.file)
+if(ncol(circ_to_gene) == 1){
+    ## case: text file listing gene_to_circ.csv files
+    circ_to_gene <- unique(rbindlist(lapply(readLines(gene_to_circ.file), fread)))
+    
+    ## use intergenic clusters defined from the circ_to_genes list
+    circ_to_gene <- 
+        unique(rbindlist(list(circ_to_gene[gene_region != "intergenic"],
+                              intergenic_circs_clust[, .(circ_id,
+                                                         strand,
+                                                         gene_region,
+                                                         simple_gene_region,
+                                                         gene_strand,
+                                                         gene_id = gene_ids,
+                                                         gene_name = gene_names,
+                                                         gene_biotype = gene_biotypes)]), 
+                         use.names = T))
+    
+}
+```
+
+```{r}
+## save merged host gene annotation
+merged.circ.to.gene.file <- file.path(results.dir, "gene_to_circ.csv")
+fwrite(circ_to_gene, merged.circ.to.gene.file, row.names = F)
+```
+
+Genes expressing circRNAs are listed in <a href="`r basename(merged.circ.to.gene.file)`">`r basename(merged.circ.to.gene.file)`</a>.  
 
 ```{r}
 if(exists_circrnas & exists_gene_overlaps){
@@ -264,27 +374,22 @@ if(exists_circrnas & exists_gene_overlaps){
 ```{r}
 ## read vars.py file and parse the text
 vars <- readChar(vars.py.filepath, nchars = file.info(vars.py.filepath)$size)
-
-## revert multi-line strings into one-line and remove all blank chars
-a <- gsub(" ", "", gsub("'\\\\[ ]*\n[ ]*'", "", vars))
-## set multi-line vector values into one-line
-b <- gsub(",[ ]*\n", ",", a)
-## skip comment lines
-c <- grep(pattern = "^#", invert = T, 
-          x = strsplit(b, "\n", fixed = T)[[1]], 
-          value = T)
-## skip blank lines
-d <- paste0(c[c != ""], collapse = "\n")
-## transform into a data.frame
-vars.df <- data.table(read.table(text = d, sep = "=", header = F, stringsAsFactors = F))
-colnames(vars.df) <- c("Variable", "Value")
-# rownames(vars.df) <- as.character(vars.df$Variable) ## TODO: handle duplicated parameters
+if(!grepl("=", vars)){
+    ## merge vars.py files
+    vars <- rbindlist(lapply(readLines(vars.py.filepath), 
+                     function(x)as.data.table(vars.to.df(x))), 
+                     use.names = T)
+    vars.df <- vars[, lapply(.SD, function(x)paste0(unique(x), collapse = ",")), 
+                    by = Variable]
+}else{
+    vars.df <- vars.to.df(vars.py.filepath)
+}
 ```
 
 ```{r}
 if(any("CIRCRNA_METHODS" == vars.df$Variable)){
-    methods <- strsplit(vars.df[Variable == "CIRCRNA_METHODS", Value], 
-                        ",", fixed = T)[[1]]
+    methods <- unique(strsplit(vars.df[Variable == "CIRCRNA_METHODS", Value], 
+                        ",", fixed = T)[[1]])
 }else{
     ## CIRCRNA_METHODS maybe not overriden in vars.py, for instance 
     ## when default value is left
@@ -311,14 +416,19 @@ write.csv(x = circrnas.morethan2methods.medrpm.table,
 
 ## CircRNAs detected per method
 
+Select only circRNAs detected with >= `r min_reads` reads.  
+
 ```{r}
 circrnas.gtf <- fread(circrnas.gtf.file, showProgress = F)
 ```
 
-
 ```{r, echo=FALSE, include=TRUE}
-## select only circRNAs with >= 2 reads (not normalized values)
-circ.per.method <- circrnas.gtf[reads >= min_reads, .N, by = .(circ_id, method)]
+## Given that min_reads = 2, select only circRNAs with >= 2 reads 
+## (not normalized values) by at least one method. 
+
+detected_circ_ids <- circrnas.gtf[reads >= min_reads, unique(circ_id)]
+circ.per.method <- circrnas.gtf[reads >= min_reads,
+                                .N, by = .(circ_id, method)]
 
 non.redundant <- circ.per.method[, .N, by = circ_id][, .N]
 ## number of circRNAs per method
@@ -366,8 +476,8 @@ shared.counts.table <-
                         sort(colnames(shared.counts.table))]
 
 ## save table
-write.csv(x = data.frame(shared.counts.table), 
-          file = file.path(results.dir, "methods_shared_circRNA_counts.csv"), 
+write.csv(x = data.frame(shared.counts.table),
+          file = file.path(results.dir, "methods_shared_circRNA_counts.csv"),
           row.names = F)
 
 kshow <- data.table(shared.counts.table, keep.rownames = "Method")
@@ -390,7 +500,14 @@ if(nrow(shared.counts.table) > 2){
 ```{r, echo=FALSE, include=TRUE}
 ############# Barplot number of circRNAs shared by methods ###########
 ## "\u2265" is the unicode character for 'greater than or equal'
-plot.dt <- circ.per.method[, .(shared_by = .N), 
+# plot.dt <- circ.per.method[, .(shared_by = .N), 
+#                                   by = circ_id]
+
+plot.dt <-  
+    circrnas.gtf[reads >= min_reads,
+                 .(n_methods = .N),
+                 by = .(sample_id, 
+                        circ_id)][, .(shared_by = max(n_methods)), 
                                   by = circ_id]
 
 ggplot(data = plot.dt, 
@@ -412,8 +529,9 @@ ggplot(data = plot.dt,
 ```
 
 ```{r, fig.width=3}
-ggplot(data = circ.per.method[, .(shared_by = .N), 
-                              by = circ_id][, .N, by = shared_by], 
+# ggplot(data = circ.per.method[, .(shared_by = .N), 
+#                               by = circ_id][, .N, by = shared_by], 
+ggplot(data = plot.dt[, .N, by = shared_by], 
        mapping = aes(x = "", y = N,
                      fill = factor(shared_by))) + 
     geom_bar(stat = "identity", width = .7, 
@@ -425,37 +543,22 @@ ggplot(data = circ.per.method[, .(shared_by = .N),
     scale_x_discrete(expand = c(0, 0)) +
     ylab("CircRNAs") +
     xlab(NULL) +
-    ggtitle("Proportions of commonly detected circRNAs") +
+    ggtitle("Proportions of commonly\ndetected circRNAs") +
     # coord_polar(theta = "y") +
     theme_bw() +
     theme(axis.ticks.x = element_blank(), plot.title = element_text(hjust = .5))
 ```
 
-
-```{r}
-## save methods detecting each circRNA
-cmet_per_circ.file <- file.path(results.dir, "cmet_per_circ.csv")
-
-circ_met <- fread(ccp_circrna_methods.csv.file, showProgress = F)
-circ_n_met <- fread(ccp_circrna_n_methods.csv.file, showProgress = F)
-
-circ_met <- 
-    merge(circ_n_met[, .(circ_id, reliable.circrna, overall.n.methods)],
-          circ_met[, .(circ_id, reliable.circrna, overall.circ.methods)], 
-          by = c("circ_id", "reliable.circrna"))[order(-reliable.circrna, 
-                                                       -overall.n.methods)]
-
-write.csv(circ_met, cmet_per_circ.file, row.names = F)
-```
-
-Methods detecting each circRNAs are listed in  <a href="`r basename(cmet_per_circ.file)`">`r basename(cmet_per_circ.file)`</a>.
-
 ```{r}
 ## cumulative number of circrnas by number of methods
+# cum.met <- 
+#     circ.per.method[, .(n_methods = .N), 
+#                     by = circ_id][, .N, 
+#                                   by = n_methods][order(-n_methods)][
+#                                       , .(n_methods, cum.sum = cumsum(N))]
+
 cum.met <- 
-    circ.per.method[, .(n_methods = .N), 
-                    by = circ_id][, .N, 
-                                  by = n_methods][order(-n_methods)][
+    plot.dt[, .N, by = .(n_methods = shared_by)][order(-n_methods)][
                                       , .(n_methods, cum.sum = cumsum(N))]
 
 ggplot(cum.met, aes(x = factor(paste0("\u2265", n_methods)), 
@@ -472,8 +575,40 @@ ggplot(cum.met, aes(x = factor(paste0("\u2265", n_methods)),
     theme(plot.title = element_text(hjust = .5))
 ```
 
+```{r}
+# ## save methods detecting each circRNA
+# cmet_per_circ.file <- file.path(results.dir, "cmet_per_circ.csv")
+# 
+# circ_met <- fread(ccp_circrna_methods.csv.file, showProgress = F)
+# circ_met[, pass_min_reads_filter := 0]
+# circ_met[circ_id %in% detected_circ_ids, pass_min_reads_filter := 1]
+# 
+# circ_n_met <- fread(ccp_circrna_n_methods.csv.file, showProgress = F)
+# 
+# ## attach a column that tells how many methods (at max among the samples)
+# ## detected the circrna with >= min_reads. Other columns in circ_n_met count
+# ## a method if it detected the circrna with at least 1 read
+# circ_n_met <- 
+#     merge(circ_n_met,
+#           circrnas.gtf[reads >= min_reads,
+#                        .(n_methods = .N),
+#                        by = .(sample_id, 
+#                               circ_id)][, .(max.methods.w.min.reads = max(n_methods)), 
+#                                         by = circ_id], 
+#           by = c("circ_id"), all.x = T)
+# 
+# circ_met <- 
+#     merge(circ_n_met[, .(circ_id, reliable.circrna, overall.n.methods, max.methods.w.min.reads)],
+#           circ_met[, .(circ_id, reliable.circrna, pass_min_reads_filter, overall.circ.methods)], 
+#           by = c("circ_id", "reliable.circrna"))[order(-reliable.circrna,
+#                                                        -pass_min_reads_filter,
+#                                                        -overall.n.methods)]
+# 
+# write.csv(circ_met, cmet_per_circ.file, row.names = F)
+```
 
 ```{r}
+# analize which is the most numerous combination of methods
 reduce.cmeth.names <- function(x){
     x <- gsub("circexplorer2", "ce2", x)
     x <- gsub("segemehl", "se", x)
@@ -481,43 +616,61 @@ reduce.cmeth.names <- function(x){
     x
 }
 
-circ_met.to.plot <- 
-    circ_met[circ_id %in% unique(circ.per.method$circ_id), 
-             .(circ_id, n_methods = overall.n.methods, 
-               c_methods = reduce.cmeth.names(overall.circ.methods))]
+# circ_met.to.plot <-
+#     circ_met[circ_id %in% unique(circ.per.method$circ_id),
+#              .(circ_id, n_methods = overall.n.methods,
+#                c_methods = reduce.cmeth.names(overall.circ.methods))]
+
+circ_met.to.plot <-
+    circrnas.gtf[reads >= min_reads,
+                 .(n_methods = .N, 
+                   c_methods = reduce.cmeth.names(paste0(sort(unique(method)), 
+                                                         collapse = "|"))),
+                 by = .(sample_id, 
+                        circ_id)][, .N, 
+                                  by = .(circ_id, n_methods, c_methods)]
 
 circ_met.plot.height <- max(c(4, (circ_met.to.plot[, .N, by = c_methods][, .N]*0.5)/2.54))
 
-circ_met.to.plot <- 
-    circ_met.to.plot[, .N, 
-                     by = .(c_methods, 
+circ_met.to.plot <-
+    circ_met.to.plot[, .N,
+                     by = .(c_methods,
                             n_methods)][order(-N)]
 
-circ_met.to.plot$c_methods <- 
-    factor(circ_met.to.plot$c_methods, 
-           levels = circ_met.to.plot$c_methods, 
+circ_met.to.plot$c_methods <-
+    factor(circ_met.to.plot$c_methods,
+           levels = circ_met.to.plot$c_methods,
            ordered = T)
 ```
 
+```{r}
+## save methods detecting each circRNA
+cmet_per_circ.file <- file.path(results.dir, "cmet_per_circ.csv")
+write.csv(circ_met.to.plot, cmet_per_circ.file, row.names = F)
+```
+
+Methods detecting each circRNAs are listed in  <a href="`r basename(cmet_per_circ.file)`">`r basename(cmet_per_circ.file)`</a>.
+
 ```{r, fig.height=`circ_met.plot.height`, fig.width=7}
-ggplot(circ_met.to.plot, aes(x = c_methods, y = N)) + 
-    geom_bar(stat = "identity", color = "black", 
-             aes(fill = factor(n_methods))) + 
-    scale_fill_brewer(direction = 1) + 
-    guides(fill=FALSE) + 
+## method combinations plot
+ggplot(circ_met.to.plot, aes(x = c_methods, y = N)) +
+    geom_bar(stat = "identity", color = "black",
+             aes(fill = factor(n_methods))) +
+    scale_fill_brewer(direction = 1) +
+    guides(fill = FALSE) +
     geom_text(stat = 'identity', aes(label = N),
               size = default.font.size*(5/14),
-              hjust = -.05) + 
+              hjust = -.05) +
     geom_text(stat = 'identity', aes(label = "", y = N*1.1), hjust = -.05,
-              size = default.font.size*(5/14)) + 
-    scale_y_continuous(expand = c(0, 0)) + 
-    coord_flip() + 
+              size = default.font.size*(5/14)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    coord_flip() +
     facet_grid(facets = n_methods ~ ., scales = "free_y", space = "free") +
-    geom_text(stat = 'identity', aes(label = "", y = N * 1.1)) + 
+    geom_text(stat = 'identity', aes(label = "", y = N * 1.1)) +
     xlab("Method combinations") + ylab("CircRNAs") +
     ggtitle(paste("CircRNAs commonly\ndetected by the methods")) +
-    theme_bw() + 
-    theme(text = element_text(size = default.font.size), 
+    theme_bw() +
+    theme(text = element_text(size = default.font.size),
           plot.title = element_text(hjust = 0.5))
 
 ```
@@ -529,22 +682,53 @@ For each method, at least `r min_reads` reads were required to consider a circRN
 
 With at least `r min_reads` reads | With at least `r min_reads` reads and `r min_methods` methods
 ---------------: | -----------------------------------------:
-`r circrnas.gtf[reads >= min_reads, .N, by = .(circ_id)][, .N]` | `r circrnas.morethan2methods.medrpm.table[, .N]`
+`r length(detected_circ_ids)` | `r circrnas.morethan2methods.medrpm.table[, .N]`
 
 The reliable circRNAs have been saved in file <a href="`r circRNA_expression_per_sample.csv.basename`">`r circRNA_expression_per_sample.csv.basename`</a>. Expression values represent the median of raw counts predicted by the methods.  
+
+## Reliable circRNAs for each method
+
+```{r}
+circ.per.method[, reliable.circ := "Non-reliable"]
+circ.per.method[circ_id %in% as.character(circrnas.morethan2methods.medrpm.table$circ_id), 
+                reliable.circ := "Reliable"]
+
+ggplot(data = circ.per.method[, .N, by = .(method, reliable.circ)], 
+       mapping = aes(x = method, y = N, fill = reliable.circ)) + 
+    geom_col(width = .7) + 
+    geom_text(aes(label = N), 
+              # vjust = -0.3, 
+              position = position_stack(vjust = .5),
+              size = default.font.size*(5/14)) + 
+    geom_text(aes(label = "", y = N*1.1), 
+              position = position_stack(vjust = .5),
+              size = default.font.size*(5/14)) + 
+    scale_y_continuous(expand = c(0, 0)) + 
+    scale_fill_viridis_d(name = "CircRNA",
+                         option = "D", begin = .35, end = .7, alpha = .8) +
+    xlab(NULL) + 
+    ylab("CircRNAs") +
+    # ggtitle(bquote("CircRNAs detected with " >= .(min_reads) ~ "reads by each method")) + 
+    theme_bw() + 
+    theme(text = element_text(size = default.font.size), 
+          plot.title = element_text(hjust = 0.5),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top")
+```
+
 
 ## CircRNAs detected by sample
 
 ```{r show_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE}
 circ.2reads.at.least <- 
-    circrnas.gtf[reads >= min_reads , .N, 
+    circrnas.gtf[circ_id %in% detected_circ_ids, .N, 
                  by = .(sample_id, circ_id)][, .(above_min_reads = .N), 
                                              by = sample_id]
 colnames(circ.2reads.at.least)[colnames(circ.2reads.at.least) == "above_min_reads"] <- 
     paste0("\u2265 ", min_reads, " reads")
 
 circrnas.morethan2methods.medrpm <- 
-    melt(circrna.rpms[reliable.circrna == 1], 
+    melt(circrna.rpms[reliable.circrna == 1, c("circ_id", meta$sample_id), with = F], 
          id.vars = "circ_id", 
          variable.name = "sample_id", 
          value.name = "reads")[sample_id != "reliable.circrna"][reads > 0]
@@ -564,7 +748,7 @@ datatable(reliable.circ.tab,
           fillContainer = F, autoHideNavigation = T, options = list(searching = F))
 ```
 
-```{r plot_circrnas_2reads_2methods_sample, echo=FALSE, include=TRUE, fig.width=12}
+```{r}
 reliable.circ.tab.long <- melt(data = reliable.circ.tab, id.vars = "sample_id", 
                                variable.name = "Filter", value.name = "count")
 reliable.circ.tab.long.d <- merge(reliable.circ.tab.long, intgroup.dt, 
@@ -572,29 +756,69 @@ reliable.circ.tab.long.d <- merge(reliable.circ.tab.long, intgroup.dt,
 reliable.circ.tab.long.d$sample_id <- factor(reliable.circ.tab.long.d$sample_id, 
                                              levels =  unique(reliable.circ.tab.long.d$sample_id),
                                              ordered = T)
+```
+
+```{r, echo=FALSE, include=TRUE, fig.width=12}
+# ggplot(data = reliable.circ.tab.long.d, 
+#        mapping = aes(x = sample_id, y = count,
+#                      fill = sample_id)) + 
+#     geom_bar(stat = "identity", width = .7, aes(colour = sample_id), position = "dodge") + 
+#     geom_text(stat ='identity', aes(label = count), 
+#               vjust = -0.3, size = default.font.size*(5/14)) +
+#     geom_text(stat = 'identity', aes(label = "", y = count*1.1), 
+#               vjust = -0.3, size = default.font.size*(5/14))  + 
+#     scale_y_continuous(expand = c(0, 0)) + 
+#     scale_fill_manual(values = setNames(intgroup.dt[, color], 
+#                                         nm = intgroup.dt[, sample_id]), 
+#                       guide = F) +
+#     scale_color_manual(values = setNames(intgroup.dt[, hue], 
+#                                          nm = intgroup.dt[, sample_id]), 
+#                        guide = F) +
+#     facet_wrap(facets = ~ Filter) + 
+#     ggtitle("CircRNAs per sample") + 
+#     xlab("") + 
+#     ylab("Number of circRNAs") + 
+#     theme_bw() + 
+#     theme(plot.title = element_text(hjust = 0.5),
+#           text = element_text(size=default.font.size), 
+#           axis.text.x = element_text(angle=45, hjust=1))
+
+```
+
+```{r, echo=FALSE, include=TRUE, fig.width=12}
+reliable.circ.tab.long.d$sample_id <- 
+    factor(reliable.circ.tab.long.d$sample_id, 
+           levels = reliable.circ.tab.long.d[Filter == paste0("\u2265 ", 
+                                                              min_reads, 
+                                                              " reads")][order(-count),
+                                             sample_id], 
+           ordered = T)
 
 ggplot(data = reliable.circ.tab.long.d, 
        mapping = aes(x = sample_id, y = count,
-                     fill = sample_id)) + 
-    geom_bar(stat = "identity", width = .7, aes(colour = sample_id), position = "dodge") + 
-    geom_text(stat ='identity', aes(label = count), 
-              vjust = -0.3, size = default.font.size*(5/14)) +
+                     fill = Filter)) + 
+    geom_bar(stat = "identity", width = .7, 
+             # aes(colour = sample_id), 
+             position = "dodge") + 
+    geom_text(stat ='identity', 
+              aes(label = count, y = 0.1), 
+              hjust = -.1,
+              position = position_dodge(width = .7),
+              angle = 90, 
+              size = default.font.size*(5/14)) +
     geom_text(stat = 'identity', aes(label = "", y = count*1.1), 
               vjust = -0.3, size = default.font.size*(5/14))  + 
     scale_y_continuous(expand = c(0, 0)) + 
-    scale_fill_manual(values = setNames(intgroup.dt[, color], 
-                                        nm = intgroup.dt[, sample_id]), 
-                      guide = F) +
-    scale_color_manual(values = setNames(intgroup.dt[, hue], 
-                                         nm = intgroup.dt[, sample_id]), 
-                       guide = F) +
-    facet_wrap(facets = ~ Filter) + 
-    ggtitle("CircRNAs per sample") + 
+    scale_fill_viridis_d(option = "D", begin = .35, end = .7, alpha = .8, name = NULL) +
+    facet_grid(facets = . ~ condition, scales = "free_x", drop = T, space = "free") + 
+    # ggtitle("CircRNAs per sample") + 
     xlab("") + 
-    ylab("Number of circRNAs") + 
+    ylab("CircRNAs") + 
     theme_bw() + 
-    theme(plot.title = element_text(hjust = 0.5),
+    theme(plot.title = element_text(hjust = 0.5), 
+          panel.spacing.x = unit(.1, "lines"),
           text = element_text(size=default.font.size), 
+          legend.position = "top", 
           axis.text.x = element_text(angle=45, hjust=1))
 
 ```
@@ -700,9 +924,9 @@ datatable(data = circrna.classes.tab.ext,
 
 ```{r circrnas_per_gene, echo=FALSE, include=TRUE}
 ## Number of circRNAs per gene
-
-circRNAs.to.gene <- subset(circ_to_gene[gene_region != "intergenic"], 
-                           circ_id %in% circrnas.morethan2methods.medrpm.table$circ_id)
+circRNAs.to.gene <- 
+    circ_to_gene[gene_region != "intergenic" & 
+                     circ_id %in% as.character(circrnas.morethan2methods.medrpm.table$circ_id)]
 
 ## count circRNAs per gene and set the list of circRNAs of the gene
 n.circ.per.gene <- circRNAs.to.gene[, .(n_circRNAs = .N, 
@@ -720,9 +944,10 @@ circRNAs.per.gene <- circRNAs.to.gene[, .(circRNAs_per_gene = .N),
 
 ```
 
-`r n.circ.per.gene[, .N]` genes overlap the `r circrnas.morethan2methods.medrpm.table[, .N]` reliable circRNAs ( _intergenic_ circRNAs were not considered)  
+`r n.circ.per.gene[, .N]` genes overlap `r circrnas.morethan2methods.medrpm.table[gene_region != "intergenic", .N]` reliable circRNAs.   
+`r circrnas.morethan2methods.medrpm.table[gene_region == "intergenic", .N]` _intergenic_ circRNAs were clustered into `r circrnas.morethan2methods.medrpm.table[gene_region == "intergenic", .N, by = gene_names][, .N]` putative new genes.  
 
-Number of circRNAs expressed by each gene, with the respective circRNAs IDs, are reported in file <a href="`r basename(circRNAs_per_gene.file)`">`r basename(circRNAs_per_gene.file)`</a>.  
+Number of circRNAs expressed by each gene ( _intergenic_ circRNAs excluded) are reported in file <a href="`r basename(circRNAs_per_gene.file)`">`r basename(circRNAs_per_gene.file)`</a>.  
 
 ### Overall circRNAs per gene  
 
@@ -731,9 +956,9 @@ Number of circRNAs expressed by each gene, with the respective circRNAs IDs, are
 ggplot(data = circRNAs.per.gene, 
        mapping = aes(x = factor(circRNAs_per_gene))) + 
     geom_bar(stat = "count") +
-    geom_text(stat = "count", aes(label = ..count..),
-              vjust = -0.3, size = default.font.size*(5/14)) +
-    geom_text(stat = "count", aes(label = "", y = ..count..*1.1), vjust = -0.3, 
+    # geom_text(stat = "count", aes(label = ..count..),
+    #           vjust = -0.3, size = default.font.size*(5/14)) +
+    geom_text(stat = "count", aes(label = "", y = ..count..*1.1), vjust = -0.3,
               size = default.font.size*(5/14)) +
     scale_y_continuous(expand = c(0, 0)) + 
     ggtitle("CircRNAs per gene") + 
@@ -750,14 +975,19 @@ ggplot(data = circRNAs.per.gene,
 ```{r echo=FALSE, include=TRUE}
 ## Number of circRNA per gene, discriminating each sample
 circRNAs.to.gene.per.sample <- 
-    merge(circrnas.morethan2methods.medrpm[, .(circ_id, sample_id)], 
-          circRNAs.to.gene[, .(circ_id, gene_id, gene_name)], 
-          by = "circ_id", all.x = T, all.y = F)
+    merge(circrnas.morethan2methods.medrpm[sorted_label != "intergenic", 
+                                           .(circ_id, sample_id)], 
+          circRNAs.to.gene[, .(circ_id, gene_id, gene_name, simple_gene_region)], 
+          by = "circ_id", 
+          all.x = T, 
+          all.y = F, 
+          allow.cartesian = T)
 
 n.circ.per.gene.per.sample <- 
-    circRNAs.to.gene.per.sample[, .(n_circRNAs = .N, 
-                                    circ_ids = paste0(unique(circ_id), 
-                                                      collapse = "|")), 
+    circRNAs.to.gene.per.sample[simple_gene_region != "intergenic", 
+                                .(n_circRNAs = .N, 
+                                  circ_ids = paste0(unique(circ_id), 
+                                                    collapse = "|")), 
                                 by = .(sample_id, gene_id, 
                                        gene_name)][order(sample_id, -n_circRNAs)]
 
@@ -775,7 +1005,7 @@ circRNAs.per.gene.per.sample <-
 ```
 
 ```{r}
-fig.height <- max(ceiling(meta[, .N]/3), 2)*1.5
+fig.height <- max(ceiling(meta[, .N]/2), 2)*2
 ```
 
 ```{r, echo=FALSE, include=TRUE, fig.width=12, fig.height=fig.height}
@@ -791,7 +1021,7 @@ ggplot(data = circRNAs.per.gene.per.sample,
                      color = sample_id)) + 
     geom_bar(stat = "count") + 
     facet_wrap(facets = ~ sample_id, scales = "free", 
-               ncol = min(3, meta[, .N])) + 
+               ncol = min(2, meta[, .N])) + 
     scale_fill_manual(values = setNames(intgroup.dt[, color], nm = intgroup.dt[, sample_id])) +
     scale_color_manual(values = setNames(intgroup.dt[, hue], nm = intgroup.dt[, sample_id])) + 
     geom_text(stat = "count", aes(label = "", y = ..count..*1.1)) +
@@ -821,7 +1051,7 @@ circRNAs.to.gene.per.sample <- merge(circRNAs.to.gene.per.sample,
                                      intgroup.dt[, .(sample_id, condition)], 
                                      by = "sample_id")
 
-if(intgroup.dt[, .N, by=condition][, .N] > 1){
+# if(intgroup.dt[, .N, by=condition][, .N] > 1){
     
     n.circ.per.gene.per.condition <- 
         unique(circRNAs.to.gene.per.sample[, .(circ_id, gene_id, gene_name, 
@@ -841,11 +1071,11 @@ if(intgroup.dt[, .N, by=condition][, .N] > 1){
     write.csv(x = n.circ.per.gene.per.condition,
               file = circRNAs_per_gene.per.cond.file,
               row.names = F)
-}
+# }
 ```
 
 ```{r plot_circrnas_per_gene_per_condition, echo=FALSE, include=TRUE, fig.width=12, fig.height=fig.height}
-if(intgroup.dt[, .N, by=condition][, .N] > 1){
+# if(intgroup.dt[, .N, by=condition][, .N] > 1){
     ## barplot per condition
     ggplot(data = circRNAs.per.gene.per.condition, 
            mapping = aes(x = factor(circRNAs_per_gene), 
@@ -866,7 +1096,7 @@ if(intgroup.dt[, .N, by=condition][, .N] > 1){
         theme(text = element_text(size=default.font.size), 
               axis.text.x = element_text(angle = 90, hjust = 1),
               plot.title = element_text(hjust = 0.5))
-}
+# }
 ```
 
 Number of circRNAs expressed per gene, grouping by condition, have been saved in file <a href="`r basename(circRNAs_per_gene.per.cond.file)`">`r basename(circRNAs_per_gene.per.cond.file)`</a>. 
@@ -882,7 +1112,7 @@ bks_linear_counts.tab.gz.m <-
 bks_linear_counts.tab.gz <- 
     dcast(bks_linear_counts.tab.gz.m,
           formula = circ_id ~ sample_id,
-          value.var = "lin.reads")
+          value.var = "lin.reads", fill = 0)
 ```
 
 ```{r}
@@ -923,8 +1153,17 @@ circ.lin.xpr <- merge(circ.lin.xpr,
 ```
 
 ```{r, fig.width=2}
-ggplot(circ.lin.xpr, aes(x = "", y = log2(CLR))) +
-    geom_boxplot() +
+plot.circ.lin.xpr <- copy(circ.lin.xpr)
+new.inf <- 2*max(plot.circ.lin.xpr[CLR != Inf, CLR])
+plot.circ.lin.xpr[CLR == Inf, CLR := new.inf]
+```
+
+NB: in plots, infinite CLRs (i.e. when no linear expression was detected for a circRNA) have been represented with double the maximum CLR detected.  
+
+```{r, fig.width=2}
+ggplot(plot.circ.lin.xpr, 
+       aes(x = NULL, y = log2(CLR))) +
+    geom_boxplot(outlier.size = .5) +
     xlab(NULL) +
     ylab(expression(Log[2](CLR))) +
     theme_bw() +
@@ -932,9 +1171,9 @@ ggplot(circ.lin.xpr, aes(x = "", y = log2(CLR))) +
 ```
 
 ```{r}
-ggplot(circ.lin.xpr, 
+ggplot(plot.circ.lin.xpr, 
        aes(x = condition, y = log2(CLR), fill = condition)) +
-    geom_boxplot(varwidth = T) +
+    geom_boxplot(varwidth = T, outlier.size = .5) +
     xlab(NULL) +
     ylab(expression(Log[2](CLR))) +
     scale_fill_manual(values = setNames(unique(intgroup.dt[, hue]), 
@@ -945,17 +1184,20 @@ ggplot(circ.lin.xpr,
 ```
 
 ```{r}
-ggplot(circ.lin.xpr, aes(x = sample_id, y = log2(CLR), fill = sample_id)) +
-    geom_boxplot(varwidth = T) +
-    facet_wrap(facets = ~ condition, drop = T, scales = "free_x", 
-               ncol = min(3, length(unique(meta$condition)))) +
+ggplot(plot.circ.lin.xpr, 
+       aes(x = sample_id, y = log2(CLR), fill = sample_id)) +
+    geom_boxplot(varwidth = T, outlier.size = .5) +
+    facet_grid(cols = vars(condition), space = "free",
+               drop = T, 
+               scales = "free_x") +
     xlab(NULL) +
     ylab(expression(Log[2](CLR))) +
     scale_fill_manual(values = setNames(intgroup.dt[, color], 
                                         nm = intgroup.dt[, sample_id]), 
                       guide = F) +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+          panel.spacing.x = unit(.1, "lines"))
 ```
 
 # Session info

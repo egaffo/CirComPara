@@ -141,9 +141,10 @@ vars.Add('PREPROCESSOR_PARAMS',
         'MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ',
         '')
 vars.Add('LINEAR_EXPRESSION_METHODS', 'The method to be used for the linear expression estimates'\
-	 '/transcriptome reconstruction. To run more methods use a comma separated list. '\
-	 'However, only the first method in the list will be used in downstream processing. '\
-	 'Currently supported methods: stringtie,cufflinks,htseq.', 'stringtie')
+         '/transcriptome reconstruction. To run more methods use a comma separated list. '\
+    	 'However, only the first method in the list will be used in downstream processing. '\
+	     'Currently supported methods: stringtie,cufflinks,htseq.', 
+         'stringtie')
 vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
          'reconstruction. Default only quantifies genes and transcripts from the given '\
          'annotation GTF file', 'False')
@@ -151,42 +152,51 @@ vars.Add('DIFF_EXP', 'Set the method to and enable differential expression '\
          'computation for linear genes/transcripts. Current methods '\
          'supported: cufflinks, ballgown, DESeq2.'\
      	 'Only available if more than one sample and more than one condition are given. '\
-         'N.B: differential expression tests for circRNAs is not yet '\
-         'implemented', '')
-vars.Add('CIRC_DIFF_EXP', '(Experimental) Set True to enable differential gene expression computation '\
-         'also with DESeq2. Only available if more than one sample and more than one condition are given', 
-         'False')
-vars.Add('QRE_FIND', '(Experimental) Set True to toggle analysis of QKI response elements sequences', 
-         'False')
+         'N.B: differential expression tests for circRNAs is not yet implemented', 
+         '')
 vars.Add('READSTAT_METHODS', 'Comma separated list of methods to use for read statistics. '\
          'Currently supported: fastqc,fastx', 'fastqc')
 vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
                         'define the circRNA as reliable. If this value exceeds the number '\
-                        'of methods specified, it will be set to the number of methods.', 2)
-vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 2)
+                        'of methods specified, it will be set to the number of methods.', 
+         2)
+vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 
+         2)
 vars.Add('BYPASS', 'Skip analysis of linear/circular transcripts. This will also skip '\
 			       'the analysis of linear-to-circular expression correlation.'\
                    '{linear,circular}',
-                   'False')
+         'False')
 vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
         'collapsed into single-end reads to search for circRNA backsplices. Set'\
         'this option to "True" to force circRNA method aligners to'\
         'maintain paired-end read alignment', 'False')
 vars.Add('LIN_COUNTER', 'The method to estimate circRNA-host gene '\
                         'linear expression. Available are using the DCC '\
-                        '[dcc], or the CirComPara [ccp] method', 'ccp')
+                        '[dcc], or the CirComPara [ccp] method', 
+         'ccp')
 vars.Add('FIX_READ_HEADER', 'Trim FASTQ headers to the read ids. '\
-                            'Recommended when processing SRA datasets', 'True')
+                            'Recommended when processing SRA datasets', 
+         'True')
 vars.Add('UNSTRANDED_CIRCS', 'Force unstranded circRNAs even if stranded library '\
                         'was used', 
-                        'False')
+         'False')
 
 ## performance options
 vars.Add('SAM_SORT_MM', 'Value for samtools sort -m option', '768M')
 
+## experimental
+vars.Add('CIRC_DIFF_EXP', '(Experimental) Set True to enable differential expression computation '\
+                          'for circRNAs. Only available if >1 conditions are given.', 
+         'False')
+vars.Add('QRE_FIND', '(Experimental) Set True to toggle analysis of QKI response elements sequences', 
+         'False')
+vars.Add('CCP_COUNTS', '(Experimental) Use the CirComPara merged alignment counts', 
+         'False')
+
 ## deprecated parameters (legacy)
-vars.Add('CIRI', 'The full path to the CIRI_vx.x.pl perl script (DEPRECATED). '\
-	'By default the symlink in CirComPara bin/ directory will be used', '')
+vars.Add('CIRI', '(DEPRECATED) The full path to the CIRI_vx.x.pl perl script. '\
+                 'By default, the symlink in CirComPara bin/ directory will be used', 
+         '')
 
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
@@ -199,6 +209,7 @@ if unknown:
 
 env.Append(BUILDERS = {'WriteLinesInTxt' : WriteLinesInTxt})
 
+env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 env['VARS'] = File(variables_file)
 env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
@@ -255,6 +266,15 @@ if env['DIFF_EXP'].strip() == '':
 env.SetDefault(CIRC_DIFF_EXP = False)
 if env['CIRC_DIFF_EXP'].lower() == 'true':
     env.Replace(CIRC_DIFF_EXP = True)
+else:
+    env.Replace(CIRC_DIFF_EXP = False)
+
+env.SetDefault(CCP_COUNTS = False)
+if env['CCP_COUNTS'].strip().lower() == 'true':
+    env.Replace(CCP_COUNTS = True)
+else:
+    env.Replace(CCP_COUNTS = False)
+    
 
 env.SetDefault(ORIGINAL_ANNOTATION = env['ANNOTATION'])
 

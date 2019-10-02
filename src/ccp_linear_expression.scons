@@ -24,7 +24,11 @@ linexp_dir = 'linear_quantexp'
 
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
     ## MERGE THE TRANSCRIPTS PREDICTED IN THE VARIOUS SAMPLES
-    transcripts_gtf_files = get_matching_nodes(env['RUNS'], '.*transcripts\.gtf')
+    #transcripts_gtf_files = get_matching_nodes(env['RUNS'], '.*transcripts\.gtf')
+    if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
+        transcripts_gtf_files = [env['RUNS_DICT'][sample]['LINEAR_EXPRESSION']['CUFFLINKS'][0] for sample in env['RUNS_DICT'].keys()]
+    if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
+        transcripts_gtf_files = [env['RUNS_DICT'][sample]['LINEAR_EXPRESSION']['STRINGTIE']['TRANSCRIPTS_GTF'] for sample in env['RUNS_DICT'].keys()]
 
     if len(transcripts_gtf_files) > 1:        
         if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
@@ -38,6 +42,7 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
             env.Replace(ANNOTATION = cuffmerge)
 
         if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
+
             stringtiemerge_list_target = os.path.join(cuffmerge_dir,
                                                       'transcripts_gtf_files_mergelist.txt')
             stringtiemerge_list_cmd = '''echo -ne '${"\\\\n".join([str(s.path) '''\

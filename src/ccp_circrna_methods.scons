@@ -25,7 +25,7 @@ Imports:
 
 '''
 
-import os
+import os, re
 
 ccp_testrealign   = 'ccp_testrealign.scons'
 ccp_segemehl = 'ccp_segemehl.scons'
@@ -118,6 +118,50 @@ build_dir = 'circRNAs'
 if env['CIRC_PE_MAPPING']:
     env['READS'] = [File(f) for f in env['READS']]
 else:
+    if len(env['READS']) > 1:
+        ## if stranded reads we should handle the cases before concatenating,
+        ## to have single-end reads from the same strand of the transcript.
+        ## An issue comes with TopHat2, which distinguish orientation of 
+        ## single-end reads: for instance, if HISAT2 is set to RF (as for dUTP
+        ## library protocol), then the second-in-pair matehas the same strnad
+        ## of the transcript, whilst the first-in-pair mate has the opposite 
+        ## direction. However, TopHat2 would have been set to fr-firststrand
+        ## for paired end alignments, so we need to: (i) make a strand
+        ## consistent set of reads (from the same strand of thje transcript, as
+        ## other aligners will assume that), and (ii) tell TopHat2 that the 
+        ## (single-end) reads are from the same strand of the transcript,
+        ## indeed reversing the strand parameter (into fr-secondstrand)
+        strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+        if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
+            if 'RF' in env['HISAT2_EXTRA_PARAMS'].split():
+                ## reverse complement the first mate
+                ## to have all reads in the same direction of the transcript
+                mate_idx = 0
+
+                ## switch TopHat2 parameter
+                th2_lib_type = 'fr-secondstrand'
+                ## set DCC strandnedd
+                env.AppendUnique(DCC_EXTRA_PARAMS = ['-ss'])
+
+            elif 'FR' in env['HISAT2_EXTRA_PARAMS'].split():
+                ## reverse complement second mate
+                mate_idx = 1
+                ## switch TopHat2 parameter
+                th2_lib_type = 'fr-firststrand'
+
+            revcomp_cmd = 'fastq_rev_comp.py -f $SOURCE | gzip -c > $TARGET'
+            revcomp = env.Command(os.path.join(build_dir, 
+                                               env['SAMPLE'] + 
+                                               '_' +
+                                               str(mate_idx+1) +
+                                               '.revcomp.fq.gz'), 
+                                  env['READS'][mate_idx], 
+                                  revcomp_cmd) 
+            
+            ## replace env variable
+            env['READS'][mate_idx] = revcomp
+            env.Replace(TOPHAT_PARAMS = ['--library-type', th2_lib_type])
+
     ## collapse paired reads into single file
     ## indeed processing reads as they were single-end
     cat_reads_target = os.path.join(build_dir,  
@@ -125,7 +169,7 @@ else:
     
     ## we can concatenate gzipped files, no need to decompress
     cat_cmd = 'cat ${SOURCES} '
-
+    
     if env['FIX_READ_HEADER']:
         ## trim FASTQ header to the first white space, so
         ## that only the read ids are kept in FASTQ headers.

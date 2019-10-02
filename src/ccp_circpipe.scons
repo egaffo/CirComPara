@@ -183,10 +183,29 @@ if not env['BYPASS'] == 'linear':
         results.append(expression[1]['STRINGTIE']['RAW_COUNTS'])
         # the ALL_TARGETS is a temporary hack. It will be removed when SConscript
         # results are passed as dictionaries/custom-objects and handled accordingly
+        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
+            env.Replace(ANNOTATION = expression[1]['STRINGTIE']['TRANSCRIPTS_GTF'].abspath)
+
     if 'htseq' in env['LINEAR_EXPRESSION_METHODS']:
         results.append(expression[1]['HTSEQ'])
+
     if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
         results.append(expression[1]['CUFFLINKS'])
+        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
+            env.Replace(ANNOTATION = expression[1]['CUFFLINKS'][0])
+
+    ## if transcriptome was reconstructed, then update the genePred
+    ## annoation file required by CIRCexplorer2
+    if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
+        env_check_indexes = env.Clone()
+        env_check_indexes['GENEPRED'] = ''
+        genepred = env.SConscript(os.path.join(build_dir,
+                                               'ccp_check_indexes.scons'),
+                                  variant_dir = build_dir, 
+                                  src_dir = SRC_DIR,
+                                  duplicate = 0,
+                                  exports = '''env_check_indexes''')
+        env.Replace(GENEPRED = genepred['GENEPRED'])
 
 else:
 	expression = [None, 
@@ -247,6 +266,13 @@ if not env['BYPASS'] == 'circular':
         ## Environment is propagated to the Sconscript
         env_sample_circrna_methods.AppendUnique(FINDCIRC_EXTRA_PARAMS = ['--strandpref', '--stranded'])
         # env_sample_circrna_methods.AppendUnique(DCC_EXTRA_PARAMS = ['-ss']) ## default DCC is stranded
+        
+        ## set automatically and accordingly the other methods' strandness parameters
+        if 'RF' in env['HISAT2_EXTRA_PARAMS'].split():
+            env_sample_circrna_methods.AppendUnique(TOPHAT_PARAMS = ['--library-type', 'fr-firststrand'])
+        elif 'FR' in env['HISAT2_EXTRA_PARAMS'].split():
+            env_sample_circrna_methods.AppendUnique(TOPHAT_PARAMS = ['--library-type', 'fr-secondstrand'])
+            
     else:
         ## assume non-stranded library
          env_sample_circrna_methods.AppendUnique(DCC_EXTRA_PARAMS = ['-N'])
@@ -257,13 +283,21 @@ if not env['BYPASS'] == 'circular':
                             exports = '''env_sample_circrna_methods''')
     results.append(circrnas[0]) ## the list result format
 
+    if not env['BYPASS'] == 'linear':
+        if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
+            ## could be improved by setting only the reconstructed 
+            ## transcriptome file as the dependency, f.i.
+            ## expression[1]['STRINGTIE']['TRANSCRIPTS_GTF'] if stringtie
+            Depends(circrnas[0], expression[0]) 
+
 results_dict = {'RAW_READ_STATS'        : raw_read_stats,
                 'PREPROCESSING'         : preprocess,
                 'LINEAR_EXPRESSION'     : expression[1],
                 'CIRCULAR_EXPRESSION'   : circrnas[1], ## the dict results format
                 'LINEAR_ALIGNMENTS'     : env['ALIGNMENTS'],
                 'LINEAR_ALIGNMENTS_IDX' : mappings['BAM_INDEX'],
-                'LINEAR_MAPPING_RES'    : mappings}
+                'LINEAR_MAPPING_RES'    : mappings,
+                'FASTQC_DATA'           : fastqc_data}
 
 ## CLEAN COMMANDS
 Clean('.', read_statistics_dir)
