@@ -45,7 +45,7 @@ STAR_PARAMS = ['--outFilterMultimapNmax', '1',
 LIN_COUNTER = 'ccp' #'dcc'
 
 DCC_EXTRA_PARAMS = ['-fg', '-M', '-Nr', 1, 1, '-F', '-ss']
-TESTREALIGN_PARAMS = ['-q', 'median_15'] ## suggested 'median_40'
+TESTREALIGN_PARAMS = ['-q', 'median_1'] ## suggested 'median_40'
 CE2_PARAMS = ['--no-fix'] #suggested not to set '--no-fix' in real datasets
 FINDCIRC_EXTRA_PARAMS = ['--best-qual', '0'] #suggested '40' 
 FIX_READ_HEADER = 'True'
