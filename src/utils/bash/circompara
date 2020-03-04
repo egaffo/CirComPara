@@ -1,15 +1,18 @@
 #!/bin/bash
 
+
 export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))
 
 TOOLS_DIR=$CIRCOMPARA_HOME/tools
+PYTHON_VERSION=`python --version | sed -r "s/Python ([0-9]\.[0-9]).*/\1/"`
+
 export TRIMMOMATIC=$TOOLS_DIR/Trimmomatic-0.38/trimmomatic-0.38.jar
 
-export PATH=$CIRCOMPARA_HOME/bin:$PATH
+export PATH=$CIRCOMPARA_HOME/src/utils/python:$CIRCOMPARA_HOME/src/utils/R:$PATH
 
-export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR/lib/python2.7/site-packages/"
+export PYTHONPATH=$TOOLS_DIR/lib/python$PYTHON_VERSION/site-packages/:$PYTHONPATH
 
-export R_LIBS="$CIRCOMPARA_HOME/tools/R_libs"
+export R_LIBS=$CIRCOMPARA_HOME/tools/R_libs
 
-scons -f $CIRCOMPARA_HOME/src/ccp_main.scons $1 
+scons -f $CIRCOMPARA_HOME/src/sconstructs/ccp_main.py $1 
 
