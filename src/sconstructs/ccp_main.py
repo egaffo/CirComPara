@@ -321,14 +321,14 @@ with open(env['META']) as csvfile:
     for row in reader:
         samples[row['sample']].append(os.path.abspath(row['file']))
         conditions[row['condition']].add(row['sample'])
-	try:
-	        adapters[row['sample']] = row['adapter'].strip()
+        try:
+            adapters[row['sample']] = row['adapter'].strip()
             ##NB:last sample adapter row overwrites the previous
-	except KeyError as ke:
-		#adapters[row['sample']] = ''
-		print str(ke) + ' not defined for file' + row['file'] + ', sample ' +\
-		       row['sample'] + '. Skipping.'
-		pass
+        except KeyError as ke:
+            #adapters[row['sample']] = ''
+            print(str(ke) + ' not defined for file' + row['file'] + ', sample ' +\
+                    row['sample'] + '. Skipping.')
+            pass
         try:
             for tr in row['translocation'].split('#'):
                 if tr: translocations.add(tr)
