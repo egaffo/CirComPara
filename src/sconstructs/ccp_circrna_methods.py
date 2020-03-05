@@ -323,7 +323,15 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 
         ## parse STAR alignments with circrna-finder
         cfinder_env = env.Clone()
+        ## save external env PATH before modifying it
+        old_env_path = env['ENV']['PATH']
+
         ## circrna-finder uses old version of samtools  ( < v1.0 ) 
+        ## we need to modify the external env PATH to run it
+        ## unfortunately, modifying the external ENV has side effect
+        ## on the system PATH, no matter if it is modified in a cloned environment :(
+        ## we will later revert to the original PATH
+        ## TODO: Is this trick working also in parallel task execution??
         cfinder_env.PrependENVPath('PATH', os.path.join(env['ENV']['CIRCOMPARA_HOME'],
                                                         'bin', 'samtools_v0'))
         cfinder_env['FUSION_FILE'] = Chimeric_out_sam
@@ -338,6 +346,9 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         
         results.append([File(f) for f in cfinder.values()])	
         Depends(cfinder.values(), star)
+
+        ## revert to the old env PATH once finished circrna_finder
+        env['ENV']['PATH'] = old_env_path
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 	any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_bwa', 'ciri']]):
