@@ -397,8 +397,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 		       	                             '--no-coverage-search',
                                              '--bowtie1'])
     if not env['ANNOTATION'] == '' and \
-       not ('--GTF' in env_tophat['TOPHAT_PARAMS'] or '-G' in env_tophat['TOPHAT_PARAMS']):
-	env_tophat.AppendUnique(TOPHAT_PARAMS = ['--GTF', env['ANNOTATION']])
+            not ('--GTF' in env_tophat['TOPHAT_PARAMS'] or '-G' in env_tophat['TOPHAT_PARAMS']):
+                env_tophat.AppendUnique(TOPHAT_PARAMS = ['--GTF', env['ANNOTATION']])
 
     tophat = env.SConscript(os.path.join(build_dir, 'ccp_tophat.py'),
                               variant_dir = build_dir, src_dir = SRC_DIR,

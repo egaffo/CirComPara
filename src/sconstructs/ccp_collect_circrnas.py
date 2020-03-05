@@ -60,10 +60,10 @@ circ_gtf_sources = []
 circ_gtf_cmd = '''{ '''
 for k,v in env['CSVS'].iteritems():
     if v:
-	circ_gtf_sources.append(v)
+        circ_gtf_sources.append(v)
         circ_gtf_cmd = circ_gtf_cmd + \
-                       '''convert_circrna_collect_tables.py $STRANDED -p ''' +\
-                       methods[k] + ''' ''' + v[0].path + ''' ; '''
+                        '''convert_circrna_collect_tables.py $STRANDED -p ''' +\
+                        methods[k] + ''' ''' + v[0].path + ''' ; '''
 circ_gtf_cmd = circ_gtf_cmd + '''} | sort -k1,1 -k4,4n > ${TARGETS[0]}'''
 
 circ_gtf_target = 'circrnas.gtf'
