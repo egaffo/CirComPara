@@ -90,7 +90,7 @@ except NameError:
     env.Replace(READS = env['READS'].split(','))
     env.Replace(CIRCRNA_METHODS = env['CIRCRNA_METHODS'].strip().split(','))
 
-SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 results = []
 

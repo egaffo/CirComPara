@@ -87,7 +87,7 @@ except NameError:
     else:
         env.Replace(CIRC_PE_MAPPING = False)
 
-SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 env.SetDefault(CIRC_PE_MAPPING = False)
 

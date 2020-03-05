@@ -33,7 +33,7 @@ except NameError as ne:
         print "Unknown variables", unknown.keys()
         Exit(1)
     
-SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
     
 CPUS        = env['CPUS']
 GENOME      = env['GENOME'].split(',')

@@ -71,7 +71,7 @@ except NameError:
 expression_results = []
 expression = {'HTSEQ': None, 'CUFFLINKS': None, 'STRINGTIE': None}
 
-SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 #mapping_file = ALIGNMENTS
 #sample_name  = SAMPLE

@@ -30,7 +30,7 @@ except NameError as ne:
         print "Unknown variables", unknown.keys()
         Exit(1)
     
-SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 GENOME      = env['GENOME'].split(',')
 env.SetDefault(INDEXING_ALGORITHM = 'bwtsw') # set a default value in case it was not defined

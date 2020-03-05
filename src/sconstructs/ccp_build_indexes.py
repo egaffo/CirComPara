@@ -40,7 +40,7 @@ except NameError as ne:
         Exit(1)
 
 
-SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 ## SET DEFAULT VALUES FOR (OPTIONAL) EXTRA PARAMETERS
 env.SetDefault(HISAT2_EXTRA_PARAMS  = '')

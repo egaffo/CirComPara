@@ -32,7 +32,7 @@ if unknown:
     print "Run sample: unknown variables", unknown.keys()
     Exit(1)
 
-env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 ## BUILD GENOME INDEXES FOR READ ALIGNERS
 env['GENOME'] = File(env['GENOME']).abspath

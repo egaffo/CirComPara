@@ -43,7 +43,7 @@ except NameError, ne:
     # standalone
     readset = env['READS']
 
-SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 env.SetDefault(READSTAT_METHODS = 'fastqc')
 

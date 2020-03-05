@@ -35,7 +35,7 @@ except NameError as ne:
         print "Unknown variables", unknown.keys()
         Exit(1)
 
-    env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+    env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 annotation_dir = 'ccp_indexes'
 

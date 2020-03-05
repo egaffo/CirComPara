@@ -24,7 +24,7 @@ except NameError:
 
     env.Replace(SAMPLES, env['SAMPLES'].split(','))
     env.Replace(RUNS, env['RUNS'].split(','))
-    SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+    SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
     env['SCONSCRIPT_HOME'] = SCONSCRIPT_HOME
 
 ## COLLECT CIRCRNA RESULTS

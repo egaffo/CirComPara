@@ -105,7 +105,7 @@ except NameError as ne:
 
     env.Replace(EXPRESSION_FILES = env['EXPRESSION_FILES'].split(','))
 
-env.SetDefault(SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src'))
+env.SetDefault(SCONSCRIPT_HOME = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs'))
 
 raw_count_matrix = None
 norm_count_matrix = None

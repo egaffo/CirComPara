@@ -37,7 +37,7 @@ except NameError:
         print "Unknown variables:", unknown.keys()
         Exit(1)
 
-SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
 preprocess_dir = 'preprocess'
 preprocessings = []
