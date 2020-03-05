@@ -34,7 +34,7 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
         if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
             env_cuffmerge = env.Clone()
             env_cuffmerge['TRANSCRIPT_FILES'] = transcripts_gtf_files
-            cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'ccp_cuffmerge.scons'),
+            cuffmerge = SConscript(os.path.join(cuffmerge_dir, 'ccp_cuffmerge.py'),
                                     src_dir = env['SCONSCRIPT_HOME'],
                                     variant_dir = cuffmerge_dir, duplicate = 0,
                                     exports = '''env_cuffmerge''')
@@ -68,7 +68,7 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
                 env_gffcompare = env.Clone()
                 env_gffcompare['MERGED_TRANSCRIPTS'] = stringtiemerge
 
-                gffcompare = SConscript(os.path.join(cuffmerge_dir, 'ccp_gffcompare.scons'),
+                gffcompare = SConscript(os.path.join(cuffmerge_dir, 'ccp_gffcompare.py'),
                                         src_dir = env['SCONSCRIPT_HOME'],
                                         variant_dir = cuffmerge_dir, duplicate = 0,
                                         exports = '''env_gffcompare''')
@@ -84,7 +84,7 @@ if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
 ## RETRIEVE TRANSCRIPT SEQUENCES
 env_transcript_fastas = env.Clone()
 transcript_sequences = SConscript(os.path.join(transcript_sequences_dir, 
-                                               'ccp_transcript_fastas.scons'), 
+                                               'ccp_transcript_fastas.py'), 
                                   src_dir = env['SCONSCRIPT_HOME'],
                                   variant_dir = transcript_sequences_dir, duplicate = 0,
                                   exports = '''env_transcript_fastas''')
@@ -94,7 +94,7 @@ for met in env['LINEAR_EXPRESSION_METHODS']:
     linexp_dir = 'linear_quantexp_' + met
     env_linear_quantexp = env.Clone()
     env_linear_quantexp.Replace(LINEAR_EXPRESSION_METHODS = [met])
-    linquantexp = SConscript(os.path.join(linexp_dir, 'ccp_linear_quantexp.scons'),
+    linquantexp = SConscript(os.path.join(linexp_dir, 'ccp_linear_quantexp.py'),
                                 src_dir = env['SCONSCRIPT_HOME'],
                                 variant_dir = linexp_dir, duplicate = 0,
                                 exports = '''env_linear_quantexp SymLink get_matching_nodes''')
@@ -134,7 +134,7 @@ for met in env['LINEAR_EXPRESSION_METHODS']:
                
             #env_linear_diffexp['EXPRESSION_FILES'] = linquantexp['EXPRESSION_FILES']
             lindiffexp = SConscript(os.path.join(lindiffexp_dir,
-                                                 'ccp_linear_diffexp.scons'),
+                                                 'ccp_linear_diffexp.py'),
                                     src_dir = env['SCONSCRIPT_HOME'],
                                     variant_dir = lindiffexp_dir, duplicate = 0,
                                     exports = '''env_linear_diffexp SymLink get_matching_nodes''')

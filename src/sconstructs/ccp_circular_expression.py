@@ -20,7 +20,7 @@ circRNA_collect_dir = 'circRNA_collection'
 
 env_merge_sample_circrnas = env.Clone()
 merge_sample_circrnas = SConscript(os.path.join(circRNA_collect_dir, 
-					'ccp_merge_sample_circrnas.scons'),
+					'ccp_merge_sample_circrnas.py'),
                             src_dir = env['SCONSCRIPT_HOME'], 
                             variant_dir = circRNA_collect_dir, duplicate = 0,
                             exports = '''env_merge_sample_circrnas get_matching_nodes''')
@@ -30,7 +30,7 @@ env_circrna_collect = env.Clone()
 env_circrna_collect['CSVS'] = merge_sample_circrnas
 env_circrna_collect['GTF'] = env['ANNOTATION'] #cuffmerge
 circrna_collect = SConscript(os.path.join(circRNA_collect_dir, 
-                                          'ccp_collect_circrnas.scons'), 
+                                          'ccp_collect_circrnas.py'), 
                             src_dir = env['SCONSCRIPT_HOME'], 
                             variant_dir = circRNA_collect_dir, duplicate = 0,
                             exports = '''env_circrna_collect''')
@@ -61,7 +61,7 @@ if int(env_circrna_analyze['MIN_METHODS']) > len(env['CIRCRNA_METHODS']):
     env_circrna_analyze['MIN_METHODS'] = len(env['CIRCRNA_METHODS'])
 
 circrna_analyze = SConscript(os.path.join(circrna_analyze_dir, 
-                                          'ccp_analyze_circrnas.scons'),
+                                          'ccp_analyze_circrnas.py'),
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = circrna_analyze_dir, duplicate = 0,
                             exports = '''env_circrna_analyze''')

@@ -49,7 +49,7 @@ if env['PREPROCESSOR'].lower() == 'trimmomatic':
     trimmomatic_adapter_file = env['ADAPTER_FILE']
     trimmomatic_extra_params = env['PREPROCESSOR_PARAMS']
 
-    preps = SConscript(os.path.join(preprocess_dir, 'ccp_trimmomatic.scons'),
+    preps = SConscript(os.path.join(preprocess_dir, 'ccp_trimmomatic.py'),
                        src_dir = SRC_DIR, 
                        variant_dir = preprocess_dir, duplicate = 0, 
                        exports = '''env trimmomatic_reads trimmomatic_adapter_file '''
@@ -70,7 +70,7 @@ if env['PREPROCESSOR'].lower() == 'trimmomatic':
         if not os.path.isabs(env_read_statistics['READSET']):
             env_read_statistics['READSET'] = '#' + env_read_statistics['READSET']
         preprocessing_stats.append(SConscript(os.path.join(preprocess_dir, 
-                                                           'ccp_read_statistics.scons'), 
+                                                           'ccp_read_statistics.py'), 
                                               src_dir = SRC_DIR, 
                                               variant_dir = preprocess_dir, duplicate = 0, 
                                               exports = 'env_read_statistics')

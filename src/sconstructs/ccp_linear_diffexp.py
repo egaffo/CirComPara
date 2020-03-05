@@ -44,7 +44,7 @@ if len(conditions.keys()) > 1:
 
         ## PREPARE VARIABLES FOR BALLGOWN
         if met == 'ballgown':
-            diffexp_sconscript = 'ccp_ballgown.scons'
+            diffexp_sconscript = 'ccp_ballgown.py'
             diffexp_dir = 'ballgown'
             
             ctabs = ['e2t.ctab', 
@@ -72,7 +72,7 @@ if len(conditions.keys()) > 1:
 
         ## PREPARE VARIABLES FOR CUFFDIFF
         if met == 'cuffdiff':
-            diffexp_sconscript = 'ccp_cuffdiff.scons'
+            diffexp_sconscript = 'ccp_cuffdiff.py'
             diffexp_dir = 'cuffdiff'
             env.Replace(EXTRA_PARAMS = env['CUFFDIFF_EXTRA_PARAMS'])
             env['CONDITIONS'] = conditions
@@ -82,7 +82,7 @@ if len(conditions.keys()) > 1:
    
         ## PREPARE VARIABLES FOR DESEQ
         if met == 'deseq':
-            diffexp_sconscript = 'ccp_DESeq.scons'
+            diffexp_sconscript = 'ccp_DESeq.py'
             diffexp_dir = 'DESeq2'
             
             report_template = 'DESeq_gene_diffexp.Rmd'

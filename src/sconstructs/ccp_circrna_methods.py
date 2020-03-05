@@ -3,10 +3,10 @@ This SConscript performs circRNAs detection on a RNA-seq sample using different
 circRNA detection methods.
 
 Software dependencies are inherited from the CIRCOMPARA-SConscripts used:
- * ccp_testrealign.scons
- * ccp_ciri.scons
- * ccp_findcirc.scons
- * ccp_tophat.scons
+ * ccp_testrealign.py
+ * ccp_ciri.py
+ * ccp_findcirc.py
+ * ccp_tophat.py
 
 Imports:
  * env
@@ -27,8 +27,8 @@ Imports:
 
 import os, re
 
-ccp_testrealign   = 'ccp_testrealign.scons'
-ccp_segemehl = 'ccp_segemehl.scons'
+ccp_testrealign   = 'ccp_testrealign.py'
+ccp_segemehl = 'ccp_segemehl.py'
 
 Import('*')
 
@@ -235,7 +235,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         circexplorer2_env['FUSION_FILE'] = segemap['SINGLE_SPLITS']
         circexplorer2_env['ALIGNMENTS'] = segemap['ALIGNMENTS']
         circexplorer2_segemehl = env.SConscript(os.path.join(build_dir,	
-                                                             'ccp_circexplorer2.scons'),
+                                                             'ccp_circexplorer2.py'),
                                                 variant_dir = build_dir, src_dir = SRC_DIR,
                                                 duplicate = 0,
                                                 exports = '''circexplorer2_env''')
@@ -245,7 +245,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
    'findcirc' in env['CIRCRNA_METHODS']:
     ## FIND_CIRC
-    ccp_findcirc    = 'ccp_findcirc.scons'
+    ccp_findcirc    = 'ccp_findcirc.py'
    
     find_circ = env.SConscript(os.path.join(build_dir, ccp_findcirc),
                                variant_dir = build_dir, src_dir = SRC_DIR, 
@@ -268,7 +268,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     star_env.AppendUnique(STAR_PARAMS = ['--chimSegmentMin', '10', 
                                          '--chimOutType', 'Junctions', 'SeparateSAMold'])
     
-    star = env.SConscript(os.path.join(build_dir, 'ccp_star.scons'),
+    star = env.SConscript(os.path.join(build_dir, 'ccp_star.py'),
                           variant_dir = build_dir, src_dir = SRC_DIR,
                           duplicate = 0, 
     		      exports = '''star_env''')	
@@ -289,7 +289,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         circexplorer2_env['ALIGNER'] = 'star'
         circexplorer2_env['ALIGNMENTS'] = Chimeric_out_sam #star[0][0]
         circexplorer2_star = env.SConscript(os.path.join(build_dir, 
-        						'ccp_circexplorer2.scons'),
+        						'ccp_circexplorer2.py'),
         			variant_dir = build_dir, src_dir = SRC_DIR,
                                     duplicate = 0,
         			exports = '''circexplorer2_env''')
@@ -344,7 +344,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 
     bwa_env = env.Clone()
   
-    bwa = env.SConscript(os.path.join(build_dir, 'ccp_bwa.scons'), 
+    bwa = env.SConscript(os.path.join(build_dir, 'ccp_bwa.py'), 
                           variant_dir = build_dir, src_dir = SRC_DIR, 
                           duplicate = 0, 
                           exports = 'bwa_env')
@@ -363,7 +363,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         circexplorer2_env['ALIGNER'] = 'BWA'
         circexplorer2_env['ALIGNMENTS'] = bwa[0]
         circexplorer2_bwa = env.SConscript(os.path.join(build_dir, 
-        						'ccp_circexplorer2.scons'),
+        						'ccp_circexplorer2.py'),
         			variant_dir = build_dir, src_dir = SRC_DIR,
                                 duplicate = 0,
         			exports = '''circexplorer2_env''')
@@ -377,7 +377,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         ## parse BWA alignments with CIRI
         env_ciri = env.Clone()
         env_ciri['BWA_ALIGN'] = bwa[0] 
-        ciri = env.SConscript(os.path.join(build_dir, 'ccp_ciri.scons'), 
+        ciri = env.SConscript(os.path.join(build_dir, 'ccp_ciri.py'), 
                               variant_dir = build_dir, src_dir = SRC_DIR, 
                               duplicate = 0, 
                               exports = 'env_ciri')
@@ -400,7 +400,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
        not ('--GTF' in env_tophat['TOPHAT_PARAMS'] or '-G' in env_tophat['TOPHAT_PARAMS']):
 	env_tophat.AppendUnique(TOPHAT_PARAMS = ['--GTF', env['ANNOTATION']])
 
-    tophat = env.SConscript(os.path.join(build_dir, 'ccp_tophat.scons'),
+    tophat = env.SConscript(os.path.join(build_dir, 'ccp_tophat.py'),
                               variant_dir = build_dir, src_dir = SRC_DIR,
                               duplicate = 0, exports = '''env_tophat''')
     
@@ -417,7 +417,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     if env['CIRC_PE_MAPPING'] and len(env['READS']) > 1:
         circexplorer2_env.Replace(ALIGNER = 'tophat_pe')
     circexplorer2_tophat = env.SConscript(os.path.join(build_dir, 
-    						'ccp_circexplorer2.scons'),
+    						'ccp_circexplorer2.py'),
     			variant_dir = build_dir, src_dir = SRC_DIR,
                             duplicate = 0,
     			exports = '''circexplorer2_env''')

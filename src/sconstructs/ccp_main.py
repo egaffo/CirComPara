@@ -211,7 +211,7 @@ env.Append(BUILDERS = {'WriteLinesInTxt' : WriteLinesInTxt})
 
 env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 env['VARS'] = File(variables_file)
-env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
+env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
 
 env.SetDefault(TOPHAT_PARAMS = '')
@@ -350,7 +350,7 @@ if len(conditions.keys()) < 2:
 ## BUILD READ ALIGNER PROGRAM GENOME INDEXES IF NOT PROVIDED BY THE USER
 indexes_dir = 'ccp_dbs'
 env_check_indexes = env.Clone()
-indexes = SConscript(os.path.join(indexes_dir, 'ccp_check_indexes.scons'),
+indexes = SConscript(os.path.join(indexes_dir, 'ccp_check_indexes.py'),
                         src_dir = env['SCONSCRIPT_HOME'],
                         variant_dir = indexes_dir, duplicate = 0,
                         exports = '''env_check_indexes''')
@@ -378,7 +378,7 @@ for sample in sorted(samples.keys()):
                                                         m in env_circpipe['CIRCRNA_METHODS']])
         
     sample_dir = os.path.join(samples_dir, sample)
-    run_sample = SConscript(os.path.join(sample_dir, 'ccp_circpipe.scons'),
+    run_sample = SConscript(os.path.join(sample_dir, 'ccp_circpipe.py'),
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = sample_dir, duplicate = 0,
                             exports = '''env_circpipe get_matching_nodes''')
@@ -438,7 +438,7 @@ if not env['BYPASS'] == 'linear':
     env_linear_expression['RUNS'] = runs
     env_linear_expression['RUNS_DICT'] = runs_dict
     linexp = env.SConscript(os.path.join(linexp_dir,
-                                         'ccp_linear_expression.scons'),
+                                         'ccp_linear_expression.py'),
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = linexp_dir, duplicate = 0,
                             exports = '''env_linear_expression '''
@@ -460,7 +460,7 @@ collect_read_stats_dir = 'read_statistics'
 env_collect_read_stats = env.Clone()
 env_collect_read_stats['RUNS'] = runs
 collect_read_stats = env.SConscript(os.path.join(collect_read_stats_dir, 
-                                                'ccp_collect_read_stats.scons'),
+                                                'ccp_collect_read_stats.py'),
                                     src_dir = env['SCONSCRIPT_HOME'],
                                     variant_dir = collect_read_stats_dir,
                                     duplicate = 0, 
@@ -478,7 +478,7 @@ if not env['BYPASS'] == 'circular':
     env_circular_expression['LINEXP'] = linexp
     env_circular_expression['PROCESSING_READ_STATS'] = collect_read_stats['PROCESSING_READ_STATS']
     circexp = env.SConscript(os.path.join(circexp_dir,
-                                          'ccp_circular_expression.scons'),
+                                          'ccp_circular_expression.py'),
                              src_dir = env['SCONSCRIPT_HOME'],
                              variant_dir = circexp_dir, duplicate = 0,
                              exports = '''env_circular_expression '''
@@ -491,7 +491,7 @@ if env['QRE_FIND'] == 'True':
     ## ANALYZE GENE SEQUENCES FOR QKI RESPONSE ELEMENTS
     qre_GTF = env['ANNOTATION'] #cuffmerge
     qre_GENOME = env['GENOME_FASTA']
-    qre = SConscript(os.path.join(qre_dir, 'ccp_QRE_finder.scons'),
+    qre = SConscript(os.path.join(qre_dir, 'ccp_QRE_finder.py'),
                      src_dir = env['SCONSCRIPT_HOME'],
                      variant_dir = qre_dir, duplicate = 0,
                      exports = '''env qre_GTF qre_GENOME''')

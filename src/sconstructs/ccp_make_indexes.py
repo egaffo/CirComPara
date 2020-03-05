@@ -37,7 +37,7 @@ env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src')
 ## BUILD GENOME INDEXES FOR READ ALIGNERS
 env['GENOME'] = File(env['GENOME']).abspath
 env_build_indexes = env.Clone()
-indexes = SConscript('ccp_build_indexes.scons',
+indexes = SConscript('ccp_build_indexes.py',
                             src_dir = env['SCONSCRIPT_HOME'],
                             variant_dir = Dir(".").path, duplicate = 0,
                             exports = '''env_build_indexes ''')

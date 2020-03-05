@@ -94,7 +94,7 @@ if('fastqc' in env['READSTAT_METHODS'].split(',')):
     env_fastqc = env.Clone()
     #fastqc_readset = File(readset)
     env_fastqc['READSET'] = File(readset)
-    ccp_fastqc = env.SConscript(os.path.join(fastqc_dir, 'ccp_fastqc.scons'), 
+    ccp_fastqc = env.SConscript(os.path.join(fastqc_dir, 'ccp_fastqc.py'), 
                                   src_dir = SRC_DIR,
                                   variant_dir = fastqc_dir, duplicate = 0,
                                   exports = 'env_fastqc')

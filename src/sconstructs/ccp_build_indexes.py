@@ -61,7 +61,7 @@ if 'HISAT2' in env['INDEXES'].split(','):
     env_index_hisat2['EXTRA_PARAMS'] = env['HISAT2_EXTRA_PARAMS']
 
     index_dir = os.path.join(indexes_dir, 'hisat2')
-    index = SConscript(os.path.join(index_dir, 'ccp_index_hisat2.scons'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_hisat2.py'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_hisat2 ''')
@@ -76,7 +76,7 @@ if 'SEGEMEHL' in env['INDEXES'].split(','):
     env_index_segemehl['EXTRA_PARAMS'] = env['SEGEMEHL_EXTRA_PARAMS']
 
     index_dir = os.path.join(indexes_dir, 'segemehl')
-    index = SConscript(os.path.join(index_dir, 'ccp_index_segemehl.scons'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_segemehl.py'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_segemehl ''')
@@ -92,7 +92,7 @@ if 'BWA' in env['INDEXES'].split(','):
     #env_index_hisat2['INDEXING_ALGORITHM'] = env['INDEXING_ALGORITHM']
 
     index_dir = os.path.join(indexes_dir, 'bwa')
-    index = SConscript(os.path.join(index_dir, 'ccp_index_bwa.scons'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_bwa.py'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_bwa ''')
@@ -108,7 +108,7 @@ if 'BOWTIE2' in env['INDEXES'].split(','):
     env_index_bowtie2['EXTRA_PARAMS'] = env['BOWTIE2_EXTRA_PARAMS']
 
     index_dir = os.path.join(indexes_dir, 'bowtie2')
-    index = SConscript(os.path.join(index_dir, 'ccp_index_bowtie2.scons'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_bowtie2.py'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_bowtie2 ''')
@@ -124,7 +124,7 @@ if 'BOWTIE' in env['INDEXES'].split(','):
     env_index_bowtie['EXTRA_PARAMS'] = env['BOWTIE_EXTRA_PARAMS']
 
     index_dir = os.path.join(indexes_dir, 'bowtie')
-    index = SConscript(os.path.join(index_dir, 'ccp_index_bowtie.scons'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_bowtie.py'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_bowtie ''')
@@ -140,7 +140,7 @@ if 'STAR' in env['INDEXES'].split(','):
     env_index_star['EXTRA_PARAMS'] = env['STAR_EXTRA_PARAMS']
 
     index_dir = os.path.join(indexes_dir, 'star')
-    index = SConscript(os.path.join(index_dir, 'ccp_index_star.scons'), 
+    index = SConscript(os.path.join(index_dir, 'ccp_index_star.py'), 
                             src_dir = SCONSCRIPT_HOME, 
                             variant_dir = index_dir, duplicate = 0,
                             exports = '''env_index_star ''')

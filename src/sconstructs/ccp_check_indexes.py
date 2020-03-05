@@ -111,7 +111,7 @@ if genome_indexes_to_build:
     env_build_indexes['STAR_EXTRA_PARAMS']      = ''
     env_build_indexes['BOWTIE_EXTRA_PARAMS']   = '' #'$( --threads $CPUS $)'
 
-    indexes = SConscript(os.path.join(annotation_dir, 'ccp_build_indexes.scons'),
+    indexes = SConscript(os.path.join(annotation_dir, 'ccp_build_indexes.py'),
                                 src_dir = env['SCONSCRIPT_HOME'],
                                 variant_dir = annotation_dir, duplicate = 0,
                                 exports = '''env_build_indexes ''')

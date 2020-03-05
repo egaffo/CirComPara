@@ -2,12 +2,12 @@
 This script functions as a dispatcher to the desired gene expression analysis methods.
 It sets the necessary variables and launch the expression analyses.
 Currently it performs:
- * gene expression estimation via HTSeq-count (ccp_htseq_count.scons);
- * gene/transcript expression estimation and detection via Cufflinks (ccp_cufflinks.scons).
+ * gene expression estimation via HTSeq-count (ccp_htseq_count.py);
+ * gene/transcript expression estimation and detection via Cufflinks (ccp_cufflinks.py).
 
 Software requirements inherited from the called SConscripts:
- * ccp_htseq_count.scons
- * ccp_cufflinks.scons
+ * ccp_htseq_count.py
+ * ccp_cufflinks.py
 
 Variables to export when calling from a SConscript:
  * expression_cpus
@@ -92,7 +92,7 @@ if 'htseq' in env['LINEAR_EXPRESSION_METHODS'] and not env['ANNOTATION'] == '':
         env_htseq_count['STRANDED'] = 'no'
 
     ## GET READ COUNTS
-    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.scons'), 
+    htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.py'), 
                              src_dir = env['SCONSCRIPT_HOME'], 
                              variant_dir = htseq_counts_dir, duplicate = 0, 
                              exports = '''env_htseq_count''')
@@ -105,7 +105,7 @@ if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
     cufflinks_cpus = env['CPUS']
     cufflinks_params = env['CUFFLINKS_PARAMS']
     cufflinks_toggle_transcriptome_reconstruction = env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']
-    cufflinks = SConscript(os.path.join(cufflinks_dir, 'ccp_cufflinks.scons'),
+    cufflinks = SConscript(os.path.join(cufflinks_dir, 'ccp_cufflinks.py'),
                            variant_dir = cufflinks_dir, src_dir = SRC_DIR, 
                            duplicate = 0, exports = '''env mapping_file sample_name '''
                            '''cufflinks_annotation cufflinks_cpus cufflinks_params '''
@@ -116,7 +116,7 @@ if 'cufflinks' in env['LINEAR_EXPRESSION_METHODS']:
 if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
     ## RUN STRINGTIE
     env_stringtie = env.Clone()
-    stringtie = SConscript(os.path.join(stringtie_dir, 'ccp_stringtie.scons'), 
+    stringtie = SConscript(os.path.join(stringtie_dir, 'ccp_stringtie.py'), 
                             variant_dir = stringtie_dir, src_dir = SRC_DIR,
                             duplicate = 0, exports = 'env_stringtie')
 

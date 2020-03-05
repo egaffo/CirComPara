@@ -6,11 +6,11 @@ reconstruct transcripts, estimates gene/transcript expression, and
 also detects circRNAs by means of backsplice junctions.
 
 Software dependencies are inherited from the CIRCOMPARA-SConscripts used:
- * ccp_read_statistics.scons
- * ccp_preprocess.scons
- * ccp_hisat2.scons
- * ccp_expression.scons
- * ccp_circrna_methods.scons
+ * ccp_read_statistics.py
+ * ccp_preprocess.py
+ * ccp_hisat2.py
+ * ccp_expression.py
+ * ccp_circrna_methods.py
 
 When called from a SConscript it imports the following variables:
  * env_circpipe
@@ -21,11 +21,11 @@ import os, itertools, re
 
 ## SET (DISPATCHER) SCRIPT NAMES. THESE ARE THE MAIN PIPELINE STEPS, EACH OF THEM MIGHT FIRE
 ## DIFFERENT ACTIONS/SCONSCRIPTS
-ccp_read_statistics = 'ccp_read_statistics.scons'
-ccp_preprocess      = 'ccp_preprocess.scons'
-ccp_mapping         = 'ccp_hisat2.scons'
-ccp_expression      = 'ccp_expression.scons'
-ccp_circrna_methods        = 'ccp_circrna_methods.scons'
+ccp_read_statistics = 'ccp_read_statistics.py'
+ccp_preprocess      = 'ccp_preprocess.py'
+ccp_mapping         = 'ccp_hisat2.py'
+ccp_expression      = 'ccp_expression.py'
+ccp_circrna_methods        = 'ccp_circrna_methods.py'
 
 Import('*')
 
@@ -200,7 +200,7 @@ if not env['BYPASS'] == 'linear':
         env_check_indexes = env.Clone()
         env_check_indexes['GENEPRED'] = ''
         genepred = env.SConscript(os.path.join(build_dir,
-                                               'ccp_check_indexes.scons'),
+                                               'ccp_check_indexes.py'),
                                   variant_dir = build_dir, 
                                   src_dir = SRC_DIR,
                                   duplicate = 0,

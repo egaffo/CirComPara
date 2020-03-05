@@ -76,7 +76,7 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
             ballgown_files.append(gene_ab[3:])
 
             ## N.B: this code should be wrapped in a SConscript since it is
-            ## used also in ccp_expression.scons !
+            ## used also in ccp_expression.py !
             ## compute read raw counts for StringTie
             SAMPLE = sample_name
             TRANSCRIPTS_GTF = gene_ab[0]
@@ -128,7 +128,7 @@ if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
         env_cuffquant['EXTRA_PARAMS'] = env['CUFFQUANT_EXTRA_PARAMS']
         env_cuffquant['ALIGNMENTS'] = env['LINEAR_ALIGNMENTS']
         
-        cuffquant = SConscript(os.path.join(cuffquant_dir, 'ccp_cuffquant.scons'),
+        cuffquant = SConscript(os.path.join(cuffquant_dir, 'ccp_cuffquant.py'),
                                src_dir = env['SCONSCRIPT_HOME'],
                                variant_dir = cuffquant_dir, duplicate = 0,
                                exports = '''env_cuffquant''')
@@ -141,7 +141,7 @@ if ('cufflinks' in env['LINEAR_EXPRESSION_METHODS']) or \
         env_cuffnorm['EXTRA_PARAMS']= env['CUFFNORM_EXTRA_PARAMS'] #TODO: set strandness when required
         env_cuffnorm['LABELS'] = env['CONDITIONS']
         
-        cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffnorm.scons'),
+        cuffnorm = SConscript(os.path.join(cuffdiff_dir, 'ccp_cuffnorm.py'),
                               src_dir = env['SCONSCRIPT_HOME'],
                               variant_dir = cuffdiff_dir, duplicate = 0,
                               exports = '''env_cuffnorm''')
@@ -181,7 +181,7 @@ if 'htseq' in env['LINEAR_EXPRESSION_METHODS']:
             env_htseq_count['STRANDED'] = 'yes'
 
         ## GET READ COUNTS
-        htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.scons'), 
+        htseq_count = SConscript(os.path.join(htseq_counts_dir, 'ccp_htseq_count.py'), 
                                  src_dir = env['SCONSCRIPT_HOME'], 
                                  variant_dir = htseq_counts_dir, duplicate = 0, 
                                  exports = '''env_htseq_count''')
