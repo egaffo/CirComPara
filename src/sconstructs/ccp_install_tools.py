@@ -6,9 +6,10 @@ def SymLink(target, source, env):
 env = Environment(ENV=os.environ, SHELL = '/bin/bash')
 tools_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'tools')
 ccp_bin_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin')
-python_lib_dir = os.path.join(tools_dir, 'lib', 'python2.7','site-packages')
 
-#env.PrependENVPath('PYTHONUSERBASE', tools_dir)
+PYTHON_VERSION = str(sys.version_info.major) + '.' + str(sys.version_info.minor)
+python_lib_dir = os.path.join(tools_dir, 'lib', 'python'+PYTHON_VERSION,'site-packages')
+
 env.PrependENVPath('PYTHONUSERBASE', tools_dir)
 env.PrependENVPath('PYTHONPATH', python_lib_dir)
 
