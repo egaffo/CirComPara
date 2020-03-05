@@ -1,9 +1,13 @@
 #!/bin/bash
 
-export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))/../../../
+export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))/../../..
 
 mkdir $CIRCOMPARA_HOME/tools
 mkdir -p $CIRCOMPARA_HOME/bin
+
+export PATH=$CIRCOMPARA_HOME/bin/:$PATH
+## export environment variable for local R repository
+export R_LIBS=$CIRCOMPARA_HOME/tools/R_libs
 
 ## check whether Scons is installed and install it if not
 ## install Scons
@@ -20,11 +24,6 @@ cd $CIRCOMPARA_HOME/bin
 ln -s ../src/utils/python/* .
 ln -s ../src/utils/R/* .
 cd -
-
-export PATH=$CIRCOMPARA_HOME/bin/:$PATH
-
-## export environment variable for local R repository
-export R_LIBS=$CIRCOMPARA_HOME/tools/R_libs
 
 ## install other tools
 scons -i -f $CIRCOMPARA_HOME/src/sconstructs/ccp_install_tools.py $1 
