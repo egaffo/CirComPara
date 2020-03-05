@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 def SymLink(target, source, env):
     os.symlink(os.path.abspath(str(source[0])), os.path.abspath(str(target[0])))
