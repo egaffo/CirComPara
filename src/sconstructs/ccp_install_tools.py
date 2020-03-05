@@ -272,38 +272,38 @@ FINDCIRC = env.Command(FINDCIRC_target, [], ['wget -O $TARGET  ' + FINDCIRC_link
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FINDCIRC[1], SymLink)
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FINDCIRC[2], SymLink)
 
-# FASTX-TOOLKIT
-libgtextutils_tar   = 'libgtextutils-0.7.tar.gz'
-libgtextutils_link  = 'https://github.com/agordon/libgtextutils/releases/download/0.7/' +\
-                     libgtextutils_tar
-libgtextutils_dir   = os.path.join(tools_dir, 'libgtextutils-0.7')
-libgtextutils_target = [os.path.join(tools_dir, libgtextutils_tar), 
-                        os.path.join(libgtextutils_dir, 'lib', 'libgtextutils.so'),
-                        os.path.join(libgtextutils_dir, 'lib', 'pkgconfig', 'gtextutils.pc')]
-libgtextutils = env.Command(libgtextutils_target, [], 
-                            ['wget -O $TARGET ' + libgtextutils_link, 
-                            'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}', 
-                            'cd ' + libgtextutils_dir + ' && ./configure --prefix=`pwd`'\
-                            ' && make && make install',
-                            'cd ' + Dir('#').abspath])
-
-libgtextutils_config_path = os.path.dirname(libgtextutils[2].abspath)
-
-FASTXTOOLKIT_tar = 'fastx_toolkit-0.0.14.tar.bz2'
-FASTXTOOLKIT_link = 'https://github.com/agordon/fastx_toolkit/releases/download/0.0.14/' +\
-                    FASTXTOOLKIT_tar
-FASTXTOOLKIT_dir = os.path.join(tools_dir, 'fastx_toolkit-0.0.14')
-FASTXTOOLKIT_target = [os.path.join(tools_dir, FASTXTOOLKIT_tar),
-                       os.path.join(FASTXTOOLKIT_dir, 'bin', 'fastx_quality_stats')]
-FASTXTOOLKIT = env.Command(FASTXTOOLKIT_target, [Value(libgtextutils_config_path), libgtextutils[2]], 
-                           ['wget -O $TARGET ' + FASTXTOOLKIT_link,
-                            'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
-                            'cd ' + FASTXTOOLKIT_dir + ' && ./configure --prefix=' +\
-                            FASTXTOOLKIT_dir + ' PKG_CONFIG_PATH=${SOURCES[0]}'\
-                            ':$$PKG_CONFIG_PATH '\
-                            ' && make && make install', 
-                            'cd ' + Dir('#').abspath])
-env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FASTXTOOLKIT[1], SymLink)
+## FASTX-TOOLKIT
+#libgtextutils_tar   = 'libgtextutils-0.7.tar.gz'
+#libgtextutils_link  = 'https://github.com/agordon/libgtextutils/releases/download/0.7/' +\
+#                     libgtextutils_tar
+#libgtextutils_dir   = os.path.join(tools_dir, 'libgtextutils-0.7')
+#libgtextutils_target = [os.path.join(tools_dir, libgtextutils_tar), 
+#                        os.path.join(libgtextutils_dir, 'lib', 'libgtextutils.so'),
+#                        os.path.join(libgtextutils_dir, 'lib', 'pkgconfig', 'gtextutils.pc')]
+#libgtextutils = env.Command(libgtextutils_target, [], 
+#                            ['wget -O $TARGET ' + libgtextutils_link, 
+#                            'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}', 
+#                            'cd ' + libgtextutils_dir + ' && ./configure --prefix=`pwd`'\
+#                            ' && make && make install',
+#                            'cd ' + Dir('#').abspath])
+#
+#libgtextutils_config_path = os.path.dirname(libgtextutils[2].abspath)
+#
+#FASTXTOOLKIT_tar = 'fastx_toolkit-0.0.14.tar.bz2'
+#FASTXTOOLKIT_link = 'https://github.com/agordon/fastx_toolkit/releases/download/0.0.14/' +\
+#                    FASTXTOOLKIT_tar
+#FASTXTOOLKIT_dir = os.path.join(tools_dir, 'fastx_toolkit-0.0.14')
+#FASTXTOOLKIT_target = [os.path.join(tools_dir, FASTXTOOLKIT_tar),
+#                       os.path.join(FASTXTOOLKIT_dir, 'bin', 'fastx_quality_stats')]
+#FASTXTOOLKIT = env.Command(FASTXTOOLKIT_target, [Value(libgtextutils_config_path), libgtextutils[2]], 
+#                           ['wget -O $TARGET ' + FASTXTOOLKIT_link,
+#                            'tar -xf ${TARGETS[0]} -C ${TARGETS[0].dir}',
+#                            'cd ' + FASTXTOOLKIT_dir + ' && ./configure --prefix=' +\
+#                            FASTXTOOLKIT_dir + ' PKG_CONFIG_PATH=${SOURCES[0]}'\
+#                            ':$$PKG_CONFIG_PATH '\
+#                            ' && make && make install', 
+#                            'cd ' + Dir('#').abspath])
+#env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), FASTXTOOLKIT[1], SymLink)
 
 # gtfToGenePred
 gtfToGenePred_link = 'http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/gtfToGenePred'
