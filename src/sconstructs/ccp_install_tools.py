@@ -83,7 +83,7 @@ dcc_url = 'https://github.com/dieterich-lab/DCC/archive/' + dcc_tar
 dcc_target = [os.path.join(tools_dir, dcc_tar),
 		      os.path.join(tools_dir, 'bin', 'DCC'),
               #os.path.join(dcc_python_sitepkg, "site.py")]
-              os.path.join(python_lib_dir, 'DCC-0.4.6-py2.7.egg')]
+              os.path.join(python_lib_dir, 'DCC-0.4.6-py'+ PYTHON_VERSION +'.egg')]
 dcc = env.Command(dcc_target, 
 			         [pandas], 
           	         ['wget -O ${TARGETS[0]} ' + dcc_url,
