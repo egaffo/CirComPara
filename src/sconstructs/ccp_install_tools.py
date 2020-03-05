@@ -407,7 +407,7 @@ cfinder = env.Command(cfinder_target,
                       [],
                       ['wget -O ${TARGETS[0]} ' + cfinder_url,
                        'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}'])
-for t in cfinder:
+for t in cfinder[1:]:
     env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), t, SymLink)
 
 # SAMTOOLS <v1.0 is required by circrna_finder
