@@ -96,9 +96,8 @@ if not ''.join([str(f) for f in Flatten(testrealign_nodes)]) == '':
 
     testrealign_files = ','.join([f.path for f in Flatten(testrealign_nodes)])
     testrealign_labels = ','.join(samples)
-    testrealign_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''testrealign_compare.R -l ''' + testrealign_labels +\
-                             ''' -i ''' + testrealign_files + ''' -o $TARGET''')
+    testrealign_comapared_cmd = '''testrealign_compare.R -l ''' + testrealign_labels +\
+                             ''' -i ''' + testrealign_files + ''' -o $TARGET'''
     testrealign_comapared_target = os.path.join(circRNA_collect_dir, 'testrealign_compared.csv')
     testrealign_compared = env.Command(testrealign_comapared_target, 
                                     testrealign_nodes, 
@@ -110,9 +109,8 @@ if not ''.join([str(f) for f in Flatten(find_circ_nodes)]) == '':
 
     find_circ_files = ','.join([f.path for f in Flatten(find_circ_nodes)])
     find_circ_labels = ','.join(samples)
-    find_circ_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''findcirc_compare.R -l ''' + find_circ_labels +\
-                             ''' -i ''' + find_circ_files + ''' -o $TARGET''')
+    find_circ_comapared_cmd = '''findcirc_compare.R -l ''' + find_circ_labels +\
+                             ''' -i ''' + find_circ_files + ''' -o $TARGET'''
     find_circ_comapared_target = os.path.join(circRNA_collect_dir, 'find_circ_compared.csv')
     find_circ_compared = env.Command(find_circ_comapared_target, 
                                     find_circ_nodes, 
@@ -124,9 +122,8 @@ if not ''.join([str(f) for f in Flatten(ciri_nodes)]) == '':
 
     ciri_files = ','.join([f.path for f in Flatten(ciri_nodes)])
     ciri_labels = ','.join(samples)
-    ciri_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''ciri_compare.R -l ''' + ciri_labels +\
-                             ''' -i ''' + ciri_files + ''' -o $TARGET''')
+    ciri_comapared_cmd = '''ciri_compare.R -l ''' + ciri_labels +\
+                         ''' -i ''' + ciri_files + ''' -o $TARGET'''
     ciri_comapared_target = os.path.join(circRNA_collect_dir, 'ciri_compared.csv')
     ciri_compared = env.Command(ciri_comapared_target, 
                                     ciri_nodes, 
@@ -137,9 +134,8 @@ if not ''.join([str(f) for f in Flatten(ciri_nodes)]) == '':
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_star_nodes)]) == '':
     CIRCexplorer2_star_files = ','.join([f.path for f in Flatten(CIRCexplorer2_star_nodes)])
     CIRCexplorer2_star_labels = ','.join(samples)
-    CIRCexplorer2_star_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_star_labels +\
-                             ''' -i ''' + CIRCexplorer2_star_files + ''' -o $TARGET''')
+    CIRCexplorer2_star_comapared_cmd = '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_star_labels +\
+                             ''' -i ''' + CIRCexplorer2_star_files + ''' -o $TARGET'''
     CIRCexplorer2_star_comapared_target = os.path.join(circRNA_collect_dir, 
                                             'CIRCexplorer2_star_compared.csv')
     CIRCexplorer2_star_compared = env.Command(CIRCexplorer2_star_comapared_target, 
@@ -151,9 +147,8 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_star_nodes)]) == '':
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_bwa_nodes)]) == '':
     CIRCexplorer2_bwa_files = ','.join([f.path for f in Flatten(CIRCexplorer2_bwa_nodes)])
     CIRCexplorer2_bwa_labels = ','.join(samples)
-    CIRCexplorer2_bwa_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_bwa_labels +\
-                             ''' -i ''' + CIRCexplorer2_bwa_files + ''' -o $TARGET''')
+    CIRCexplorer2_bwa_comapared_cmd = '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_bwa_labels +\
+                             ''' -i ''' + CIRCexplorer2_bwa_files + ''' -o $TARGET'''
     CIRCexplorer2_bwa_comapared_target = os.path.join(circRNA_collect_dir, 
                                         'CIRCexplorer2_bwa_compared.csv')
     CIRCexplorer2_bwa_compared = env.Command(CIRCexplorer2_bwa_comapared_target, 
@@ -165,9 +160,8 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_bwa_nodes)]) == '':
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_segemehl_nodes)]) == '':
     CIRCexplorer2_segemehl_files = ','.join([f.path for f in Flatten(CIRCexplorer2_segemehl_nodes)])
     CIRCexplorer2_segemehl_labels = ','.join(samples)
-    CIRCexplorer2_segemehl_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                         '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_segemehl_labels +\
-                         ''' -i ''' + CIRCexplorer2_segemehl_files + ''' -o $TARGET''')
+    CIRCexplorer2_segemehl_comapared_cmd = '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_segemehl_labels +\
+                         ''' -i ''' + CIRCexplorer2_segemehl_files + ''' -o $TARGET'''
     CIRCexplorer2_segemehl_comapared_target = os.path.join(circRNA_collect_dir, 
                                         'CIRCexplorer2_segemehl_compared.csv')
     CIRCexplorer2_segemehl_compared = env.Command(CIRCexplorer2_segemehl_comapared_target, 
@@ -182,9 +176,8 @@ if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_pe_nodes)]) == '':
 if not ''.join([str(f) for f in Flatten(CIRCexplorer2_tophat_nodes)]) == '':
     CIRCexplorer2_tophat_files = ','.join([f.path for f in Flatten(CIRCexplorer2_tophat_nodes)])    
     CIRCexplorer2_tophat_labels = ','.join(samples)
-    CIRCexplorer2_tophat_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                         '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_tophat_labels +\
-                         ''' -i ''' + CIRCexplorer2_tophat_files + ''' -o $TARGET''')
+    CIRCexplorer2_tophat_comapared_cmd = '''CIRCexplorer_compare.R -l ''' + CIRCexplorer2_tophat_labels +\
+                         ''' -i ''' + CIRCexplorer2_tophat_files + ''' -o $TARGET'''
     CIRCexplorer2_tophat_comapared_target = os.path.join(circRNA_collect_dir, 
                                         'CIRCexplorer2_tophat_compared.csv')
     CIRCexplorer2_tophat_compared = env.Command(CIRCexplorer2_tophat_comapared_target, 
@@ -197,9 +190,8 @@ if not ''.join([str(f) for f in Flatten(dcc_nodes)]) == '':
 
     dcc_files = ','.join([f.path for f in Flatten(dcc_nodes)])
     dcc_labels = ','.join(samples)
-    dcc_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''dcc_compare.R -l ''' + dcc_labels +\
-                             ''' -i ''' + dcc_files + ''' -o $TARGET''')
+    dcc_comapared_cmd = '''dcc_compare.R -l ''' + dcc_labels +\
+                        ''' -i ''' + dcc_files + ''' -o $TARGET'''
     dcc_comapared_target = os.path.join(circRNA_collect_dir, 'dcc_compared.csv')
     dcc_compared = env.Command(dcc_comapared_target, 
                                     dcc_nodes, 
@@ -211,9 +203,8 @@ if not ''.join([str(f) for f in Flatten(cfinder_nodes)]) == '':
 
     cfinder_files = ','.join([f.path for f in Flatten(cfinder_nodes)])
     cfinder_labels = ','.join(samples)
-    cfinder_comapared_cmd = os.path.join(SCONSCRIPT_HOME,
-                             '''cfinder_compare.R -l ''' + cfinder_labels +\
-                             ''' -i ''' + cfinder_files + ''' -o $TARGET''')
+    cfinder_comapared_cmd = '''cfinder_compare.R -l ''' + cfinder_labels +\
+                            ''' -i ''' + cfinder_files + ''' -o $TARGET'''
     cfinder_comapared_target = os.path.join(circRNA_collect_dir, 'cfinder_compared.csv')
     cfinder_compared = env.Command(cfinder_comapared_target, 
                                     cfinder_nodes, 
