@@ -83,10 +83,9 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
             FASTQC_DATA = env['RUNS_DICT'][SAMPLE]['FASTQC_DATA']
             raw_counts_sources = [TRANSCRIPTS_GTF,
                                   FASTQC_DATA]
-            raw_counts_cmd = os.path.join(env['SCONSCRIPT_HOME'],
-                                     '''get_stringtie_rawcounts.R -g ${SOURCES[0]} '''\
+            raw_counts_cmd = os.path.join('''get_stringtie_rawcounts.R -g ${SOURCES[0]} '''\
                                      '''-f ${','.join([str(s.abspath) for s in SOURCES[1:]])} '''\
-                                     '''-o ${TARGETS[0].dir}''' + os.path.sep +\
+                                     '''-o ${TARGETS[0].dir}''',
                                      SAMPLE + '''_''')
             raw_counts_targets = [os.path.join(SAMPLE + "_" + f) \
                                   for f in ['gene_expression_rawcounts.csv',
@@ -214,7 +213,7 @@ trx_raw_counts_files_list = env.WriteLinesInTxt(os.path.join(geneexp_dir,
                                           'samples_trxrawc_files.txt'), 
                                   trx_raw_counts_list)
 
-gene_exp_analysis_template = os.path.join("$SCONSCRIPT_HOME", "gene_expression_analysis.Rmd")
+gene_exp_analysis_template = os.path.join("$CCP_RMD_DIR", "gene_expression_analysis.Rmd")
 gene_exp_analysis_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[0].abspath}"); '''\
                         '''meta.file <- "${SOURCES[0].abspath}"; '''\
                         '''gene.xpr.file <- "${SOURCES[1].abspath}"; '''\

@@ -124,8 +124,8 @@ read_stats_report_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''linear.mapper <- "hisat2"; '''\
                         '''circrna.reads.stats.file <- "${SOURCES[1].abspath}"; '''\
                         '''meta_file <- "${SOURCES[2].abspath}"; '''\
-                        '''circrna_read_stats.Rmd <- file.path("$SCONSCRIPT_HOME", "$CIRCRNA_RMD"); '''\
-                        '''rmarkdown::render(input = "$SCONSCRIPT_HOME/read_statistics.Rmd",'''\
+                        '''circrna_read_stats.Rmd <- file.path("$CCP_RMD_DIR", "$CIRCRNA_RMD"); '''\
+                        '''rmarkdown::render(input = "$CCP_RMD_DIR/read_statistics.Rmd",'''\
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 

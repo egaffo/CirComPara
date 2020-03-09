@@ -102,13 +102,13 @@ if len(conditions.keys()) > 1:
         gene_meta = diffexp['META']
         gene_diffexp = diffexp['GENE_DIFF_TESTS']
         
-        gene_diffexp_analysis_template = os.path.join("$SCONSCRIPT_HOME", 
+        gene_diffexp_analysis_template = os.path.join("$CCP_RMD_DIR", 
         							report_template)
         report_target = [report_template.split('.')[0] + ".html",
                          'DEG_tests_by_contrast.csv']
         report_cmd = '''Rscript -e 'results.dir <- dirname("${TARGETS[1].abspath}"); '''\
         	                '''meta.file <- "${SOURCES[1].abspath}"; '''\
-                            '''child.Rmd <- file.path("$SCONSCRIPT_HOME", "_lindiffexp.Rmd"); '''\
+                            '''child.Rmd <- file.path("$CCP_RMD_DIR", "_lindiffexp.Rmd"); '''\
                             '''gene.de.file <- "${SOURCES[0].abspath}"; '''\
                             '''rmarkdown::render(input = "''' + \
                             str(gene_diffexp_analysis_template) + '''", '''\

@@ -213,6 +213,7 @@ env['CIRCOMPARA_HOME'] = env['ENV']['CIRCOMPARA_HOME']
 env['VARS'] = File(variables_file)
 env['SCONSCRIPT_HOME'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 env['CIRI'] = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin', 'CIRI.pl')
+env['CCP_RMD_DIR'] = os.path.join(env['CIRCOMPARA_HOME'], 'src', 'utils', 'Rmd')
 
 env.SetDefault(TOPHAT_PARAMS = '')
 

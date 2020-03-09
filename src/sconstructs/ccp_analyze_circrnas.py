@@ -194,7 +194,7 @@ circrnas_analysis_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath")
                         '''ccp_circrna_n_methods.csv.file <- "${SOURCES[8].abspath}"; '''\
                         '''min_methods <- ${MIN_METHODS}; '''\
                         '''min_reads <- ${MIN_READS}; '''\
-                        '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circRNAs_analysis.Rmd",'''\
+                        '''rmarkdown::render(input = "$CCP_RMD_DIR/circRNAs_analysis.Rmd",'''\
                         '''output_file = "$TARGET.abspath", quiet=T,'''\
                         '''intermediates_dir = dirname("$TARGET.abspath") )' '''
 
@@ -229,7 +229,7 @@ if env['CIRC_DIFF_EXP']:
     circrnas_diffexp_cmd = '''Rscript -e 'results.dir <- dirname("$TARGET.abspath"); '''\
                            '''meta.file <- "${SOURCES[0].abspath}"; '''\
                            '''circrnas.per.sample.file <- "${SOURCES[1].abspath}"; '''\
-                           '''rmarkdown::render(input = "$CIRCOMPARA_HOME/src/circrnas_diffexp.Rmd",'''\
+                           '''rmarkdown::render(input = "$CCP_RMD_DIR/circrnas_diffexp.Rmd",'''\
                            '''output_file = "$TARGET.abspath", quiet=T,'''\
                            '''intermediates_dir = dirname("$TARGET.abspath") )' '''
     

@@ -126,10 +126,9 @@ if 'stringtie' in env['LINEAR_EXPRESSION_METHODS']:
     ## compute read raw counts for StringTie
     raw_counts_sources = [stringtie['TRANSCRIPTS_GTF'],
                           env['FASTQC_DATA']]
-    raw_counts_cmd = os.path.join(env['SCONSCRIPT_HOME'],
-                             '''get_stringtie_rawcounts.R -g ${SOURCES[0]} '''\
+    raw_counts_cmd = os.path.join('''get_stringtie_rawcounts.R -g ${SOURCES[0]} '''\
                              '''-f ${','.join([str(s.abspath) for s in SOURCES[1:]])} '''\
-                             '''-o ${TARGETS[0].dir}''' + os.path.sep +\
+                             '''-o ${TARGETS[0].dir}''', 
                              env['SAMPLE'] + '''_''')
     raw_counts_targets = [os.path.join(stringtie_dir, env['SAMPLE'] + "_" + f) \
                           for f in ['gene_expression_rawcounts.csv',
