@@ -1,10 +1,9 @@
 #!/bin/bash
 
-
 export CIRCOMPARA_HOME=$(dirname $(readlink -f $0))/../../..
 
 TOOLS_DIR=$CIRCOMPARA_HOME/tools
-PYTHON_VERSION=`python --version | sed -r "s/Python ([0-9]\.[0-9]).*/\1/"`
+PYTHON_VERSION=`python --version 2>&1 | sed -r "s/Python ([0-9]\.[0-9]).*/\1/"`
 
 export TRIMMOMATIC=$TOOLS_DIR/Trimmomatic-0.38/trimmomatic-0.38.jar
 
