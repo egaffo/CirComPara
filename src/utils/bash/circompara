@@ -10,7 +10,7 @@ export TRIMMOMATIC=$TOOLS_DIR/Trimmomatic-0.38/trimmomatic-0.38.jar
 
 export PATH=$CIRCOMPARA_HOME/bin:$PATH
 
-export PYTHONPATH=$TOOLS_DIR/lib/python$PYTHON_VERSION/site-packages/:$PYTHONPATH
+export PYTHONPATH=$VIRTUAL_ENV/lib/python$PYTHON_VERSION/site-packages/:$TOOLS_DIR/lib/python$PYTHON_VERSION/site-packages/:$PYTHONPATH
 
 export R_LIBS=$CIRCOMPARA_HOME/tools/R_libs
 

@@ -7,57 +7,88 @@ env = Environment(ENV=os.environ, SHELL = '/bin/bash')
 tools_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'tools')
 ccp_bin_dir = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'bin')
 
-PYTHON_VERSION = str(sys.version_info.major) + '.' + str(sys.version_info.minor)
-python_lib_dir = os.path.join(tools_dir, 'lib', 'python'+PYTHON_VERSION,'site-packages')
+#env.PrependENVPath('PATH', os.path.join(tools_dir, 'bin'))
 
-env.PrependENVPath('PYTHONUSERBASE', tools_dir)
+PYTHON_VERSION = str(sys.version_info.major) + '.' + str(sys.version_info.minor)
+
+python_lib_dir = os.path.join(tools_dir, 'lib', 'python'+PYTHON_VERSION,'site-packages')
+SET_PIP_USER = '--user'
+## pip does not work with --user if run inside a virtualenv
+if env['ENV']['VIRTUAL_ENV']:
+    print 'Running in virtualenv. Python packages will be installed in the virtualenv directories'
+    SET_PIP_USER = ''
+    python_lib_dir = os.path.join(env['ENV']['VIRTUAL_ENV'], 'lib', 'python'+PYTHON_VERSION,'site-packages')
+else:
+    env.PrependENVPath('PYTHONUSERBASE', tools_dir)
+
 env.PrependENVPath('PYTHONPATH', python_lib_dir)
 
 ## PIP
-pip_file = 'get-pip.py'
-pip_url = 'https://bootstrap.pypa.io/' + pip_file
-pip_targets = [os.path.join(tools_dir, pip_file),
-               os.path.join(tools_dir, 'bin', 'pip')]
-pip_cmd = ' && '.join(['wget -O ${TARGETS[0]} ' + pip_url, 
-                       'python ${TARGETS[0]} --user'])
-pip = env.Command(pip_targets, 
-                  [], 
-                  pip_cmd)
-
+## use virtualenv pip if run inside virtualenv
+if env['ENV']['VIRTUAL_ENV']:
+    pip_targets = os.path.join(env['ENV']['VIRTUAL_ENV'], 'bin', 'pip2')
+    pip = env.Command(os.path.join(ccp_bin_dir, 'pip'), pip_targets, SymLink)
+else:
+    pip_file = 'get-pip.py'
+    pip_url = 'https://bootstrap.pypa.io/' + pip_file
+    pip_targets = [os.path.join(tools_dir, pip_file),
+                   os.path.join(tools_dir, 'bin', 'pip')]
+    pip_cmd = ' && '.join(['wget -O ${TARGETS[0]} ' + pip_url, 
+                           'python ${TARGETS[0]} ' + SET_PIP_USER + ''])
+    pip = env.Command(pip_targets, 
+                      [], 
+                      pip_cmd)
+    pip = env.Command(os.path.join(ccp_bin_dir, 'pip'), pip[1], SymLink)
 
 # BIOPYTHON
+## N.B: if the virtualenv is not a subdirectory of circompara (installation),
+## i.e. not under the Scons directory scope, then the installation could miss
+## the targets in the virtualenv directories
 BIOPYTHON_dir = os.path.join(python_lib_dir, 'Bio')
 BIOPYTHON_target = [os.path.join(BIOPYTHON_dir, 'SeqIO', 'FastaIO.py')]
 BIOPYTHON = env.Command(BIOPYTHON_target, [pip], 
-                        #['pip install --install-option="--prefix=' +\
-                        #os.path.abspath(BIOPYTHON_dir) +\
-                        #'" biopython'])
-                        ['pip install --ignore-installed --user biopython'])
+                        ['pip install --ignore-installed ' + SET_PIP_USER + ' biopython'])
+
+## CYTHON
+#cython_dir = os.path.join(python_lib_dir, 'cython')
+if env['ENV']['VIRTUAL_ENV']:
+    cython_target = [os.path.join(env['ENV']['VIRTUAL_ENV'], 'bin', 'cython')]
+else:
+    cython_target = [os.path.join(tools_dir, 'bin', 'cython')]
+cython_cmd = 'pip install ' + SET_PIP_USER + ' Cython --install-option="--no-cython-compile"'
+cython = env.Command(cython_target,
+                     [pip],
+                     cython_cmd)
 
 # HTSeq
 #HTSeq_dir = os.path.join(tools_dir, 'HTSeq')
 HTSeq_dir = os.path.join(python_lib_dir, 'HTSeq')
 #HTSeq_target = [os.path.join(HTSeq_dir, 'lib','python2.7','site-packages',
 #                'HTSeq', '__init__.py'),
-HTSeq_target = [os.path.join(HTSeq_dir, '__init__.py'),
-                os.path.join(tools_dir, 'bin', 'htseq-count')]
-HTSeq = env.Command(HTSeq_target, [pip], 
+HTSeq_target = [os.path.join(HTSeq_dir, '__init__.py')]
+if env['ENV']['VIRTUAL_ENV']:
+    HTSeq_target.append(os.path.join(env['ENV']['VIRTUAL_ENV'], 'bin', 'htseq-count'))
+else:
+    HTSeq_target.append(os.path.join(tools_dir, 'bin', 'htseq-count'))
+HTSeq = env.Command(HTSeq_target, [pip, cython], 
                            #['pip install --ignore-installed --install-option="--prefix=' +\
                            #os.path.abspath(HTSeq_dir) +\
                            #'" HTSeq'])
-                    ['pip install --ignore-installed --user HTSeq'])
+                    ['pip install --ignore-installed ' + SET_PIP_USER + ' HTSeq'])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[1], SymLink)
 
 # CIRCEXPLORER2
 #CIRCEXPLORER2_dir = os.path.join(tools_dir, 'CIRCexplorer2')
-CIRCEXPLORER2_dir = os.path.join(python_lib_dir, 'circ2')
-CIRCEXPLORER2_target = [os.path.join(tools_dir, 'bin', 'CIRCexplorer2')]#, 
-#                       os.path.join(CIRCEXPLORER2_dir, 'bin', 'fast_circ.py')]
+#CIRCEXPLORER2_dir = os.path.join(python_lib_dir, 'circ2')
+if env['ENV']['VIRTUAL_ENV']:
+    CIRCEXPLORER2_target = [os.path.join(env['ENV']['VIRTUAL_ENV'], 'bin', 'CIRCexplorer2')]#, 
+else:
+    CIRCEXPLORER2_target = [os.path.join(tools_dir, 'bin', 'CIRCexplorer2')]#, 
 CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [pip, HTSeq], 
                            #['pip install --install-option="--prefix=' +\
                            #os.path.abspath(CIRCEXPLORER2_dir) +\
                            #'" -Iv circexplorer2==2.3.3'])
-                           ['pip install --ignore-installed --user -Iv circexplorer2==2.3.3'])
+                           ['pip install --ignore-installed ' + SET_PIP_USER + ' -Iv circexplorer2==2.3.3'])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLink)
 #env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
 
@@ -74,23 +105,25 @@ env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLi
 pandas_dir = os.path.join(python_lib_dir, 'pandas')
 pandas = env.Command([os.path.join(pandas_dir, '__init__.py')], 
                          [pip, HTSeq], 
-                         "pip install --ignore-installed --user pandas")
+                         'pip install --ignore-installed ' + SET_PIP_USER + ' pandas')
 
 #dcc_dir = os.path.join(python_lib_dir, 'DCC-0.4.6')
 dcc_dir = os.path.join(tools_dir, 'DCC-0.4.6')
 dcc_tar = 'v0.4.6.tar.gz'
 dcc_url = 'https://github.com/dieterich-lab/DCC/archive/' + dcc_tar
-dcc_target = [os.path.join(tools_dir, dcc_tar),
-		      os.path.join(tools_dir, 'bin', 'DCC'),
-              #os.path.join(dcc_python_sitepkg, "site.py")]
-              os.path.join(python_lib_dir, 'DCC-0.4.6-py'+ PYTHON_VERSION +'.egg')]
+dcc_target = [os.path.join(tools_dir, dcc_tar)]
+if env['ENV']['VIRTUAL_ENV']:
+    dcc_target.append(os.path.join(env['ENV']['VIRTUAL_ENV'], 'bin', 'DCC'))
+else:
+    dcc_target.append(os.path.join(tools_dir, 'bin', 'DCC'))
+dcc_target.append(os.path.join(python_lib_dir, 'DCC-0.4.6-py'+ PYTHON_VERSION +'.egg'))
 dcc = env.Command(dcc_target, 
 			         [pandas], 
           	         ['wget -O ${TARGETS[0]} ' + dcc_url,
 			          'tar -xzf ${TARGETS[0]} -C ${TARGETS[0].dir}',
                       'cd ' + dcc_dir +\
                       #' && python setup.py install --prefix ' + dcc_dir,
-                      ' && python setup.py install --user',
+                      ' && python setup.py install ' + SET_PIP_USER + '',
                       'cd ' + Dir('#').abspath]
 			         )
 
