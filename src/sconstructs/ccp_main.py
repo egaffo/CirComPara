@@ -340,7 +340,7 @@ with open(env['META']) as csvfile:
 env['CONDITIONS'] = conditions
 
 if len(conditions.keys()) < 2:
-    print "WARNING: " + str(conditions.keys()) + " is the only "\
+    print str(conditions.keys()) + " is the only "\
           "condition set for the samples. Differential "\
           "expression analysis will not be performed."
     env.Replace(DIFF_EXP = False)
