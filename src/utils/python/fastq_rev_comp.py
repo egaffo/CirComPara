@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import argparse, gzip, HTSeq, sys
 
@@ -43,7 +43,6 @@ if __name__ == '__main__':
         f = sys.stdin
     else:
         f = open(args.fastq_file, 'r')
-
 
     ## Program logic
     fastq_file = HTSeq.FastqReader(f, args.quality_encoding)
