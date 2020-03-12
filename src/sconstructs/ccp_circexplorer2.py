@@ -75,12 +75,15 @@ bedsamwawb_parse = '''cut -f4,10 | '''\
 if env['ALIGNER'].lower() == 'star':
     env.Replace(ALIGNER = 'STAR')
     bks_sfx = ".ce2star"
-    circ_reads_cmd = '''chimoutjunc_to_bed.py -i ${SOURCES[0]} | '''\
-                     '''bedtools intersect -s -bed -b stdin -a '''\
-                     '''${SOURCES[1]} -wa -wb | '''\
-                     + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+    chimout_bed_cmd = '''chimoutjunc_to_bed.py -i ${SOURCES[0]} | '''\
+                     '''gzip -c > $TARGET'''
+    chimout_bed = env.Command([os.path.join(out_dir, 'chimoutjunc.bed.gz')], 
+                              [File(env['FUSION_FILE'])], 
+                              chimout_bed_cmd)
 
-    env.Replace(ALIGNMENTS = env['FUSION_FILE'])
+    env.Replace(ALIGNMENTS = chimout_bed)
+
+    circ_reads_cmd = '''get_ce2_star_bks_reads.R -r ${SOURCES[0]} -c ${SOURCES[1]} -g 10 -o $TARGET'''
 
 if env['ALIGNER'].lower() == 'bwa':
     env.Replace(ALIGNER = 'BWA')
@@ -194,9 +197,12 @@ if not env['GENEPRED'] == '':
 
     results.append(CIRCexplorer2_annotate)
 
-bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
-                  [circ_bed],
-                  bed_cmd)
+if env['ALIGNER'].lower() == 'star':
+    bed = circ_bed
+else:
+    bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
+                      [circ_bed],
+                      bed_cmd)
 
 results.append(bed)
 
