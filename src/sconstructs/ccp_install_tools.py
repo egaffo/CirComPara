@@ -88,7 +88,7 @@ CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [pip, HTSeq],
                            #['pip install --install-option="--prefix=' +\
                            #os.path.abspath(CIRCEXPLORER2_dir) +\
                            #'" -Iv circexplorer2==2.3.3'])
-                           ['pip install --ignore-installed ' + SET_PIP_USER + ' -Iv circexplorer2==2.3.3'])
+                           ['pip install --ignore-installed ' + SET_PIP_USER + ' -Iv circexplorer2==2.3.8'])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLink)
 #env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
 
