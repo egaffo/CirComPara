@@ -23,7 +23,7 @@ arguments <- parse_args(parser, positional_arguments=F)
 orig.file <- arguments$circrnas
 orig.est <- fread(file = orig.file)
 annotation <- "bed"
-if(length(ncol(orig.est)) > 6){
+if(ncol(orig.est) > 6){
     annotation <- "annotated"
 }
 
