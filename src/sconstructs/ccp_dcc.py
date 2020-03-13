@@ -59,23 +59,33 @@ dcc = env.Command(dcc_targets,
 ## as default, use the CircCoordinates file 
 ## to collect backsplice reads
 circ_bed = dcc[1] ## CircCoordinates file is in BED format
+circrnas = dcc[0]
+
+## when -F filtering option is used the results loose strand info
+## so we have to retrieve it from the coodinates file
+if '-F' in env['DCC_EXTRA_PARAMS']:
+    circrnas = env.Command(os.path.join(out_dir, 'strandedCircRNACount'),
+                           [dcc[0], dcc[1]],
+                           'dcc_fix_strand.R -c ${SOURCES[0]} -d ${SOURCES[1]} -o ${TARGET}')
+    circ_bed = circrnas
+
 
 bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
                   [circ_bed],
                   bed_cmd)
 
-## get backsplice read ids
-bedsamwawb_parse = '''cut -f4,10 | '''\
-                   '''sed -r 's/([^:]+):([0-9]+)-([0-9]+):([^\\t])\\t(.*)'''\
-                            '''/\\1\\t\\2\\t\\3\\t\\5\\t0\\t\\4/' '''
+### get backsplice read ids
+circ_reads_cmd = '''get_dcc_bks_reads.R -r ${SOURCES[0]} -c ${SOURCES[1]} -o $TARGET'''
 
-circ_reads_cmd = '''chimoutjunc_to_bed.py -i ${SOURCES[0]} | '''\
-                 '''bedtools intersect -s -bed -b stdin -a '''\
-                 '''${SOURCES[1]} -wa -wb | '''\
-                 + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+## TODO: if "-E" or "--endTol" in env['EXTRA_PARAMs']
+#circ_reads_cmd = circ_reads_cmd + ' -t ' + get_endTol_value
+
+if (not '-N' in env['EXTRA_PARAMS']) or '-ss' in env['EXTRA_PARAMS']:
+    circ_reads_cmd = circ_reads_cmd + ' -s'
+
 circ_reads = env.Command([os.path.join(out_dir,
                                       '${SAMPLE}.circular.reads.bed.gz')], 
-                         [env['ALIGNMENTS'], bed], 
+                         [env['ALIGNMENTS'], circ_bed], 
                          circ_reads_cmd)
     
 ## collect all read ids
@@ -87,15 +97,6 @@ bks_reads = env.Command([os.path.join(out_dir,
                                       env['SAMPLE'] + '.dcc.bks.reads')], 
                         [circ_reads, bed], 
                         bks_reads_cmd)
-
-circrnas = dcc[0]
-
-## when -F filtering option is used the results loose strand info
-## and we nhave to retrieve it from the coodinates file
-if '-F' in env['DCC_EXTRA_PARAMS']:
-    circrnas = env.Command(os.path.join(out_dir, 'strandedCircRNACount'),
-                           [dcc[0], dcc[1]],
-                           'dcc_fix_strand.R -c ${SOURCES[0]} -d ${SOURCES[1]} -o ${TARGET}')
 
 results = {'CIRCRNAS': circrnas[0],
            'CIRC_COORDINATES': dcc[1],
