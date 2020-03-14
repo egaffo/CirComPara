@@ -1,7 +1,7 @@
-## By Alex Dobin (modified by Jakub Orzechowski Westholm) modified by Enrico Gaffo
-## Filters sam output for circular RNAs.
+## By Alex Dobin (modified by Jakub Orzechowski Westholm) further modified by Enrico Gaffo
+## Filters sam output for circular RNAs and keep read ids
 ##
-## Example usage: $ cat Chimeric.out.junction | awk -f filterCirc.awk  > circrna_finder_circRNA_reads.txt
+## Example usage: $ cat Chimeric.out.junction | awk -f cf_filterChimout.awk  > circrna_finder_circRNA_reads.txt
 
 function cigarGenomicDist(cig)
 {
@@ -25,8 +25,6 @@ BEGIN {
 	## non-overlapping reads in pair.
 	if ( ($3=="+" && $11+endTol>$5 && $13+cigarGenomicDist($14)-endTol<=$2) \
 	     || ($3=="-" && $13+endTol>$2 && $11+cigarGenomicDist($12)-endTol<=$5) ) {
-	    #print 
-	    #print $1,($3=="+"?$5:$2),($3=="+"?$2:$5),($3=="+"?"-":"+"),($7==0?0:3-$7),$8,$9;
 	    print $1,($3=="+"?$5:$2),($3=="+"?$2:$5)-1,$10,($7==0?0:3-$7),($3=="+"?"-":"+");
 
 	};
