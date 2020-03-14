@@ -62,17 +62,17 @@ bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
                   bed_cmd)
 
 ## get backsplice read ids
-bedsamwawb_parse = '''cut -f4,10 | '''\
-                   '''sed -r 's/([^:]+):([0-9]+)-([0-9]+):([^\\t])\\t(.*)'''\
-                            '''/\\1\\t\\2\\t\\3\\t\\5\\t0\\t\\4/' '''
-
-circ_reads_cmd = '''chimoutjunc_to_bed.py -i ${SOURCES[0]} | '''\
-                 '''bedtools intersect -s -bed -b stdin -a '''\
-                 '''${SOURCES[1]} -wa -wb | '''\
-                 + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+filter_chimout_cmd = '''cat ${SOURCES[0]} | awk -f ''' +\
+                 os.path.join('$CIRCOMPARA_HOME', 'src', 'utils', 'bash', 'cf_filterChimout.awk') +\
+                 ''' | gzip -c > $TARGET'''
+filter_chimout = env.Command(os.path.join(out_dir, 'cf.filtered.Chimeric.out.junction.gz'),
+                            env['ALIGNMENTS'],
+                            filter_chimout_cmd)
+circ_reads_cmd = '''get_circrnaFinder_bks_reads.R -r ${SOURCES[0]} '''\
+                 '''-c ${SOURCES[1]} -o $TARGET'''
 circ_reads = env.Command([os.path.join(out_dir,
                                       '${SAMPLE}.circular.reads.bed.gz')], 
-                         [env['ALIGNMENTS'], bed], 
+                         [filter_chimout, cfinder[0]], 
                          circ_reads_cmd)
     
 ## collect all read ids
