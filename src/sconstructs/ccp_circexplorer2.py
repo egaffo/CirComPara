@@ -121,16 +121,18 @@ if env['ALIGNER'].lower() == 'segemehl':
                         '''\\1\\t$$((\\3-1))\\t\\3\\t\\1:\\2-\\3:\\6\\t\\5\\t\\6"/e' '''\
                         '''${SOURCES[0]} | sort -k1,1 -k2,2n -k3,3n > $TARGET'''
 
-    ##TODO: should -s (strandness) be considered in bedtools intersect
-    ## commmand, since CIRCexplorer annotate may change strand field?
-    circ_reads_cmd = '''grep ";B\\|C;" ${SOURCES[0]} | '''\
-                     '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
-                               '''([^;]+);([^;]+);([^;]+);([^\\t]+)\\t'''\
-                               '''([^\\t]+)\\t([^\\t]+)/echo "'''\
-                               '''\\1\\t$$((\\2+1))\\t\\3\\t\\6\\t\\8\\t\\9"/e' | '''\
-                     '''sort | uniq | '''\
-                     '''bedtools intersect -s -a ${SOURCES[1]} -b stdin -wa -wb | '''\
-                      + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+    ###TODO: should -s (strandness) be considered in bedtools intersect
+    ### commmand, since CIRCexplorer annotate may change strand field?
+    #circ_reads_cmd = '''grep ";B\\|C;" ${SOURCES[0]} | '''\
+    #                 '''sed -r 's/([^\\t]+)\\t([^\\t]+)\\t([^\\t]+)\\t'''\
+    #                           '''([^;]+);([^;]+);([^;]+);([^\\t]+)\\t'''\
+    #                           '''([^\\t]+)\\t([^\\t]+)/echo "'''\
+    #                           '''\\1\\t$$((\\2+1))\\t\\3\\t\\6\\t\\8\\t\\9"/e' | '''\
+    #                 '''sort | uniq | '''\
+    #                 '''bedtools intersect -s -a ${SOURCES[1]} -b stdin -wa -wb | '''\
+    #                  + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+
+    circ_reads_cmd = '''get_ce2_segemehl_bks_reads.R -r ${SOURCES[0]} -c ${SOURCES[1]} -o $TARGET'''
 
 if env['ALIGNER'].lower() == 'tophat':
     env.Replace(ALIGNER = 'TopHat-Fusion')
@@ -197,7 +199,7 @@ if not env['GENEPRED'] == '':
 
     results.append(CIRCexplorer2_annotate)
 
-if env['ALIGNER'].lower() == 'star':
+if env['ALIGNER'].lower() in ['star', 'segemehl']:
     bed = circ_bed
 else:
     bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
