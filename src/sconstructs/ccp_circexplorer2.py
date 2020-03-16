@@ -151,19 +151,20 @@ if env['ALIGNER'].lower() == 'tophat_pe':
 
 if env['ALIGNER'] == 'TopHat-Fusion':
 
-    ## first, filter TopHat-Fusion alignments to get only fusion alignments
-    ## then intersect with backsplices.
-    ## 260=256+4 i.e: secondary alignment and not mapped.
-    ## Keep SAM header in grep (required by bedtools).
-    ## Mind that we want BAM input to bedtools being the B file,
-    ## check bedtools intersect note (1) "When a BAM file is used for the A
-    ##  file, the alignment is retained if overlaps exist, and exlcuded if an
-    ##  overlap cannot be found.  If multiple overlaps exist, they are notreported,
-    ##  as we are only testing for one or more overlaps."
-    circ_reads_cmd = '''samtools view -hF 260 ${SOURCES[0]} | grep "^@\\|XF:Z\\|XP:Z" | '''\
-                     '''samtools view -uS - | bedtools intersect -s -bed '''\
-                     '''-a ${SOURCES[1]} -b stdin -wa -wb | '''\
-                     + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+    ### first, filter TopHat-Fusion alignments to get only fusion alignments
+    ### then intersect with backsplices.
+    ### 260=256+4 i.e: secondary alignment and not mapped.
+    ### Keep SAM header in grep (required by bedtools).
+    ### Mind that we want BAM input to bedtools being the B file,
+    ### check bedtools intersect note (1) "When a BAM file is used for the A
+    ###  file, the alignment is retained if overlaps exist, and exlcuded if an
+    ###  overlap cannot be found.  If multiple overlaps exist, they are notreported,
+    ###  as we are only testing for one or more overlaps."
+    #circ_reads_cmd = '''samtools view -hF 260 ${SOURCES[0]} | grep "^@\\|XF:Z\\|XP:Z" | '''\
+    #                 '''samtools view -uS - | bedtools intersect -s -bed '''\
+    #                 '''-a ${SOURCES[1]} -b stdin -wa -wb | '''\
+    #                 + bedsamwawb_parse + ''' | gzip -c > $TARGET'''
+    circ_reads_cmd = '''get_ce2_th_bks_reads.R -r ${SOURCES[0]} -c ${SOURCES[1]} -o $TARGET'''
  
 if env['ALIGNER'].lower() == 'mapsplice':
     env.Replace(ALIGNER = 'MapSplice')
@@ -180,6 +181,9 @@ CIRCexplorer2 = env.Command(CIRCexplorer2_targets,
 ## as default, use the fusion_junction.bed file 
 ## to collect backsplice reads
 circ_bed = CIRCexplorer2[0]
+
+if env['ALIGNER'] == 'TopHat-Fusion':
+    env.Replace(ALIGNMENTS = circ_bed)
 
 results.append(CIRCexplorer2)
 
@@ -205,7 +209,7 @@ if not env['GENEPRED'] == '':
 
     results.append(CIRCexplorer2_annotate)
 
-if env['ALIGNER'].lower() in ['star', 'segemehl', 'bwa']:
+if env['ALIGNER'].lower() in ['star', 'segemehl', 'bwa', 'tophat-fusion']:
     bed = circ_bed
 else:
     bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
