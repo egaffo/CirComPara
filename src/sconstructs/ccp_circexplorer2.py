@@ -88,10 +88,16 @@ if env['ALIGNER'].lower() == 'star':
 if env['ALIGNER'].lower() == 'bwa':
     env.Replace(ALIGNER = 'BWA')
     bks_sfx = ".ce2bwa"
+
     ## alignment file is gzip'd SAM
-    circ_reads_cmd = '''zgrep "^@\|SA:Z" ${SOURCES[0]} | samtools view -huF 260 - | '''\
-                     '''bedtools intersect -s -bed -a ${SOURCES[1]} -b stdin -wa -wb | '''\
-                     + bedsamwawb_parse + ''' | sort | uniq | gzip -c > $TARGET'''
+    bwa_reads_cmd = '''zcat ${SOURCES[0]} | get_ce2_bwa_circ_reads.py -i - > $TARGET'''
+    bwa_reads = env.Command(os.path.join(out_dir, 'unfiltered_ce2_bwa_bks_reads.bed.gz'), 
+                            env['FUSION_FILE'], 
+                            bwa_reads_cmd)
+
+    env.Replace(ALIGNMENTS = bwa_reads)
+    
+    circ_reads_cmd = '''get_ce2_bwa_bks_reads.R -r ${SOURCES[0]} -c ${SOURCES[1]} -o $TARGET'''
 
 if env['ALIGNER'].lower() == 'segemehl':
     env.Replace(ALIGNER = 'segemehl')
@@ -199,7 +205,7 @@ if not env['GENEPRED'] == '':
 
     results.append(CIRCexplorer2_annotate)
 
-if env['ALIGNER'].lower() in ['star', 'segemehl']:
+if env['ALIGNER'].lower() in ['star', 'segemehl', 'bwa']:
     bed = circ_bed
 else:
     bed = env.Command([os.path.join(out_dir, "${SAMPLE}.sn.circ.bed")],
