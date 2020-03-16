@@ -68,7 +68,9 @@ if(qual.func == "any"){
 if(nrow(sege_circ) > 0){
 
     sege_circ[, c("read.group", "type", "read.name",
-                  "mate.status"):=(tstrsplit(V4, ";"))][, `:=`(V4 = NULL,
+                  "mate.status"):=(tstrsplit(V4, ";"))][, read.name :=
+                                                            paste0(read.name, "/",
+                                                                   mate.status)][, `:=`(V4 = NULL,
                                                                read.group = NULL,
                                                                type = NULL,
                                                                mate.status = NULL)]
