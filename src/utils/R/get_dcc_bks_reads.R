@@ -13,7 +13,7 @@ option_list <- list(
                 help="The circRNA read IDs for each circRNA in compressed BED (circular.reads.bed.gz)"),
     make_option(c("-t", "--tolerance"), action="store", type="integer", default = 5,
                 help="Number of basepairs tolerated in realigning circRNAs from CIRCexplorer2 annotate"),
-    make_option(c("-s", "--stranded"), action="store_true",
+    make_option(c("-s", "--stranded"), action="store_true", default = FALSE,
                 help="Set if stranded library")
 )
 
@@ -86,14 +86,21 @@ invert.strand <- function(s){
 
 if(strand){
     chimout.junc.bed[, V6 := sapply(V6, invert.strand)]
-}
 
-filterd.chimout.junc <-
-    merge(chimout.junc.bed,
-          orig.est[, .(V1, V2, V3, V6)],
-          by = c("V1", "V2", "V3", "V6"),
-          all.x = F,
-          all.y = T)[, .(V1, V2, V3, V4, V5, V6)]
+    filterd.chimout.junc <-
+        merge(chimout.junc.bed,
+              orig.est[, .(V1, V2, V3, V6)],
+              by = c("V1", "V2", "V3", "V6"),
+              all.x = F,
+              all.y = T)[, .(V1, V2, V3, V4, V5, V6)]
+}else{
+    filterd.chimout.junc <-
+        merge(chimout.junc.bed,
+              orig.est[, .(V1, V2, V3)],
+              by = c("V1", "V2", "V3"),
+              all.x = F,
+              all.y = T)[, .(V1, V2, V3, V4, V5, V6)]
+}
 
 splitted.filename <- strsplit(arguments$output, ".", fixed = T)[[1]]
 if(tail(splitted.filename, 1) == "gz"){

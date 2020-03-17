@@ -103,7 +103,7 @@ if(annotation == "annotated"){
         unfix.orig.est <-
             orig.est[V5 != 0, .(start = V2 + ext.range,
                                 end = V3 + ext.range),
-                     by = .(V1, fixed.V2 = V2, fixed.V3= V3, V6)]
+                     by = .(V1, fixed.V2 = V2, fixed.V3 = V3, V6)]
 
         ## search the reads with the extended coordinates
         ## fixed.bks.reads will be the extended coordinates-found reads
