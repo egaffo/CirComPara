@@ -12,7 +12,9 @@ option_list <- list(
     make_option(c("-o", "--output"), action="store", type="character",
                 help="The circRNA read IDs for each circRNA in compressed BED (circular.reads.bed.gz)"),
     make_option(c("-g", "--range"), action="store", type="integer", default = 10,
-                help="Number of basepairs tolerated in realigning circRNAs from CIRCexplorer2 annotate")
+                help="Number of basepairs tolerated in realigning circRNAs from CIRCexplorer2 annotate"),
+    make_option(c("-d", "--discriminate_mates"), action="store_true", default = FALSE,
+                help="By default, reads will be collapsed by read ID and position. Enable this option to discriminate paired-end read mates by appending \1 or \2 to read IDs.")
 )
 
 parser <-
@@ -46,11 +48,17 @@ bks.reads <-
     bks.reads[, c("read.group", "type", "read.name",
                       "mate.status") :=
                       tstrsplit(V4, ";",
-                                type.convert = T)][, read.name :=
-                                                       paste0(read.name, "/",
-                                                              mate.status)][, `:=`(V4 = NULL,
-                                                                                   read.group = NULL,
-                                                                                   mate.status = NULL)]
+                                type.convert = T)]
+
+if(arguments$discriminate_mates){
+    bks.reads[, read.name :=
+                  paste0(read.name, "/",
+                         mate.status)]
+}
+
+bks.reads <- unique(bks.reads[, `:=`(V4 = NULL,
+                                     read.group = NULL,
+                                     mate.status = NULL)])
 
 if(annotation == "annotated"){
 
