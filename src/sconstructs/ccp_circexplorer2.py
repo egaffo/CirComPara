@@ -98,6 +98,8 @@ if env['ALIGNER'].lower() == 'bwa':
     env.Replace(ALIGNMENTS = bwa_reads)
     
     circ_reads_cmd = '''get_ce2_bwa_bks_reads.R -r ${SOURCES[0]} -c ${SOURCES[1]} -o $TARGET'''
+    if env['STRANDED']:
+        circ_reads_cmd = circ_reads_cmd + ' -s'
 
 if env['ALIGNER'].lower() == 'segemehl':
     env.Replace(ALIGNER = 'segemehl')
