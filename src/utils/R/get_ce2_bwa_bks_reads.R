@@ -12,7 +12,11 @@ option_list <- list(
     make_option(c("-o", "--output"), action="store", type="character",
                 help="The circRNA read IDs for each circRNA in compressed BED (circular.reads.bed.gz)"),
     make_option(c("-g", "--range"), action="store", type="integer", default = 10,
-                help="Number of basepairs tolerated in realigning circRNAs from CIRCexplorer2 annotate")
+                help="Number of basepairs tolerated in realigning circRNAs from CIRCexplorer2 annotate"),
+    make_option(c("-d", "--discriminate_mates"), action="store_true", default = FALSE,
+                help="By default, reads will be collapsed by read ID and position. Enable this option to discriminate paired-end read mates by appending \1 or \2 to read IDs."),
+    make_option(c("-s", "--stranded"), action="store_true", default = FALSE,
+                help="Do not consider strand of alignments. The reported strand will be copied from CIRCexplorer2 annotate results")
 )
 
 parser <-
@@ -39,15 +43,30 @@ if(ncol(orig.est) > 6){
 orig.est <- orig.est[, .(V1, V2, V3, V5, V6)]
 
 bks.reads.file <- arguments$chimreads
-bks.reads <- fread(bks.reads.file, showProgress = F)[, V4 := paste0(V4, "/", V5)]
+bks.reads <- fread(bks.reads.file, showProgress = F)
+
+merge.fields <- c("V1", "V2", "V3")
+if(arguments$stranded){
+    merge.fields <- c(merge.fields, "V6")
+}else{
+    bks.reads <- unique(bks.reads[, .(V1, V2, V3, V4, V5)])
+}
+
+if(arguments$discriminate_mates){
+    bks.reads[, V4 := paste0(V4, "/", V5)]
+}else{
+    bks.reads <- bks.reads[, .(V5 = paste0(V5, collapse = ",")),
+                           by = c(merge.fields, "V4")]
+}
 
 if(annotation == "annotated"){
 
     unfixed.bks.reads <-
         merge(bks.reads,
               orig.est[V5 == 0],
-              by = c("V1", "V2", "V3",
-                     "V6"))[, .(V1, V2, V3, V4, V5 = V5.y, V6)]
+              by = merge.fields)[, .(V1, V2, V3, V4, V5 = V5.y, V6)]
+
+    chimout.slices <- list(unf = unfixed.bks.reads)
 
     ## circrnas missed
     # nrow(orig.est[V5 == 0]) - nrow(unfixed.bks.reads[, .(ccp = .N), by = .(V1, V2, V3, V6)])
@@ -58,114 +77,120 @@ if(annotation == "annotated"){
               by = c("V1", "V2", "V3", "V6"),
               all = T)[is.na(ccp)]
 
-    unmatched$V6 <- sapply(unmatched$V6, switch.strand)
-    strand.switched <-
-        merge(unmatched,
-              bks.reads,
-              by = c("V1", "V2", "V3", "V6"),
-              all.y = F)[, .(V1, V2, V3,
-                             V4, V5 = V5.y,
-                             V6)]
+    if(nrow(unmatched) > 0){
+        unmatched$V6 <- sapply(unmatched$V6, switch.strand)
+        strand.switched <-
+            merge(unmatched,
+                  bks.reads,
+                  by = c("V1", "V2", "V3", "V6"),
+                  all.y = F)[, .(V1, V2, V3,
+                                 V4, V5 = V5.y,
+                                 V6)]
 
-    ## missed circrnas fixed by strand switch
-    # nrow(strand.switched[, .(ccp = .N), by = .(V1, V2, V3, V6)])
-
-    ## check if now the matched circrnas correspond to the
-    ## circexplorer-unmodified circrnas
-    # nrow(orig.est[V5 == 0]) == nrow(rbindlist(list(unfixed.bks.reads,
-    #                                                strand.switched),
-    #                                           use.names = T)[, .(ccp = .N), by = .(V1, V2, V3, V6)])
-
+        ## missed circrnas fixed by strand switch
+        # nrow(strand.switched[, .(ccp = .N), by = .(V1, V2, V3, V6)])
+        if(nrow(strand.switched[, .(ccp = .N), by = .(V1, V2, V3, V6)]) > 0){
+            chimout.slices$unf.str.swi <-
+                strand.switched[, .(V1, V2, V3, V4, V5,
+                                    V6 = sapply(V6, switch.strand))]
+        }
+        ## check if now the matched circrnas correspond to the
+        ## circexplorer-unmodified circrnas
+        # nrow(orig.est[V5 == 0]) == nrow(rbindlist(list(unfixed.bks.reads,
+        #                                                strand.switched),
+        #                                           use.names = T)[, .(ccp = .N), by = .(V1, V2, V3, V6)])
+    }
     ## now, check the circexplorer-MODIFIED circrnas
 
     ## number of ce2-modified circrnas
-    # nrow(orig.est[V5 != 0])
+    if(nrow(orig.est[V5 != 0]) > 0){
 
-    ## prepare tolerance intervals for coordinate fix
-    ext.range <- c(-arguments$range:arguments$range)
-    ext.range <- ext.range[ext.range != 0]
-    unfix.orig.est <-
-        orig.est[V5 != 0, .(start = V2 + ext.range,
-                            end = V3 + ext.range),
-                 by = .(V1, fixed.V2 = V2, fixed.V3= V3, V6)]
-
-    ## search the reads with the extended coordinates
-    ## fixed.bks.reads will be the extended coordinates-found reads
-    fixed.bks.reads <-
-        merge(bks.reads,
-              unfix.orig.est,
-              by.x = c("V1", "V2", "V3", "V6"),
-              by.y = c("V1", "start", "end",
-                       "V6"))[, .(V1, V2 = fixed.V2,
-                                  V3 = fixed.V3, V4,
-                                  V5, V6)]
-
-    ## check if some circrna is still missed also after coordinate extension search
-    fixed.match <-
-        merge(orig.est[V5 != 0],
-              fixed.bks.reads[, .N, by = .(V1, V2, V3, V6)],
-              by = c("V1", "V2", "V3", "V6"),
-              all = T)
-
-    # found <- fixed.match[!is.na(N)]
-
-    still.missed <- fixed.match[is.na(N)]
-
-    ## check if the still missed have a different strand in reads
-    still.missed$V6 <- sapply(still.missed$V6, switch.strand)
-
-    ## expand interval of still missed
-    extended.still.missed <-
-        still.missed[, .(start = V2 + ext.range,
-                         end = V3 + ext.range),
+        ## prepare tolerance intervals for coordinate fix
+        ext.range <- c(-arguments$range:arguments$range)
+        ext.range <- ext.range[ext.range != 0]
+        unfix.orig.est <-
+            orig.est[V5 != 0, .(start = V2 + ext.range,
+                                end = V3 + ext.range),
                      by = .(V1, fixed.V2 = V2, fixed.V3= V3, V6)]
 
-    still.missed.strand.switched <-
-        merge(bks.reads,
-              extended.still.missed,
-              by.x = c("V1", "V2", "V3", "V6"),
-              by.y = c("V1", "start", "end",
-                       "V6"))[, .(V1, V2 = fixed.V2,
-                                  V3 = fixed.V3, V4,
-                                  V5, V6)]
+        ## search the reads with the extended coordinates
+        ## fixed.bks.reads will be the extended coordinates-found reads
+        y.merge.fields <- c("V1", "start", "end")
+        if(arguments$stranded){
+            y.merge.fields <- c(y.merge.fields, "V6")
+        }
+        fixed.bks.reads <-
+            merge(bks.reads,
+                  unfix.orig.est,
+                  by.x = merge.fields, #c("V1", "V2", "V3", "V6"),
+                  by.y = y.merge.fields)[, .(V1, V2 = fixed.V2,
+                                             V3 = fixed.V3, V4,
+                                             V5, V6)]
 
-    ## missed circrnas fixed by strand switch
-    # nrow(still.missed.strand.switched[, .(ccp = .N), by = .(V1, V2, V3, V6)])
+        ## check if some circrna is still missed also after coordinate extension search
+        fixed.match <-
+            merge(orig.est[V5 != 0],
+                  fixed.bks.reads[, .N, by = .(V1, V2, V3, V6)],
+                  by = merge.fields, #c("V1", "V2", "V3", "V6"),
+                  all = T)
+
+        if(nrow(fixed.match[!is.na(N)]) > 0){
+            ## store fixed coordinates for reads
+            chimout.slices$fix.coo <-
+                merge(bks.reads,
+                      unfix.orig.est,
+                      by.x = merge.fields,
+                      by.y = y.merge.fields,
+                      all = F)[, .(V1, V2 = fixed.V2,
+                                   V3 = fixed.V3, V4,
+                                   V5, V6)]
+        }
+
+        still.missed <- fixed.match[is.na(N)]
+        if(nrow(still.missed) > 0){
+            ## check if the still missed have a different strand in reads
+            still.missed$V6 <- sapply(still.missed$V6, switch.strand)
+
+            ## expand interval of still missed
+            extended.still.missed <-
+                still.missed[, .(start = V2 + ext.range,
+                                 end = V3 + ext.range),
+                             by = .(V1, fixed.V2 = V2, fixed.V3= V3, V6)]
+
+            still.missed.strand.switched <-
+                merge(bks.reads,
+                      extended.still.missed,
+                      by.x = c("V1", "V2", "V3", "V6"),
+                      by.y = c("V1", "start", "end",
+                               "V6"))[, .(V1, V2 = fixed.V2,
+                                          V3 = fixed.V3, V4,
+                                          V5, V6)]
+
+            ## missed circrnas fixed by strand switch
+            if(nrow(still.missed.strand.switched[, .(ccp = .N), by = .(V1, V2, V3, V6)]) > 0){
+                ## store fixed coordinates and strand for reads
+                chimout.slices$fix.coo.str <-
+                    merge(bks.reads,
+                          extended.still.missed,
+                          by.x = c("V1", "V2", "V3", "V6"),
+                          by.y = c("V1", "start", "end",
+                                   "V6"))[, .(V1, V2 = fixed.V2,
+                                              V3 = fixed.V3,
+                                              V4, V5,
+                                              V6 = sapply(V6, switch.strand))]
+            }
+        }
+    }
 
     ## bind all reads (all.seg.bks.reads)
-    annotated.bks.reads <-
-        rbindlist(list(unfixed.bks.reads,
-                       strand.switched,
-                       fixed.bks.reads,
-                       still.missed.strand.switched),
-                  use.names = T)
+    annotated.chimout.junc <-
+        rbindlist(chimout.slices,
+                  use.names = T,
+                  idcol = "Set")
 
     ## check the number of identified circrnas
     # nrow(orig.est) - nrow(annotated.bks.reads[, .(ccp = .N), by = .(V1, V2, V3, V6)])
 
-    # ccp.est <- annotated.seg.bks.reads[, .(ccp = .N), by = .(V1, V2, V3, V6)]
-    annotated.chimout.junc <-
-        rbindlist(list(unf = unfixed.bks.reads,
-                       unf.str.swi = strand.switched[, .(V1, V2, V3, V4, V5,
-                                                         V6 = sapply(V6, switch.strand))],
-                       fix.coo = merge(bks.reads,
-                                       unfix.orig.est,
-                                       by.x = c("V1", "V2", "V3", "V6"),
-                                       by.y = c("V1", "start", "end",
-                                                "V6"),
-                                       all = F)[, .(V1, V2 = fixed.V2,
-                                                    V3 = fixed.V3, V4,
-                                                    V5, V6)],
-                       fix.coo.str = merge(bks.reads,
-                                           extended.still.missed,
-                                           by.x = c("V1", "V2", "V3", "V6"),
-                                           by.y = c("V1", "start", "end",
-                                                    "V6"))[, .(V1, V2 = fixed.V2,
-                                                               V3 = fixed.V3, V4, V5,
-                                                               V6 = sapply(V6, switch.strand))]
-        ),
-        use.names = T,
-        idcol = "Set")
 }else{
 
     annotated.chimout.junc <-
