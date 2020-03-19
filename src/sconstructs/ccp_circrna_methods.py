@@ -114,6 +114,11 @@ env.SetDefault(FIX_READ_HEADER = True)
 
 build_dir = 'circRNAs'
 
+env['STRANDED'] = False
+strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
+if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
+    env['STRANDED'] = True and not env['UNSTRANDED_CIRCS']
+
 ## PREPARE CIRCRNA METHODS' INPUT READS
 if env['CIRC_PE_MAPPING']:
     env['READS'] = [File(f) for f in env['READS']]
@@ -131,7 +136,6 @@ else:
         ## other aligners will assume that), and (ii) tell TopHat2 that the 
         ## (single-end) reads are from the same strand of the transcript,
         ## indeed reversing the strand parameter (into fr-secondstrand)
-        strandness_pattern = re.compile("--rna-strandness\s+[FR]{1,2}")
         if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
             if 'RF' in env['HISAT2_EXTRA_PARAMS'].split():
                 ## reverse complement the first mate
