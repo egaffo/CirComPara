@@ -144,7 +144,7 @@ if genome_indexes_to_build:
             indexes['BOWTIE2'] = [env['BOWTIE2_INDEX'] + suffix for suffix \
 							 in bowtie2_index_suffixes]
                              
-    if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_star']]):
+    if any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_star', 'dcc', 'circrna_finder']]):
         if env['STAR_INDEX'] == '':
             #index dir
             env.Replace(STAR_INDEX = os.path.dirname(os.path.abspath(str(indexes['STAR'][0]))))

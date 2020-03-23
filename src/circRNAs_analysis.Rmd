@@ -473,7 +473,7 @@ shared.counts.table <- crossprod(x = table(circ.per.method[, .(circ_id, method)]
 ## order rows and columns alphabetically
 shared.counts.table <- 
     shared.counts.table[sort(colnames(shared.counts.table)), 
-                        sort(colnames(shared.counts.table))]
+                        sort(colnames(shared.counts.table)), drop = F]
 
 ## save table
 write.csv(x = data.frame(shared.counts.table),
