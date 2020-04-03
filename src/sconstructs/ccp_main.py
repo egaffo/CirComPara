@@ -98,6 +98,8 @@ vars.Add('BWA_PARAMS','Extra parameters for BWA','')
 vars.Add('SEGEMEHL_PARAMS', 'SEGEMEHL extra parameters', '')
 vars.Add('TOPHAT_PARAMS', 'Extra parameters to pass to TopHat', '')
 vars.Add('STAR_PARAMS', 'Extra parameters to pass to STAR', '')
+vars.Add('BOWTIE2_PARAMS', 'Extra parameters to pass to Bowtie2 in addition to '\
+         '-p $CPUS --reorder --score-min=C,-15,0 -q', '')
 
 ## linear transcriptome extra parameters
 vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\

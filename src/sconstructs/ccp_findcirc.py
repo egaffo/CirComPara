@@ -47,6 +47,8 @@ except NameError:
     vars.Add('FINDCIRC_EXTRA_PARAMS', 'Extra parameters to be passed to find_circ.py script.'\
              'F.i. --stranded --strandpref --halfunique --noncanonical', 
              '')
+    vars.Add('BOWTIE2_PARAMS', 'Extra parameters to pass to Bowtie2 in addition to'\
+            '-p $CPUS --reorder --score-min=C,-15,0 -q', '')
     env = Environment(ENV=os.environ,
                       variables=vars)
     Help(vars.GenerateHelpText(env))
@@ -86,7 +88,7 @@ if File(env['READS'][0]).path.endswith('.gz'):
     cat_cmd = 'zcat'
 
 find_circ_cmd = 'unmapped2anchors.py -Q <( ' + cat_cmd + ' ${SOURCES} ) |' + \
-                ' bowtie2 $( -p $CPUS $) --reorder --score-min=C,-15,0 -q -x ' + \
+                ' bowtie2 $BOWTIE2_PARAMS $( -p $CPUS $) --reorder --score-min=C,-15,0 -q -x ' + \
                 ' $BOWTIE2_INDEX -U - 2> ${TARGETS[2]} | find_circ.py ' + \
                 ' -G $GENOME_FASTA -p ${SAMPLE}_ -s ${TARGETS[3]}' + \
                 ' -R ${TARGETS[1]} $FINDCIRC_EXTRA_PARAMS > ${TARGETS[0]}'
