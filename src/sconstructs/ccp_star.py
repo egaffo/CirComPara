@@ -71,12 +71,16 @@ if not env['ANNOTATION'] == '':
 
 chdir_parent_cmd = '''cd ''' + Dir('#').abspath
 
-star_targets = [os.path.join(star_out_dir, f) for f in ['Aligned.sortedByCoord.out.bam', 
-                                                        'Chimeric.out.junction',
-                                                        'Log.out', 'Log.progress.out',
-                                                        'Log.final.out',
-                                                        'SJ.out.tab',
-                                                        'Chimeric.out.sam']]
+star_out_files = ['Aligned.sortedByCoord.out.bam', 
+                  'Chimeric.out.junction',
+                  'Log.out', 'Log.progress.out',
+                  'Log.final.out',
+                  'SJ.out.tab']
+
+if 'SeparateSAMold' in env['STAR_PARAMS']:
+    star_out_files.append('Chimeric.out.sam')
+
+star_targets = [os.path.join(star_out_dir, f) for f in star_out_files]
 
 star = env.Command(star_targets, 
                    star_src, 

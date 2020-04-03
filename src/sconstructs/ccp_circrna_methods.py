@@ -270,7 +270,14 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     star_env = env.Clone()
     ## set Star parameters to enable fusion search
     star_env.AppendUnique(STAR_PARAMS = ['--chimSegmentMin', '10', 
-                                         '--chimOutType', 'Junctions', 'SeparateSAMold'])
+                                         '--chimOutType', 'Junctions'])
+    
+    ## TODO: snippet code for future development
+    ## The additional value 'SeparateSAMold' for --chimOutType is required by STARChip
+    ## (perhaps only for fusion detection). Unfortunately, in STAR v2.7.3a,
+    ## --chimMultimapNmax > 0 only supports 'Junction' as chimOutType value
+    #if 'starchip' in env['CIRCRNA_METHODS']:
+    #   star_env['STAR_PARAMS'].append('SeparateSAMold')
     
     star = env.SConscript(os.path.join(build_dir, 'ccp_star.py'),
                           variant_dir = build_dir, src_dir = SRC_DIR,
@@ -282,7 +289,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     results.append(star)
     
     Chimeric_out_junction = star[0][1]
-    Chimeric_out_sam = star[0][6]
+    #Chimeric_out_sam = star[0][6]
     
     if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         'circexplorer2_star' in env['CIRCRNA_METHODS']:
@@ -291,7 +298,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         circexplorer2_env = env.Clone()
         circexplorer2_env['FUSION_FILE'] = Chimeric_out_junction
         circexplorer2_env['ALIGNER'] = 'star'
-        circexplorer2_env['ALIGNMENTS'] = Chimeric_out_sam #star[0][0]
+        #circexplorer2_env['ALIGNMENTS'] = Chimeric_out_sam #star[0][0]
         circexplorer2_star = env.SConscript(os.path.join(build_dir, 
         						'ccp_circexplorer2.py'),
         			variant_dir = build_dir, src_dir = SRC_DIR,
@@ -338,7 +345,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
         ## TODO: Is this trick working also in parallel task execution??
         cfinder_env.PrependENVPath('PATH', os.path.join(env['ENV']['CIRCOMPARA_HOME'],
                                                         'bin', 'samtools_v0'))
-        cfinder_env['FUSION_FILE'] = Chimeric_out_sam
+        #cfinder_env['FUSION_FILE'] = Chimeric_out_sam
+        cfinder_env['FUSION_FILE'] = Chimeric_out_junction
         cfinder_env['ALIGNMENTS'] = Chimeric_out_junction #Chimeric_out_sam
         cfinder_env.Append(EXTRA_PARAMS = env['CFINDER_EXTRA_PARAMS'])
 
