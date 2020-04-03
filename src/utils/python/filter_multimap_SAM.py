@@ -32,6 +32,6 @@ if __name__ == '__main__':
     outfile = pysam.AlignmentFile("-", "w", template = samfile)
 
     for read in samfile:
-        if read.get_tag('NH') < args.max_multimaps:
+        if read.get_tag('NH') <= args.max_multimaps:
             outfile.write(read)
     
