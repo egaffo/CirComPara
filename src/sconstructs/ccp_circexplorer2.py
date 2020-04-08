@@ -173,8 +173,12 @@ if env['ALIGNER'].lower() == 'mapsplice':
     bks_sfx = ".ce2ms"
     ##TODO: circ_reads_cmd
  
-CIRCexplorer2_cmd = 'CIRCexplorer2 parse $OPTIONS -b $TARGET -t $ALIGNER $SOURCE'
-CIRCexplorer2_targets = os.path.join(out_dir, 'back_spliced_junction.bed')
+CIRCexplorer2_cmd = 'CIRCexplorer2 parse $OPTIONS -b ${TARGETS[0]} -t $ALIGNER $SOURCE | tee ${TARGETS[1]}'
+## NOTES: TODO the following comment is a snippet of how to save also stderr into a file and 
+## output it also to the shell.
+## command > >(tee -a stdout.log) 2> >(tee -a stderr.log >&2)
+CIRCexplorer2_targets = [os.path.join(out_dir, 'back_spliced_junction.bed'),
+                         os.path.join(out_dir, 'CIRCexplorer2_' + env['ALIGNER'].lower() + '.log')]
 CIRCexplorer2_sources = [File(env['FUSION_FILE'])]
 CIRCexplorer2 = env.Command(CIRCexplorer2_targets, 
                             CIRCexplorer2_sources, 
@@ -190,8 +194,10 @@ if env['ALIGNER'] == 'TopHat-Fusion':
 results.append(CIRCexplorer2)
 
 if not env['GENEPRED'] == '':
-    CIRCexplorer2_annotate_targets = os.path.join(out_dir, 'annotate',
-                                                  'circularRNA_known.txt')
+    CIRCexplorer2_annotate_targets = [os.path.join(out_dir, 'annotate',
+                                                  'circularRNA_known.txt'),
+                                      os.path.join(out_dir, 'annotate', 
+                                          'CIRCexplorer2_' + env['ALIGNER'].lower() + '_annotate.log')]
     CIRCexplorer2_annotate_sources = [File(env['GENEPRED']),
                                       File(env['GENOME_FASTA']),
                                       CIRCexplorer2[0]]
@@ -199,7 +205,7 @@ if not env['GENEPRED'] == '':
                                  'CIRCexplorer2 annotate $CE2_PARAMS -r '\
                                  '${SOURCES[0].abspath} -g '\
                                  '${SOURCES[1].abspath} -b '\
-                                 '${SOURCES[2].abspath} -o $TARGET.file',
+                                 '${SOURCES[2].abspath} -o ${TARGETS[0].file} | tee ${TARGETS[1].file}',
                                  'cd ' + Dir('#').abspath])
     CIRCexplorer2_annotate = env.Command(CIRCexplorer2_annotate_targets,
                                          CIRCexplorer2_annotate_sources,
@@ -207,7 +213,7 @@ if not env['GENEPRED'] == '':
 
     ## use the filtered annotate/circularRNA_known.txt BED file
     ## to collect backsplice reads
-    circ_bed = CIRCexplorer2_annotate
+    circ_bed = CIRCexplorer2_annotate[0]
 
     results.append(CIRCexplorer2_annotate)
 
@@ -240,7 +246,7 @@ bks_reads = env.Command([os.path.join(out_dir,
 
 results.append(bks_reads)
 
-results = {'CIRCRNAS':          circ_bed[0],
+results = {'CIRCRNAS':          circ_bed,
            'CIRC_SN_BED':       bed,
            'BKS_READS':         bks_reads[0],
            'CIRC_READS':        circ_reads[0]}
