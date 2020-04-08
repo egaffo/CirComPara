@@ -32,6 +32,11 @@ if __name__ == '__main__':
     outfile = pysam.AlignmentFile("-", "w", template = samfile)
 
     for read in samfile:
-        if read.get_tag('NH') <= args.max_multimaps:
-            outfile.write(read)
+        if read.has_tag('NH'):
+            if read.get_tag('NH') <= args.max_multimaps:
+                outfile.write(read)
+        # the following should work for BWA-MEM
+        elif read.has_tag('XA'):
+            if len(read.get_tag('XA').split(';')) - 1 <= args.max_multimaps:
+                outfile.write(read)
     
