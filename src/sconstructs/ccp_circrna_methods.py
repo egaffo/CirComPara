@@ -274,8 +274,8 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     
     ## TODO: snippet code for future development
     ## The additional value 'SeparateSAMold' for --chimOutType is required by STARChip
-    ## (perhaps only for fusion detection). Unfortunately, in STAR v2.7.3a,
-    ## --chimMultimapNmax > 0 only supports 'Junction' as chimOutType value
+    ## (perhaps only for fusion detection). Unfortunately, in STAR v2.7.3a,
+    ## --chimMultimapNmax > 0 only supports 'Junction' as chimOutType value
     #if 'starchip' in env['CIRCRNA_METHODS']:
     #   star_env['STAR_PARAMS'].append('SeparateSAMold')
     
