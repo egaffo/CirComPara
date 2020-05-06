@@ -13,11 +13,17 @@ PYTHON_VERSION = str(sys.version_info.major) + '.' + str(sys.version_info.minor)
 
 python_lib_dir = os.path.join(tools_dir, 'lib', 'python'+PYTHON_VERSION,'site-packages')
 SET_PIP_USER = '--user'
+
+## initialize VIRTUAL_ENV
+if not env['ENV'].has_key('VIRTUAL_ENV'):
+    env['ENV']['VIRTUAL_ENV'] = ''
+
 ## pip does not work with --user if run inside a virtualenv
 if env['ENV']['VIRTUAL_ENV']:
     print 'Running in virtualenv. Python packages will be installed in the virtualenv directories'
     SET_PIP_USER = ''
-    python_lib_dir = os.path.join(env['ENV']['VIRTUAL_ENV'], 'lib', 'python'+PYTHON_VERSION,'site-packages')
+    python_lib_dir = os.path.join(env['ENV']['VIRTUAL_ENV'], 'lib', 
+                                  'python' + PYTHON_VERSION, 'site-packages')
 else:
     env.PrependENVPath('PYTHONUSERBASE', tools_dir)
 
