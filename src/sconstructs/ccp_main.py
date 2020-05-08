@@ -168,10 +168,16 @@ vars.Add('BYPASS', 'Skip analysis of linear/circular transcripts. This will also
 			       'the analysis of linear-to-circular expression correlation.'\
                    '{linear,circular}',
          'False')
-vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
-        'collapsed into single-end reads to search for circRNA backsplices. Set'\
-        'this option to "True" to force circRNA method aligners to'\
-        'maintain paired-end read alignment', 'False')
+vars.Add('CIRC_MAPPING', '''By default (SE), linearly unmapped reads are'''\
+         '''aligned as single-end reads to search for circRNA backsplices. Set PE '''\
+         '''to align as paired-end reads by each circRNA method aligner. You can also '''\
+         '''specify each aligner's mode, or just which aligner has to use the PE mode, '''\
+         ''' with the syntax for Python dictionaries {'SE':['ALN1','ALN2'],'PE':['ALN3','ALN4','ALNn']} '''\
+         '''or simply {'PE':['ALN1','ALN2']} if you want just ALN1 and ALN2 tu align as PE. '''\
+         '''Supported aligners are BWA,SEGEMEHL,STAR and TOPHAT. BOWTIE2 is also supported but '''\
+         '''it is run only in single-end mode as it serves only Findcirc. ''',
+         '''{'SE':['STAR','TOPHAT','BOWTIE2'],'PE':['BWA','SEGEMEHL']}''')
+
 vars.Add('LIN_COUNTER', 'The method to estimate circRNA-host gene '\
                         'linear expression. Available are using the DCC '\
                         '[dcc], or the CirComPara [ccp] method', 
@@ -219,11 +225,12 @@ env['CCP_RMD_DIR'] = os.path.join(env['CIRCOMPARA_HOME'], 'src', 'utils', 'Rmd')
 
 env.SetDefault(TOPHAT_PARAMS = '')
 
-env.SetDefault(CIRC_PE_MAPPING = False)
-if env['CIRC_PE_MAPPING'].lower() == 'true':
-    env.Replace(CIRC_PE_MAPPING = True)
-else:
-    env.Replace(CIRC_PE_MAPPING = False)
+## the CIRC_MAPPING parameter is handled in the ccp_circrna_methods.py script
+#env.SetDefault(CIRC_PE_MAPPING = False)
+#if env['CIRC_PE_MAPPING'].lower() == 'true':
+#    env.Replace(CIRC_PE_MAPPING = True)
+#else:
+#    env.Replace(CIRC_PE_MAPPING = False)
 
 #env.SetDefault(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].lower() == 'true':

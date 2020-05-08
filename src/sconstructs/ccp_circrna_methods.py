@@ -25,7 +25,8 @@ Imports:
 
 '''
 
-import os, re
+import os, re, ast
+from collections import defaultdict
 
 ccp_testrealign   = 'ccp_testrealign.py'
 ccp_segemehl = 'ccp_segemehl.py'
@@ -64,10 +65,15 @@ except NameError:
 
     vars.Add('CIRCRNA_METHODS', 'Comma separated list of circRNA detection methods to use. '\
 	     'Use all methods available as default', '')
-    vars.Add('CIRC_PE_MAPPING', 'By default, linearly unmapped reads are'\
-            'collapsed into single-end reads to search for circRNA backsplices. Set'\
-            'this option to "True" to force circRNA method aligners to'\
-            'maintain paired-end read alignment', 'False')
+    vars.Add('CIRC_MAPPING', '''By default (SE), linearly unmapped reads are'''\
+             '''aligned as single-end reads to search for circRNA backsplices. Set PE '''\
+             '''to align as paired-end reads by each circRNA method aligner. You can also '''\
+             '''specify each aligner's mode, or just which aligner has to use the PE mode, '''\
+             ''' with the syntax for Python dictionaries {'SE':['ALN1','ALN2'],'PE':['ALN3','ALN4','ALNn']} '''\
+             '''or simply {'PE':['ALN1','ALN2']} if you want just ALN1 and ALN2 tu align as PE. '''\
+             '''Supported aligners are BWA,SEGEMEHL,STAR and TOPHAT. BOWTIE2 is also supported but '''\
+             '''it is run only in single-end mode as it serves only Findcirc. ''',
+             '''{'SE':['STAR','TOPHAT','BOWTIE2'],'PE':['BWA','SEGEMEHL']}''')
 
     env = Environment(variables = vars,
                       ENV = os.environ)
@@ -81,15 +87,41 @@ except NameError:
 
     env['CIRCRNA_METHODS'] = [m.lower() for m in env['CIRCRNA_METHODS'].strip().split(',')]
 
-    env.SetDefault(CIRC_PE_MAPPING = False)
-    if env['CIRC_PE_MAPPING'].lower() == 'true':
-        env.Replace(CIRC_PE_MAPPING = True)
-    else:
-        env.Replace(CIRC_PE_MAPPING = False)
-
 SRC_DIR = os.path.join(env['ENV']['CIRCOMPARA_HOME'], 'src', 'sconstructs')
 
-env.SetDefault(CIRC_PE_MAPPING = False)
+default_circ_mapping_val = '''{'SE':['STAR','TOPHAT','BOWTIE2'],'PE':['BWA','SEGEMEHL']}'''
+env.SetDefault(CIRC_MAPPING = defaultdict(set, ast.literal_eval(default_circ_mapping_val)))
+
+all_aligners = set(['BOWTIE2','BWA', 'SEGEMEHL','STAR', 'TOPHAT'])
+
+if str(env['CIRC_MAPPING'])== '':
+    ## use empty string as alias for default
+    env.Replace(CIRC_MAPPING = defaultdict(set, ast.literal_eval(default_circ_mapping_val)))
+
+if not str(env['CIRC_MAPPING']).upper() in ['SE', 'PE']:
+    ## mixed mode
+    try:
+        env.Replace(CIRC_MAPPING = defaultdict(set, ast.literal_eval(str(env['CIRC_MAPPING']))))
+    except ValueError as e:
+        print e
+        print '''Malformed CIRC_MAPPING string. Please, set as a Python dictionary, '''\
+                '''e.g. {'SE':['STAR', 'TOPHAT'],'PE':[]}'''
+        exit(-1)
+else:
+    ## all-the-same mode
+    env.Replace(CIRC_MAPPING = defaultdict(set, 
+                                           {str(env['CIRC_MAPPING']).upper(): all_aligners}))
+
+
+## By default align in single-end mode. Remove from SE mode the aligners specified as PE
+env['CIRC_MAPPING']['PE'] = set(env['CIRC_MAPPING']['PE'])
+env['CIRC_MAPPING']['SE'] = all_aligners
+env['CIRC_MAPPING']['SE'] -= env['CIRC_MAPPING']['PE']
+
+if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
+   'findcirc' in env['CIRCRNA_METHODS']:
+    ## if Findcirc has to be run, it requires a single-end alignment mode
+    env['CIRC_MAPPING']['SE'].add('BOWTIE2')
 
 results = []
 
@@ -120,10 +152,14 @@ if strandness_pattern.search(env['HISAT2_EXTRA_PARAMS']):
     env['STRANDED'] = True and not env['UNSTRANDED_CIRCS']
 
 ## PREPARE CIRCRNA METHODS' INPUT READS
-if env['CIRC_PE_MAPPING']:
-    env['READS'] = [File(f) for f in env['READS']]
-else:
-    if len(env['READS']) > 1:
+if len(env['CIRC_MAPPING']['PE']) > 0:
+    env['READS_PE'] = [File(f) for f in env['READS']]
+
+if len(env['CIRC_MAPPING']['SE']) > 0:
+    
+    env['READS_SE'] = env['READS']
+
+    if len(env['READS_SE']) > 1:
         ## if stranded reads we should handle the cases before concatenating,
         ## to have single-end reads from the same strand of the transcript.
         ## An issue comes with TopHat2, which distinguish orientation of 
@@ -159,11 +195,11 @@ else:
                                                '_' +
                                                str(mate_idx+1) +
                                                '.revcomp.fq.gz'), 
-                                  env['READS'][mate_idx], 
+                                  env['READS_SE'][mate_idx], 
                                   revcomp_cmd) 
             
             ## replace env variable
-            env['READS'][mate_idx] = revcomp
+            env['READS_SE'][mate_idx] = revcomp
             env.Replace(TOPHAT_PARAMS = ['--library-type', th2_lib_type])
 
     ## collapse paired reads into single file
@@ -184,21 +220,29 @@ else:
         ## mate reads after concatenation.
         cat_cmd = '''trim_read_header.py -s '\\' -f ${SOURCES[0]} '''
 
-        if len(env['READS']) > 1:
+        if len(env['READS_SE']) > 1:
             cat_cmd = cat_cmd + '''-r ${SOURCES[1]} '''
 
         cat_cmd = cat_cmd + '''| gzip -c '''
 
+    ## finally, convert the paired-end reads into single-end alike
     unmapped_reads = env.Command(cat_reads_target,
-                               env['READS'],
+                               env['READS_SE'],
                                cat_cmd + '> $TARGET')
 
-    env.Replace(READS = unmapped_reads)
+    ## here we update the READS_SE parameter to point to the single-end converted reads
+    env.Replace(READS_SE = unmapped_reads)
+
 
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
    any([f in env['CIRCRNA_METHODS'] for f in ['testrealign', 'circexplorer2_segemehl']]):
     ## SEGEMEHL CIRCRNA
     env_segemehl = env.Clone()
+
+    env_segemehl['READS'] = env['READS_PE']
+    if 'SEGEMEHL' in env['CIRC_MAPPING']['SE']:
+        env_segemehl['READS'] = env['READS_SE']
+
     segemap = env.SConscript(os.path.join(build_dir, ccp_segemehl),
                              variant_dir = build_dir, 
                              src_dir = SRC_DIR,
@@ -249,12 +293,17 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
    'findcirc' in env['CIRCRNA_METHODS']:
     ## FIND_CIRC
-    ccp_findcirc    = 'ccp_findcirc.py'
-   
+    ccp_findcirc = 'ccp_findcirc.py'
+
+    env_findcirc = env.Clone()
+
+    ## Findcirc needs single-end alignment mode
+    env_findcirc['READS'] = env['READS_SE']
+
     find_circ = env.SConscript(os.path.join(build_dir, ccp_findcirc),
                                variant_dir = build_dir, src_dir = SRC_DIR, 
                                duplicate = 0, 
-                               exports = '''env''')
+                               exports = '''env_findcirc''')
 
     Depends(find_circ.values(), env['READS'])
     
@@ -278,7 +327,11 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     ## --chimMultimapNmax > 0 only supports 'Junction' as chimOutType value
     #if 'starchip' in env['CIRCRNA_METHODS']:
     #   star_env['STAR_PARAMS'].append('SeparateSAMold')
-    
+
+    star_env['READS'] = env['READS_PE']
+    if 'STAR' in env['CIRC_MAPPING']['SE']:
+        star_env['READS'] = env['READS_SE']
+   
     star = env.SConscript(os.path.join(build_dir, 'ccp_star.py'),
                           variant_dir = build_dir, src_dir = SRC_DIR,
                           duplicate = 0, 
@@ -366,7 +419,11 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 	any([f in env['CIRCRNA_METHODS'] for f in ['circexplorer2_bwa', 'ciri']]):
 
     bwa_env = env.Clone()
-  
+
+    bwa_env['READS'] = env['READS_PE']
+    if 'STAR' in env['CIRC_MAPPING']['SE']:
+        bwa_env['READS'] = env['READS_SE']
+
     bwa = env.SConscript(os.path.join(build_dir, 'ccp_bwa.py'), 
                           variant_dir = build_dir, src_dir = SRC_DIR, 
                           duplicate = 0, 
@@ -414,6 +471,11 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 
     ## align reads usign TopHat-Fusion
     env_tophat = env.Clone()
+
+    env_tophat['READS'] = env['READS_PE']
+    if 'STAR' in env['CIRC_MAPPING']['SE']:
+        env_tophat['READS'] = env['READS_SE']
+
     env_tophat['TOPHAT_INDEX']  = env['BOWTIE_INDEX']
     env_tophat.AppendUnique(TOPHAT_PARAMS = ['--fusion-search', 
                                              '--keep-fasta-order',
@@ -437,7 +499,7 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     circexplorer2_env['FUSION_FILE'] = tophat['ALIGNMENTS']
     circexplorer2_env['ALIGNER'] = 'tophat'
     circexplorer2_env['ALIGNMENTS'] = tophat['ALIGNMENTS']
-    if env['CIRC_PE_MAPPING'] and len(env['READS']) > 1:
+    if len(env_tophat['READS']) > 1:
         circexplorer2_env.Replace(ALIGNER = 'tophat_pe')
     circexplorer2_tophat = env.SConscript(os.path.join(build_dir, 
     						'ccp_circexplorer2.py'),

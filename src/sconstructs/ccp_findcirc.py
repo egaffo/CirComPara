@@ -36,7 +36,7 @@ Import('*')
 try:
     # these variables can be passed with 'exports' when calling this SConscript
     # from another SConscript
-    env = env.Clone()
+    env = env_findcirc.Clone()
 except NameError:
     vars = Variables('vars.py')
     vars.Add('CPUS', 'Max parallel jobs to execute', '4')
@@ -67,21 +67,22 @@ if '--best-qual' in env['FINDCIRC_EXTRA_PARAMS']:
     best_qual_val = env['FINDCIRC_EXTRA_PARAMS'].pop(best_qual_idx)
     env['FINDCIRC_EXTRA_PARAMS'].remove('--best-qual')
 
-## Findcirc considers only single-end reads. If CirComPara paired-end
-## mode is enabled, we need to make consistent the direction of the 
-## read mates before concatenating them. Moreover, we need to make 
-## consistent also the read names for post-processing method comparison
-## by fixing the modified read names
-if env['CIRC_PE_MAPPING']:
-    revcomp_cmd = '''fastq_rev_comp.py -f $SOURCE | '''\
-                  '''sed 's/revcomp_of_//' | '''\
-                  '''gzip -c > $TARGET'''
-    revcomp = env.Command(os.path.join(out_dir, 
-                                       env['SAMPLE'] + 
-                                       '_1.revcomp.fq.gz'), 
-                          env['READS'][0], 
-                          revcomp_cmd) 
-    env['READS'][0] = revcomp[0]
+# reads has to be converted into single-end mode before calling this script!
+### Findcirc considers only single-end reads. If CirComPara paired-end
+### mode is enabled, we need to make consistent the direction of the 
+### read mates before concatenating them. Moreover, we need to make 
+### consistent also the read names for post-processing method comparison
+### by fixing the modified read names
+#if env['CIRC_PE_MAPPING']:
+#    revcomp_cmd = '''fastq_rev_comp.py -f $SOURCE | '''\
+#                  '''sed 's/revcomp_of_//' | '''\
+#                  '''gzip -c > $TARGET'''
+#    revcomp = env.Command(os.path.join(out_dir, 
+#                                       env['SAMPLE'] + 
+#                                       '_1.revcomp.fq.gz'), 
+#                          env['READS'][0], 
+#                          revcomp_cmd) 
+#    env['READS'][0] = revcomp[0]
     
 cat_cmd = 'cat'
 if File(env['READS'][0]).path.endswith('.gz'):

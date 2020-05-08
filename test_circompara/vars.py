@@ -52,3 +52,5 @@ FIX_READ_HEADER = 'True'
 SAM_SORT_MM = '1G'
 #BYPASS = 'linear'
 CCP_COUNTS = 'True'
+
+CIRC_MAPPING = '''{'PE':['STAR']}'''
