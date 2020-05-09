@@ -239,9 +239,10 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     ## SEGEMEHL CIRCRNA
     env_segemehl = env.Clone()
 
-    env_segemehl['READS'] = env['READS_PE']
     if 'SEGEMEHL' in env['CIRC_MAPPING']['SE']:
         env_segemehl['READS'] = env['READS_SE']
+    else:
+        env_segemehl['READS'] = env['READS_PE']
 
     segemap = env.SConscript(os.path.join(build_dir, ccp_segemehl),
                              variant_dir = build_dir, 
@@ -328,9 +329,10 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     #if 'starchip' in env['CIRCRNA_METHODS']:
     #   star_env['STAR_PARAMS'].append('SeparateSAMold')
 
-    star_env['READS'] = env['READS_PE']
     if 'STAR' in env['CIRC_MAPPING']['SE']:
         star_env['READS'] = env['READS_SE']
+    else:
+        star_env['READS'] = env['READS_PE']
    
     star = env.SConscript(os.path.join(build_dir, 'ccp_star.py'),
                           variant_dir = build_dir, src_dir = SRC_DIR,
@@ -420,9 +422,10 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
 
     bwa_env = env.Clone()
 
-    bwa_env['READS'] = env['READS_PE']
-    if 'STAR' in env['CIRC_MAPPING']['SE']:
+    if 'BWA' in env['CIRC_MAPPING']['SE']:
         bwa_env['READS'] = env['READS_SE']
+    else:
+        bwa_env['READS'] = env['READS_PE']
 
     bwa = env.SConscript(os.path.join(build_dir, 'ccp_bwa.py'), 
                           variant_dir = build_dir, src_dir = SRC_DIR, 
@@ -472,9 +475,10 @@ if env['CIRCRNA_METHODS'] == [''] or env['CIRCRNA_METHODS'] == '' or \
     ## align reads usign TopHat-Fusion
     env_tophat = env.Clone()
 
-    env_tophat['READS'] = env['READS_PE']
-    if 'STAR' in env['CIRC_MAPPING']['SE']:
+    if 'TOPHAT' in env['CIRC_MAPPING']['SE']:
         env_tophat['READS'] = env['READS_SE']
+    else:
+        env_tophat['READS'] = env['READS_PE']
 
     env_tophat['TOPHAT_INDEX']  = env['BOWTIE_INDEX']
     env_tophat.AppendUnique(TOPHAT_PARAMS = ['--fusion-search', 
