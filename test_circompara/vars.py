@@ -53,4 +53,4 @@ SAM_SORT_MM = '1G'
 #BYPASS = 'linear'
 CCP_COUNTS = 'True'
 
-CIRC_MAPPING = '''{'PE':['STAR']}'''
+CIRC_MAPPING = "{'SE':['STAR','TOPHAT','BOWTIE2'],'PE':['BWA','SEGEMEHL']}"
