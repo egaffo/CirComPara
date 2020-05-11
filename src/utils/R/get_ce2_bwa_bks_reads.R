@@ -147,6 +147,11 @@ if(annotation == "annotated"){
         }
 
         still.missed <- fixed.match[is.na(N)]
+        if(any("V6.x" == colnames(still.missed))){
+            still.missed[, V6 := V6.x]
+            still.missed[, V6.x := NULL]
+            still.missed[, V6.y := NULL]
+        }
         if(nrow(still.missed) > 0){
             ## check if the still missed have a different strand in reads
             still.missed$V6 <- sapply(still.missed$V6, switch.strand)
@@ -157,12 +162,15 @@ if(annotation == "annotated"){
                                  end = V3 + ext.range),
                              by = .(V1, fixed.V2 = V2, fixed.V3= V3, V6)]
 
+            ext.merge.fields <- c("V1", "start", "end")
+            if(any("V6" == merge.fields)){
+                ext.merge.fields <- c(ext.merge.fields, "V6")
+            }
             still.missed.strand.switched <-
                 merge(bks.reads,
                       extended.still.missed,
-                      by.x = c("V1", "V2", "V3", "V6"),
-                      by.y = c("V1", "start", "end",
-                               "V6"))[, .(V1, V2 = fixed.V2,
+                      by.x = merge.fields,
+                      by.y = ext.merge.fields)[, .(V1, V2 = fixed.V2,
                                           V3 = fixed.V3, V4,
                                           V5, V6)]
 
@@ -172,9 +180,8 @@ if(annotation == "annotated"){
                 chimout.slices$fix.coo.str <-
                     merge(bks.reads,
                           extended.still.missed,
-                          by.x = c("V1", "V2", "V3", "V6"),
-                          by.y = c("V1", "start", "end",
-                                   "V6"))[, .(V1, V2 = fixed.V2,
+                          by.x = merge.fields,
+                          by.y = ext.merge.fields)[, .(V1, V2 = fixed.V2,
                                               V3 = fixed.V3,
                                               V4, V5,
                                               V6 = sapply(V6, switch.strand))]
