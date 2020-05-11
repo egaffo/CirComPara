@@ -9,23 +9,29 @@ option_list <- list(
     make_option(c("-q", "--minqual"), action = "store", type = "integer",
                 default = 40,
                 help = "Minimum quality of backsplice end mapping"),
+    make_option(c("-f", "--filter_tags"), action = "store", type = "character",
+                default = 'CIRCULAR',
+                help = "Comma separated list of flags that have to be present in rows of the Find_circ BED file"),
     make_option(c("-o", "--output"), action = "store", type = "character",
                 default = "filteredFindcirc.bed", help = "The output file")
 )
 
-parser <- OptionParser(usage = "%prog -i circ_candidates.bed -q 40 -o filteredFindcirc.bed",
+parser <- OptionParser(usage = "%prog -i circ_candidates.bed -q 40 -f CIRCULAR -o filteredFindcirc.bed",
                        option_list = option_list,
                        description = "Filter Findcirc results by quality")
 arguments <- parse_args(parser, positional_arguments = F)
 input <- arguments$input
 output <- arguments$output
 minqual <- arguments$minqual
+flags <- unlist(strsplit(arguments$filter_tags, ','))
+if(length(flags) < 1){
+    flags <- '.'
+}
 
 circ_candidates.bed <-
-    fread(cmd = paste0("grep -v '^#' ", input, " | ",
-                       "grep -w CIRCULAR | ",
-                       "grep -w UNAMBIGUOUS_BP | ",
-                       "grep -w ANCHOR_UNIQUE"),
+    fread(cmd = paste0(c(paste0("grep -v '^#' ", input),
+                         flags),
+                       collapse = " | grep -w "),
           showProgress = F)
 
 if(nrow(circ_candidates.bed) > 0){

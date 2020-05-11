@@ -129,9 +129,12 @@ vars.Add('TESTREALIGN_PARAMS', 'Segemehl/testrealign filtering parameters'\
          '(like the Haarz parameter)', '-q 25')
 ## Find_circ parameters
 vars.Add('FINDCIRC_EXTRA_PARAMS', 'Parameters for find_circ.py. '\
-         'A special parameter --best-qual INT is used to filter '\
+         'Additional parameters: --best-qual INT is used to filter '\
          'find_circ results according to best_qual_left and best_qual_right '\
-         'fields >= INT. INT = 40 as default', '')
+         'fields >= INT. Default: INT = 40. --filter-tags TAG is used to filter '\
+         'lines of find_circ.py output (sites.bed). Repeat it if multiple consecutive '\
+         'filter tags has to be applied.', 
+         '--best-qual 40 --filter-tags UNAMBIGUOUS_BP --filter-tags ANCHOR_UNIQUE')
 ## CircRNA_finder parameters
 vars.Add('CFINDER_EXTRA_PARAMS', 'Parameters for CircRNA_finder', '')
 

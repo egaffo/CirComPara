@@ -67,6 +67,14 @@ if '--best-qual' in env['FINDCIRC_EXTRA_PARAMS']:
     best_qual_val = env['FINDCIRC_EXTRA_PARAMS'].pop(best_qual_idx)
     env['FINDCIRC_EXTRA_PARAMS'].remove('--best-qual')
 
+filter_tags = ['CIRCULAR']
+if '--filter-tags' in env['FINDCIRC_EXTRA_PARAMS']:
+    filter_tags_idx = [i+1 for i, x in enumerate(env['FINDCIRC_EXTRA_PARAMS']) if x == '--filter-tags']
+    filter_tags_val = [env['FINDCIRC_EXTRA_PARAMS'].pop(i) for i in filter_tags_idx]
+    for i in range(len(filter_tags_idx)):
+        env['FINDCIRC_EXTRA_PARAMS'].remove('--filter-tags') 
+    filter_tags = filter_tags + filter_tags_val
+    
 # reads has to be converted into single-end mode before calling this script!
 ### Findcirc considers only single-end reads. If CirComPara paired-end
 ### mode is enabled, we need to make consistent the direction of the 
@@ -110,7 +118,10 @@ find_circ = env.Command([os.path.join(out_dir, 'sites.bed'),
 #                  " { grep UNAMBIGUOUS_BP || true; } | "+\
 #                  " { grep ANCHOR_UNIQUE || true; } > ${TARGET}"
 filter_circ_cmd = 'filter_findcirc_res.R -i $SOURCE -o $TARGET -q ' +\
-                  str(best_qual_val)
+                  str(best_qual_val) 
+if len(filter_tags) > 0:
+    filter_circ_cmd = filter_circ_cmd + ' -f ' + ','.join(filter_tags)
+
 filter_circ = env.Command([os.path.join(out_dir, 'circ_candidates.bed')], 
                           find_circ[0], 
                           filter_circ_cmd)
