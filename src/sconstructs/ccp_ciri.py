@@ -50,19 +50,20 @@ out_dir = 'ciri_out'
 chdir_working_cmd  = 'cd ' + os.path.join(Dir('.').abspath, out_dir)
 chdir_previous_cmd = 'cd ' + Dir('#').abspath
 
-ciri_parameters = env['CIRI_EXTRA_PARAMS']
+#ciri_parameters = env['CIRI_EXTRA_PARAMS']
 
 if env['ANNOTATION']:
-    ciri_parameters = ciri_parameters + ' -A ' + env['ANNOTATION']
+    #ciri_parameters = ciri_parameters + ' -A ' + env['ANNOTATION']
+    env['CIRI_EXTRA_PARAMS'] = env['CIRI_EXTRA_PARAMS'].extend(['-A', env['ANNOTATION']])
 
 ciri_target = os.path.join(out_dir, env['SAMPLE'] + '_ciri.out')
 
 ## Run CIRI on mappings
 ## multithread -T option works from v2 of CIRI
-ciri_cmd = 'zcat ${SOURCES[0].abspath} > ${SOURCES[0].filebase}.temp && '\
-            'perl $CIRI -T $( $CPUS $) -I ${SOURCES[0].filebase}.temp '\
-            '-O ${TARGETS[0].file} -F $GENOME_FASTA' +\
-            ciri_parameters + ' && rm ${SOURCES[0].filebase}.temp' 
+ciri_cmd = ' && '.join(['zcat ${SOURCES[0].abspath} > ${SOURCES[0].filebase}.temp',
+                        'perl $CIRI -T $( $CPUS $) -I ${SOURCES[0].filebase}.temp '\
+                        '-O ${TARGETS[0].file} -F $GENOME_FASTA $CIRI_EXTRA_PARAMS',
+                        'rm ${SOURCES[0].filebase}.temp'])
 
 ## Run the commands
 ciri = env.Command([ciri_target],
