@@ -41,18 +41,22 @@ sites.reads <-
 circ.candidates.bed <- fread(input = circ.candidates.bed.file,
                              header = F, select = c(1, 2, 3, 4, 5, 6))
 
-bks.reads <- merge(sites.reads, circ.candidates.bed,
-                   by = "V4", all.x = F,
-                   all.y = T)[, .(V1, V2, V3, read_id, V5, V6)]
+bks.reads <- data.table()
+all.reads <- data.table()
+if(nrow(circ.candidates.bed) > 0 & nrow(sites.reads) > 0){
+    bks.reads <- merge(sites.reads, circ.candidates.bed,
+                       by = "V4", all.x = F,
+                       all.y = T)[, .(V1, V2, V3, read_id, V5, V6)]
+
+    all.reads <-
+        bks.reads[, .N, by = read_id][order(-N), .(N, read_id)]
+}
 
 ## write gzipped file for circular reads
 reads_output.gz <- gzfile(reads.bed, "w")
 write.table(bks.reads, file = reads_output.gz,
             sep = "\t", col.names = F, row.names = F, quote = F)
 close(reads_output.gz)
-
-all.reads <-
-    bks.reads[, .N, by = read_id][order(-N), .(N, read_id)]
 
 write.table(all.reads, file = read.list,
             sep = "\t", col.names = F, row.names = F, quote = F)
