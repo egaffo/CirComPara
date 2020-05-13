@@ -232,15 +232,17 @@ vars.to.df <- function(vars.py.filepath){
     vars <- readChar(vars.py.filepath, nchars = file.info(vars.py.filepath)$size)
     ## revert multi-line strings into one-line and remove all blank chars
     a <- gsub(" ", "", gsub("['\"]\\\\[ ]*\n[ ]*['\"]", "", vars))
-    ## set multi-line vector values into one-line
-    b <- gsub(",[ ]*\n", ",", a)
-    b <- gsub(",#.*\n'", ",'", b)
     ## skip comment lines
-    c <- grep(pattern = "^#", invert = T, 
-              x = strsplit(b, "\n", fixed = T)[[1]], 
+    b <- grep(pattern = "^#", invert = T, 
+              x = strsplit(a, "\n", fixed = T)[[1]], 
               value = T)
     ## skip blank lines
-    d <- paste0(c[c != ""], collapse = "\n")
+    c <- paste0(b[b != ""], collapse = "\n")
+    ## set multi-line vector values into one-line
+    d <- gsub(",[ ]*\n", ",", c)
+    d <- gsub(",#.*\n'", ",'", d)
+    # ## skip blank lines
+    # d <- paste0(c[c != ""], collapse = "\n")
     ## transform into a data.frame
     vars.df <- data.table(read.table(text = d, sep = "=", header = F, stringsAsFactors = F))
     colnames(vars.df) <- c("Variable", "Value")
