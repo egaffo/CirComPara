@@ -67,13 +67,16 @@ if '--best-qual' in env['FINDCIRC_EXTRA_PARAMS']:
     best_qual_val = env['FINDCIRC_EXTRA_PARAMS'].pop(best_qual_idx)
     env['FINDCIRC_EXTRA_PARAMS'].remove('--best-qual')
 
-filter_tags = ['CIRCULAR']
+filter_tags = []
 if '--filter-tags' in env['FINDCIRC_EXTRA_PARAMS']:
-    filter_tags_idx = [i+1 for i, x in enumerate(env['FINDCIRC_EXTRA_PARAMS']) if x == '--filter-tags']
-    filter_tags_val = [env['FINDCIRC_EXTRA_PARAMS'].pop(i) for i in filter_tags_idx]
-    for i in range(len(filter_tags_idx)):
+    for i, x in enumerate(env['FINDCIRC_EXTRA_PARAMS']):
+        if x == '--filter-tags':
+            filter_tags.append(env['FINDCIRC_EXTRA_PARAMS'][i+1])
+    for i in range(len(filter_tags)):
         env['FINDCIRC_EXTRA_PARAMS'].remove('--filter-tags') 
-    filter_tags = filter_tags + filter_tags_val
+        env['FINDCIRC_EXTRA_PARAMS'].remove(filter_tags[i]) 
+
+filter_tags = ['CIRCULAR'] + filter_tags
     
 # reads has to be converted into single-end mode before calling this script!
 ### Findcirc considers only single-end reads. If CirComPara paired-end
