@@ -51,6 +51,8 @@ chdir_working_cmd  = 'cd ' + os.path.join(Dir('.').abspath, out_dir)
 chdir_previous_cmd = 'cd ' + Dir('#').abspath
 
 #ciri_parameters = env['CIRI_EXTRA_PARAMS']
+if isinstance(env['CIRI_EXTRA_PARAMS'], basestring):
+    env['CIRI_EXTRA_PARAMS'] = env['CIRI_EXTRA_PARAMS'].split()
 
 if env['ANNOTATION']:
     #ciri_parameters = ciri_parameters + ' -A ' + env['ANNOTATION']
