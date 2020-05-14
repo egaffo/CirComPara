@@ -56,7 +56,7 @@ if isinstance(env['CIRI_EXTRA_PARAMS'], basestring):
 
 if env['ANNOTATION']:
     #ciri_parameters = ciri_parameters + ' -A ' + env['ANNOTATION']
-    env['CIRI_EXTRA_PARAMS'] = env['CIRI_EXTRA_PARAMS'].extend(['-A', env['ANNOTATION']])
+    env['CIRI_EXTRA_PARAMS'].extend(['-A', env['ANNOTATION']])
 
 ciri_target = os.path.join(out_dir, env['SAMPLE'] + '_ciri.out')
 
