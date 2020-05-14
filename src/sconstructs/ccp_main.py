@@ -509,7 +509,7 @@ if env['QRE_FIND'] == 'True':
                      variant_dir = qre_dir, duplicate = 0,
                      exports = '''env qre_GTF qre_GENOME''')
     
-    Depends(qre, [cuffmerge, alignments])
+    Depends(qre, [env['ANNOTATION'], env['GENOME_FASTA']])
 
 
 ## CLEAN DIRS WHEN CLEANING TARGETS
