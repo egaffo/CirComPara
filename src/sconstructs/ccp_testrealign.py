@@ -35,8 +35,15 @@ except NameError:
 
 ## EXTRACT CIRCULAR SPLICE EVENTS, COLLECT SPLICE JUNCTIONS 
 ## AND FILTER BY MAPPING QUALITY
-collect_splice_cmd = "filter_segemehl.R -i $SOURCE $TESTREALIGN_PARAMS "\
-                     "-o ${TARGETS[0]} -r ${TARGETS[1]}"
+collect_splice_cmd = "filter_segemehl.R -i $SOURCE $TESTREALIGN_PARAMS "
+
+## let just count fragments and not single read (mates)
+#if env['FIX_READ_HEADER']: #env['CCP_COUNT_MODE'] == 'reads'
+#    #count separately read mates
+#    collect_splice_cmd = collect_splice_cmd + "-m "
+
+collect_splice_cmd = collect_splice_cmd + "-o ${TARGETS[0]} -r ${TARGETS[1]}"
+
 collect_splice_targets = ["splicesites.bed", "${SAMPLE}.circular.reads.bed.gz"]
 collect_splice = env.Command(collect_splice_targets, 
                              env['BED'],
