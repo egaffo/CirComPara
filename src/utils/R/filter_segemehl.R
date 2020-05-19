@@ -20,7 +20,10 @@ option_list <- list(
                 help = "The filtered circrnas in BED format. The 7th column is just a copy of the score field and reports the read count."),
     make_option(c("-r", "--reads_output"), action = "store", type = "character",
                 default = "sample.circular.reads.bed.gz",
-                help = "The output file")
+                help = "The output file"),
+    make_option(c("-m", "--keep_mates"), action = "store_true", #type = "logical",
+                default = F,
+                help = "Whether to include /1 or /2 in read names to distinguish readmates")
 )
 
 parser <- OptionParser(usage = "%prog -i sample.sngl.bed -q median_10 -o splicesites.bed -r sample.circular.reads.bed.gz",
@@ -67,13 +70,23 @@ if(qual.func == "any"){
 
 if(nrow(sege_circ) > 0){
 
-    sege_circ[, c("read.group", "type", "read.name",
-                  "mate.status"):=(tstrsplit(V4, ";"))][, read.name :=
-                                                            paste0(read.name, "/",
-                                                                   mate.status)][, `:=`(V4 = NULL,
-                                                               read.group = NULL,
-                                                               type = NULL,
-                                                               mate.status = NULL)]
+    if(arguments$keep_mates){
+        sege_circ[, c("read.group", "type", "read.name",
+                      "mate.status"):=(tstrsplit(V4, ";"))][, read.name :=
+                                                                paste0(read.name, "/",
+                                                                       mate.status)][, `:=`(V4 = NULL,
+                                                                                            read.group = NULL,
+                                                                                            type = NULL,
+                                                                                            mate.status = NULL)]
+    }else{
+        sege_circ[, c("read.group", "type", "read.name",
+                      "mate.status"):=(tstrsplit(V4, ";"))][, `:=`(V4 = NULL,
+                                                                   read.group = NULL,
+                                                                   type = NULL,
+                                                                   mate.status = NULL)]
+    }
+
+
     ## remove duplicated lines/alignments
     sege_circ <- sege_circ[, .(multi.mapping = .N,
                                map.qual = max(V5)),
