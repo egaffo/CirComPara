@@ -66,69 +66,120 @@ variables_file = 'vars.py'
 vars = Variables(variables_file)
 
 # basic parameters
-vars.Add('META', 'The metadata table file where you specify the project samples, etc.', 'meta.csv')
-vars.Add('ANNOTATION', 'Gene annotation file (like Ensembl GTF/GFF)', '')
-vars.Add('GENOME_FASTA', 'The FASTA file with the reference genome', '')
+vars.Add('META', 
+         'The metadata table file where you specify the project samples, etc.', 
+         'meta.csv')
+vars.Add('ANNOTATION', 
+         'Gene annotation file (like Ensembl GTF/GFF)', 
+         '')
+vars.Add('GENOME_FASTA', 
+         'The FASTA file with the reference genome', 
+         '')
 vars.Add('CIRCRNA_METHODS', 
 	 'Comma separated list of circRNA detection methods to use. '\
 	 'Repeated values will be collapsed. Currently supported: ciri, find_circ, '\
 	 'circexplorer2_star, circexplorer2_bwa, circexplorer2_segemehl, testrealign ('\
 	 'circexplorer2_segemehl is actually a filtering of testrealign predictions). '\
 	 'Set an empty string to use all methods available (including deprecated methods). ', 
-     '')
+         '')
 
 # non-basic parameters
-vars.Add('CPUS', 'Set number of CPUs', '4')
-vars.Add('GENEPRED', 'The genome annotation in GenePred format', '')
+vars.Add('CPUS', 
+         'Set number of CPUs', 
+         '4')
+vars.Add('GENEPRED', 
+         'The genome annotation in GenePred format', 
+         '')
+
 ## aligners indexes
-vars.Add('GENOME_INDEX', '''The index of the reference genome for HISAT2''', '')
-vars.Add('SEGEMEHL_INDEX', '''The .idx index for segemehl''', '')
-vars.Add('BWA_INDEX', '''The index of the reference genome for BWA''','')
-vars.Add('BOWTIE2_INDEX', '''The index of the reference genome for BOWTIE2''','')
-vars.Add('STAR_INDEX', 'The directory path where to find Star genome index', '')
-vars.Add('BOWTIE_INDEX', '''The index of the reference genome for BOWTIE '''\
-			 '''when using CIRCexplorer2_tophat''','')
+vars.Add('GENOME_INDEX', 
+         '''The index of the reference genome for HISAT2''', 
+         '')
+vars.Add('SEGEMEHL_INDEX', 
+         '''The .idx index for segemehl''', 
+         '')
+vars.Add('BWA_INDEX', 
+         '''The index of the reference genome for BWA''',
+         '')
+vars.Add('BOWTIE2_INDEX', 
+         '''The index of the reference genome for BOWTIE2''',
+         '')
+vars.Add('BOWTIE_INDEX', 
+         '''The index of the reference genome for BOWTIE '''\
+         '''when using CIRCexplorer2_tophat''','')
+
+vars.Add('STAR_INDEX', 
+         'The directory path where to find Star genome index', 
+         '')
 
 ## aligners extra parameters
-vars.Add('HISAT2_EXTRA_PARAMS', '''Extra parameters to add to the HISAT2 aligner fixed '''\
+vars.Add('HISAT2_EXTRA_PARAMS', 
+         '''Extra parameters to add to the HISAT2 aligner fixed '''\
          '''parameters '--dta --dta-cufflinks --rg-id <SAMPLE> --no-discordant '''\
          '''--no-mixed --no-overlap'. For instance, '--rna-strandness FR' if stranded reads'''\
-         ''' are used.''', '')
-vars.Add('BWA_PARAMS','Extra parameters for BWA','')
-vars.Add('SEGEMEHL_PARAMS', 'SEGEMEHL extra parameters', '')
-vars.Add('TOPHAT_PARAMS', 'Extra parameters to pass to TopHat', '')
-vars.Add('STAR_PARAMS', 'Extra parameters to pass to STAR', '')
-vars.Add('BOWTIE2_PARAMS', 'Extra parameters to pass to Bowtie2 in addition to '\
-         '-p $CPUS --reorder --score-min=C,-15,0 -q', '')
+         ''' are used.''', 
+         '')
+vars.Add('BWA_PARAMS',
+         'Extra parameters for BWA',
+         '')
+vars.Add('SEGEMEHL_PARAMS', 
+         'SEGEMEHL extra parameters', 
+         '')
+vars.Add('TOPHAT_PARAMS', 
+         'Extra parameters to pass to TopHat', 
+         '')
+vars.Add('STAR_PARAMS', 
+         'Extra parameters to pass to STAR', 
+         '')
+vars.Add('BOWTIE2_PARAMS', 
+         'Extra parameters to pass to Bowtie2 in addition to '\
+         '-p $CPUS --reorder --score-min=C,-15,0 -q', 
+         '')
 
 ## linear transcriptome extra parameters
-vars.Add('CUFFLINKS_PARAMS', '''Cufflinks extra parameters. '''\
-        '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
-        '''for the sequencing''', '')
+vars.Add('CUFFLINKS_PARAMS', 
+         '''Cufflinks extra parameters. '''\
+         '''F.i. '--library-type fr-firststrand' if dUTPs stranded library were used '''\
+         '''for the sequencing''', 
+         '')
 vars.Add('CUFFQUANT_EXTRA_PARAMS',
          'Cuffquant parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
-         ' --multi-read-correct --max-bundle-frags 9999999', '')
+         ' --multi-read-correct --max-bundle-frags 9999999', 
+         '')
 vars.Add('CUFFDIFF_EXTRA_PARAMS',
          'Cuffdiff parameter options to specify. E.g. --frag-bias-correct $GENOME_FASTA '\
-         ' --multi-read-correct', '')
-vars.Add('CUFFNORM_EXTRA_PARAMS', 'Extra parameters to use if using Cuffnorm',
+         ' --multi-read-correct', 
+         '')
+vars.Add('CUFFNORM_EXTRA_PARAMS', 
+        'Extra parameters to use if using Cuffnorm',
 	'--output-format cuffdiff')
-vars.Add('STRINGTIE_PARAMS', '''Stringtie extra parameters. '''\
+vars.Add('STRINGTIE_PARAMS', 
+         '''Stringtie extra parameters. '''\
          '''F.i. '--rf' assumes a stranded library fr-firststrand, to be '''\
-         '''used if dUTPs stranded library were sequenced''', '')
+         '''used if dUTPs stranded library were sequenced''', 
+         '')
 
 ## circRNA methods' extra parameters
-vars.Add('CIRI_EXTRA_PARAMS', 'CIRI additional parameters', '')
+vars.Add('CIRI_EXTRA_PARAMS', 
+         'CIRI additional parameters', 
+         '')
 ## DCC extra parameters
-vars.Add('DCC_EXTRA_PARAMS', 'DCC additional parameters', '')
+vars.Add('DCC_EXTRA_PARAMS', 
+         'DCC additional parameters', 
+         '')
 ## CIRCexplorer2 (annotate) parameters
-vars.Add('CE2_PARAMS', 'Parameters to pass to CIRCexplorer2 annotate', '')
+vars.Add('CE2_PARAMS', 
+         'Parameters to pass to CIRCexplorer2 annotate', 
+         '')
 ## Segemehl/testrealign extra parameters
-vars.Add('TESTREALIGN_PARAMS', 'Segemehl/testrealign filtering parameters'\
+vars.Add('TESTREALIGN_PARAMS', 
+         'Segemehl/testrealign filtering parameters'\
          '-q indicates the minimum median quality of backsplices ends '\
-         '(like the Haarz parameter)', '-q 25')
+         '(like the Haarz parameter)', 
+         '-q median_1')
 ## Find_circ parameters
-vars.Add('FINDCIRC_EXTRA_PARAMS', 'Parameters for find_circ.py. '\
+vars.Add('FINDCIRC_EXTRA_PARAMS', 
+         'Parameters for find_circ.py. '\
          'Additional parameters: --best-qual INT is used to filter '\
          'find_circ results according to best_qual_left and best_qual_right '\
          'fields >= INT. Default: INT = 40. --filter-tags TAG is used to filter '\
@@ -136,42 +187,55 @@ vars.Add('FINDCIRC_EXTRA_PARAMS', 'Parameters for find_circ.py. '\
          'filter tags has to be applied.', 
          '--best-qual 40 --filter-tags UNAMBIGUOUS_BP --filter-tags ANCHOR_UNIQUE')
 ## CircRNA_finder parameters
-vars.Add('CFINDER_EXTRA_PARAMS', 'Parameters for CircRNA_finder', '')
+vars.Add('CFINDER_EXTRA_PARAMS', 
+         'Parameters for CircRNA_finder', 
+         '')
 
 ## alternative workflow parameters
-vars.Add('PREPROCESSOR', 'The preprocessing method', 'trimmomatic')
+vars.Add('PREPROCESSOR', 
+         'The preprocessing method', 
+         'trimmomatic')
 vars.Add('PREPROCESSOR_PARAMS',
-        'Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string '\
-        'defaults to '\
-        'MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ',
-        '')
-vars.Add('LINEAR_EXPRESSION_METHODS', 'The method to be used for the linear expression estimates'\
+         'Read preprocessor extra parameters. F.i. if Trimmomatic, an empty string '\
+         'defaults to '\
+         'MAXINFO:40:0.5 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:30 MINLEN:50 AVGQUAL:30 ',
+         '')
+vars.Add('LINEAR_EXPRESSION_METHODS', 
+         'The method to be used for the linear expression estimates'\
          '/transcriptome reconstruction. To run more methods use a comma separated list. '\
     	 'However, only the first method in the list will be used in downstream processing. '\
-	     'Currently supported methods: stringtie,cufflinks,htseq.', 
+	 'Currently supported methods: stringtie,cufflinks,htseq.', 
          'stringtie')
-vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 'Set True to enable transcriptome '\
+vars.Add('TOGGLE_TRANSCRIPTOME_RECONSTRUCTION', 
+         'Set True to enable transcriptome '\
          'reconstruction. Default only quantifies genes and transcripts from the given '\
-         'annotation GTF file', 'False')
-vars.Add('DIFF_EXP', 'Set the method to and enable differential expression '\
-         'computation for linear genes/transcripts. Current methods '\
-         'supported: cufflinks, ballgown, DESeq2.'\
-     	 'Only available if more than one sample and more than one condition are given. '\
-         'N.B: differential expression tests for circRNAs is not yet implemented', 
-         '')
-vars.Add('READSTAT_METHODS', 'Comma separated list of methods to use for read statistics. '\
-         'Currently supported: fastqc,fastx', 'fastqc')
-vars.Add('MIN_METHODS', 'Number of methods that commmonly detect a circRNA to '\
-                        'define the circRNA as reliable. If this value exceeds the number '\
-                        'of methods specified, it will be set to the number of methods.', 
-         2)
-vars.Add('MIN_READS', 'Number of reads to consider a circRNA as expressed', 
-         2)
-vars.Add('BYPASS', 'Skip analysis of linear/circular transcripts. This will also skip '\
-			       'the analysis of linear-to-circular expression correlation.'\
-                   '{linear,circular}',
+         'annotation GTF file', 
          'False')
-vars.Add('CIRC_MAPPING', '''By default (SE), linearly unmapped reads are'''\
+#vars.Add('DIFF_EXP', 'Set the method to and enable differential expression '\
+#         'computation for linear genes/transcripts. Current methods '\
+#         'supported: cufflinks, ballgown, DESeq2.'\
+#     	 'Only available if more than one sample and more than one condition are given. '\
+#         'N.B: differential expression tests for circRNAs is not yet implemented', 
+#         '')
+vars.Add('READSTAT_METHODS', 
+         'Comma separated list of methods to use for read statistics. '\
+         'Currently supported: fastqc', 
+         'fastqc')
+vars.Add('MIN_METHODS', 
+         'Number of methods that commmonly detect a circRNA to '\
+         'define the circRNA as reliable. If this value exceeds the number '\
+         'of methods specified, it will be set to the number of methods.', 
+         2)
+vars.Add('MIN_READS', 
+         'Number of reads to consider a circRNA as expressed', 
+         2)
+vars.Add('BYPASS', 
+         'Skip analysis of linear/circular transcripts. This will also skip '\
+	 'the analysis of linear-to-circular expression correlation.'\
+         '{linear,circular}',
+         'False')
+vars.Add('CIRC_MAPPING', 
+         '''By default (SE), linearly unmapped reads are'''\
          '''aligned as single-end reads to search for circRNA backsplices. Set PE '''\
          '''to align as paired-end reads by each circRNA method aligner. You can also '''\
          '''specify each aligner's mode, or just which aligner has to use the PE mode, '''\
@@ -181,33 +245,39 @@ vars.Add('CIRC_MAPPING', '''By default (SE), linearly unmapped reads are'''\
          '''it is run only in single-end mode as it serves only Findcirc. ''',
          '''{'SE':['STAR','TOPHAT','BOWTIE2'],'PE':['BWA','SEGEMEHL']}''')
 
-vars.Add('LIN_COUNTER', 'The method to estimate circRNA-host gene '\
-                        'linear expression. Available are using the DCC '\
-                        '[dcc], or the CirComPara [ccp] method', 
+vars.Add('LIN_COUNTER', 
+         'The method to estimate circRNA-host gene '\
+         'linear expression. Available are using the DCC '\
+         '[dcc], or the CirComPara [ccp] method', 
          'ccp')
-vars.Add('FIX_READ_HEADER', 'Trim FASTQ headers to the read ids. '\
-                            'Recommended when processing SRA datasets', 
+vars.Add('FIX_READ_HEADER', 
+         'Trim FASTQ headers to the read ids. '\
+         'Recommended when processing SRA datasets', 
          'True')
-vars.Add('UNSTRANDED_CIRCS', 'Force unstranded circRNAs even if stranded library '\
-                        'was used', 
+vars.Add('UNSTRANDED_CIRCS', 
+         'Force unstranded circRNAs even if stranded library was used', 
          'False')
 
 ## performance options
-vars.Add('SAM_SORT_MM', 'Value for samtools sort -m option', '768M')
+vars.Add('SAM_SORT_MM', 
+         'Value for samtools sort -m option', 
+         '768M')
 
 ## experimental
-vars.Add('CIRC_DIFF_EXP', '(Experimental) Set True to enable differential expression computation '\
-                          'for circRNAs. Only available if >1 conditions are given.', 
+#vars.Add('CIRC_DIFF_EXP', '(Experimental) Set True to enable differential expression computation '\
+#                          'for circRNAs. Only available if >1 conditions are given.', 
+#         'False')
+vars.Add('QRE_FIND', 
+         '(Experimental) Set True to toggle analysis of QKI response elements sequences', 
          'False')
-vars.Add('QRE_FIND', '(Experimental) Set True to toggle analysis of QKI response elements sequences', 
-         'False')
-vars.Add('CCP_COUNTS', '(Experimental) Use the CirComPara merged alignment counts', 
+vars.Add('CCP_COUNTS', 
+         'Use the CirComPara merged alignment counts', 
          'False')
 
 ## deprecated parameters (legacy)
-vars.Add('CIRI', '(DEPRECATED) The full path to the CIRI_vx.x.pl perl script. '\
-                 'By default, the symlink in CirComPara bin/ directory will be used', 
-         '')
+#vars.Add('CIRI', '(DEPRECATED) The full path to the CIRI_vx.x.pl perl script. '\
+#                 'By default, the symlink in CirComPara bin/ directory will be used', 
+#         '')
 
 
 env = Environment(ENV=os.environ, SHELL = '/bin/bash',
