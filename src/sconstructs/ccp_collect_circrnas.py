@@ -88,9 +88,10 @@ if env['CCP_COUNTS']:
                                     ['bks.counts.intersect.csv', 
                                      'bks.counts.union.csv', 
                                      'bks.counts.union.intersected.csv']]
+                                    #bks.counts.collected_reads.csv
     ccp_counts_cmd = 'get_circompara_counts.R -i ${SOURCES[0]} '\
                      '-q $MIN_METHODS -o ${TARGETS[0].dir}'\
-                     + os.path.sep + 'bks.counts.'
+                     + os.path.sep + 'bks.counts. ' + env['STRANDED']
     ccp_counts = env.Command(ccp_counts_targets, 
                              [circular_reads_bed_gz_txt,
                               circular_reads_bed_gz_txt_sources], 
