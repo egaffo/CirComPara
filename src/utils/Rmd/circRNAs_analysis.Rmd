@@ -254,16 +254,19 @@ vars.to.df <- function(vars.py.filepath){
 
 ```{r, echo=FALSE}
 if(meta_file != ""){
-    if(!"sample" %in% colnames(fread(meta_file))){
-        ## merge meta.csv file list
-        meta <- rbindlist(lapply(readLines(meta_file), fread), 
-                          use.names = T, fill = T)
-    }else{
-        ## single meta.csv file
-        meta <- fread(meta_file)
-    }
-    meta <- unique(meta[, .(sample_id = sample, condition)])
-    intgroup.dt <- get.color.hues(meta)
+  if(!"sample" %in% colnames(fread(meta_file))){
+    ## merge meta.csv file list
+    meta <- rbindlist(lapply(readLines(meta_file), fread), 
+                      use.names = T, fill = T)
+  }else{
+    ## single meta.csv file
+    meta <- fread(meta_file)
+  }
+  if(!"condition" %in% colnames(meta)){
+    meta$condition <- "cond01"
+  }
+  meta <- unique(meta[, .(sample_id = sample, condition)])
+  intgroup.dt <- get.color.hues(meta)
 }
 ```
 

@@ -23,7 +23,7 @@ file,sample,condition,adapter,translocation
 
 '''
 
-import os, csv, itertools, collections, re, errno
+import os, csv, itertools, collections, re, errno, ast
 from collections import defaultdict
 
 def SymLink(target, source, env):
@@ -231,9 +231,23 @@ vars.Add('MIN_READS',
          2)
 vars.Add('BYPASS', 
          'Skip analysis of linear/circular transcripts. This will also skip '\
-	 'the analysis of linear-to-circular expression correlation.'\
-         '{linear,circular}',
-         'False')
+	 'the analysis of linear-to-circular expression correlation. The circular '\
+         'analysis includes the pre-filtering of linearly mapping reads. If you '\
+         'want to analyze reads already filtered for linear mappings you should '\
+         'set "linear,linmap". Choose among linear and or linmap, circular. '\
+         'NB: you still have to set the --rna-strandness '\
+         'parameter into the HISAT_EXTRA_PARAMS if you have stranded alignments/reads.',
+         '')
+vars.Add('LINMAPS', 
+         'You can specify here the path to pre-computed files of '\
+         'linearly aligned reads. This will skip read pre-processing and linear '\
+         'alignments (use jointly to BYPASS linmap to get also circular-to-linear analysis). '\
+         'Mind that the alignments must be in BAM format and the .bai mapping file index '\
+         'file must be in the same directory. NB: you still have to set the --rna-strandness '\
+         'parameter into the HISAT_EXTRA_PARAMS if you have stranded alignments/reads. '\
+         'You need to set a Python dict-like string parameter with sampleName and the '\
+         'corresponding BAM file. E.g: {"SAMPLE1": "sample1/hisat2.bam", "SAMPLE2": "sample2/hisat2.bam"}', 
+         None)
 vars.Add('CIRC_MAPPING', 
          '''By default (SE), linearly unmapped reads are'''\
          '''aligned as single-end reads to search for circRNA backsplices. Set PE '''\
@@ -299,13 +313,7 @@ env['CCP_RMD_DIR'] = os.path.join(env['CIRCOMPARA_HOME'], 'src', 'utils', 'Rmd')
 env.SetDefault(TOPHAT_PARAMS = '')
 
 ## the CIRC_MAPPING parameter is handled in the ccp_circrna_methods.py script
-#env.SetDefault(CIRC_PE_MAPPING = False)
-#if env['CIRC_PE_MAPPING'].lower() == 'true':
-#    env.Replace(CIRC_PE_MAPPING = True)
-#else:
-#    env.Replace(CIRC_PE_MAPPING = False)
 
-#env.SetDefault(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = False)
 if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION'].lower() == 'true':
 	env.Replace(TOGGLE_TRANSCRIPTOME_RECONSTRUCTION = True)
 else:
@@ -322,7 +330,19 @@ if env['UNSTRANDED_CIRCS'].lower() == 'true':
 else:
     env.Replace(UNSTRANDED_CIRCS = False)
 
-if not env['BYPASS'] == 'circular':
+env['BYPASS'] = env['BYPASS'].split(',')
+
+env.SetDefault(LINMAPS = None)
+if env['LINMAPS']:
+    try:
+        env.Replace(LINMAPS = defaultdict(set, ast.literal_eval(str(env['LINMAPS']))))
+    except ValueError as e:
+        print e
+        print '''Malformed LINMAPS string. Please, set as a Python dictionary, '''\
+                '''e.g. {'SAMPLE1': 'path/to/linmaps.bam'}'''
+        exit(-1)
+
+if not 'circular' in env['BYPASS']:
     if env['CIRCRNA_METHODS'] == ['']:
         env.Replace(CIRCRNA_METHODS = ['ciri', 
                                        'circexplorer2_bwa', 
@@ -343,14 +363,14 @@ env.Replace(LINEAR_EXPRESSION_METHODS = env['LINEAR_EXPRESSION_METHODS'].strip()
 #	env.AppendUnique(TOPHAT_PARAMS = ['--bowtie1'])
 
 env.SetDefault(DIFF_EXP = False)
-if env['DIFF_EXP'].strip() == '':
-    env.Replace(DIFF_EXP = False)
+#if env['DIFF_EXP'].strip() == '':
+#    env.Replace(DIFF_EXP = False)
 
 env.SetDefault(CIRC_DIFF_EXP = False)
-if env['CIRC_DIFF_EXP'].lower() == 'true':
-    env.Replace(CIRC_DIFF_EXP = True)
-else:
-    env.Replace(CIRC_DIFF_EXP = False)
+#if env['CIRC_DIFF_EXP'].lower() == 'true':
+#    env.Replace(CIRC_DIFF_EXP = True)
+#else:
+#    env.Replace(CIRC_DIFF_EXP = False)
 
 env.SetDefault(CCP_COUNTS = False)
 if env['CCP_COUNTS'].strip().lower() == 'true':
@@ -403,14 +423,19 @@ with open(env['META']) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         samples[row['sample']].append(os.path.abspath(row['file']))
-        conditions[row['condition']].add(row['sample'])
         try:
             adapters[row['sample']] = row['adapter'].strip()
             ##NB:last sample adapter row overwrites the previous
         except KeyError as ke:
             #adapters[row['sample']] = ''
-            print(str(ke) + ' not defined for file' + row['file'] + ', sample ' +\
-                    row['sample'] + '. Skipping.')
+            print(str(ke) + ' not defined for file ' + row['file'] + ', sample ' +\
+                    row['sample'])
+            pass
+        try:
+            conditions[row['condition']].add(row['sample'])
+        except KeyError as ke:
+            print(str(ke) + ' not defined for file ' + row['file'] + ', sample ' +\
+                    row['sample'])
             pass
         try:
             for tr in row['translocation'].split('#'):
@@ -421,11 +446,11 @@ with open(env['META']) as csvfile:
 
 env['CONDITIONS'] = conditions
 
-if len(conditions.keys()) < 2:
-    print str(conditions.keys()) + " is the only "\
-          "condition set for the samples. Differential "\
-          "expression analysis will not be performed."
-    env.Replace(DIFF_EXP = False)
+#if len(conditions.keys()) < 2:
+#    print str(conditions.keys()) + " is the only "\
+#          "condition set for the samples. Differential "\
+#          "expression analysis will not be performed."
+#    env.Replace(DIFF_EXP = False)
 
 ## PREPARE GENOME AND ANNOTATION FOR TRANSLOCATED SAMPLES
 #TODO in F-CirComPara
@@ -453,8 +478,9 @@ for sample in sorted(samples.keys()):
     
     env_circpipe = env.Clone()
     env_circpipe['SAMPLE'] = sample
-    env_circpipe['READS'] = samples[sample]
+    env_circpipe['READS'] = [File(f) for f in samples[sample]]
     env_circpipe['ADAPTER_FILE'] = adapters[sample]
+    env_circpipe['LINMAPS'] = File(env['LINMAPS'][sample])
     if len(env_circpipe['READS']) > 1:
         env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
                                                         'circexplorer2_tophat_pe', m) for \
@@ -474,7 +500,7 @@ for sample in sorted(samples.keys()):
     Depends([f for f in runs_dict[sample]['LINEAR_MAPPING_RES'].values() if f], 
             indexes['INDEXES']['HISAT2'])
 
-    if not 'circular' == env['BYPASS']:
+    if not 'circular' in env['BYPASS']:
         if runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['SEGEMEHL_MAP']:
             Depends(runs_dict[sample]['CIRCULAR_EXPRESSION']['CIRC_ALIGNERS']['SEGEMEHL_MAP'].values(), 
                     indexes['INDEXES']['SEGEMEHL']) 
@@ -515,7 +541,7 @@ env['RUNS_DICT'] = runs_dict
 ## - NORMALIZED QUANTIFICATION
 ## - DIFFERENTIAL EXPRESSION
 linexp_dir = 'linear_expression'
-if not env['BYPASS'] == 'linear':
+if not 'linear' in env['BYPASS']:
     env_linear_expression = env.Clone()
     env_linear_expression['SAMPLES'] = samples
     env_linear_expression['RUNS'] = runs
@@ -531,7 +557,7 @@ if not env['BYPASS'] == 'linear':
     env.Replace(ANNOTATION = linexp['ANNOTATION'])
 else:
     ## DO NOT ANALYZE GENE EXPRESSION: USE MOCK EMPTY FILES
-    print "BYPASS = " + env['BYPASS'] +\
+    print "BYPASS = " + str(env['BYPASS']) +\
           ": skipping linear transcript analysis"
     
     gene_exp = env.Command(os.path.join(linexp_dir, 'empty_geneexp.csv'), 
@@ -553,7 +579,7 @@ collect_read_stats = env.SConscript(os.path.join(collect_read_stats_dir,
 
 ### COLLECT AND REPORT CIRCRNA RESULTS
 circexp_dir = 'circular_expression'
-if not env['BYPASS'] == 'circular':
+if not 'circular' in env['BYPASS']:
     env_circular_expression = env.Clone()
     env_circular_expression['SAMPLES'] = samples
     env_circular_expression['RUNS'] = runs

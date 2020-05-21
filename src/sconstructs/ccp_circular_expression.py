@@ -37,17 +37,20 @@ circrna_collect = SConscript(os.path.join(circRNA_collect_dir,
 
 ## COMPUTE BACKSPLICES' LINEAR COUNTS FOR CLR (CIRCULAR TO LINEAR RATIO)
 circrna_linexp_dir = 'circrna_linexp'
-env_circrna_linexp = env.Clone()
-env_circrna_linexp['CIRCRNAS'] = circrna_collect[3] ## unique_circ.gtf.gz
-
-circrna_linexp = SConscript(os.path.join(circrna_linexp_dir, 
-                                         'ccp_circrna_linear_expression.py'),
-                            src_dir = env['SCONSCRIPT_HOME'],
-                            variant_dir = circrna_linexp_dir, duplicate = 0,
-                            exports = '''env_circrna_linexp''')
-Depends(circrna_linexp, [circrna_collect[2:3], 
-                         [env['RUNS_DICT'][s]['LINEAR_ALIGNMENTS_IDX'] for s in 
-                            env['RUNS_DICT'].keys()]])
+if env['LINMAPS']:
+    env_circrna_linexp = env.Clone()
+    env_circrna_linexp['CIRCRNAS'] = circrna_collect[3] ## unique_circ.gtf.gz
+    
+    circrna_linexp = SConscript(os.path.join(circrna_linexp_dir, 
+                                             'ccp_circrna_linear_expression.py'),
+                                src_dir = env['SCONSCRIPT_HOME'],
+                                variant_dir = circrna_linexp_dir, duplicate = 0,
+                                exports = '''env_circrna_linexp''')
+    Depends(circrna_linexp, [circrna_collect[2:3], 
+                             [env['RUNS_DICT'][s]['LINEAR_ALIGNMENTS_IDX'] for s in 
+                                env['RUNS_DICT'].keys()]])
+else:
+    circrna_linexp = None
 
 
 ## ANALYZE AND REPORT CIRCRNAS 

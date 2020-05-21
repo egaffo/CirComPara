@@ -108,7 +108,8 @@ read_stats_collect[paired == T,
 read.processing.table <- merge(unique(read_stats_collect[is.preprocessor == TRUE, 
                                                          .(Sample, `Raw reads`, `Clean reads`, Dropped)])[!is.na(`Raw reads`)],
                                read_stats_collect[is.mapper == TRUE, ][!is.na(`Linearly unmapped`), 
-                                                                       .(Sample, `Linearly unmapped`)])
+                                                                       .(Sample, `Linearly unmapped`)],
+                               all = T)
 read.processing.table[, `Linearly mapped` := `Clean reads`-`Linearly unmapped`]
 
 ## compute percentages
@@ -196,6 +197,9 @@ get.color.hues <- function(meta){
 ```{r, echo=FALSE}
 if(meta_file != ""){
     meta <- fread(meta_file)
+    if(!"condition" %in% colnames(meta)){
+      meta$condition <- "cond01"
+    }
     intgroup.dt <- get.color.hues(meta)
 }
 ```
@@ -333,6 +337,7 @@ if(meta_file != ""){
 if(file.info(circrna.reads.stats.file)$size == 0){
     sum.tab <- read.processing.table
     message <- "CircRNA detection was not performed"
+    print(message)
 }
 ```
 

@@ -154,22 +154,32 @@ elif env['PREPROCESSOR'] == '':
 else:
     clean_reads.append(preprocess['READS'][0][1])
 
-## ALIGN TO GENOME
-env_hisat2 = env.Clone()
-env_hisat2['HISAT2_INDEX'] = env['GENOME_INDEX']
-env_hisat2['HISAT2_PARAMS'] = env['HISAT2_EXTRA_PARAMS']
-env_hisat2.AppendUnique(HISAT2_PARAMS = ['--dta', '--dta-cufflinks', '--rg-id ',
-                                         env['SAMPLE'], '--no-discordant', 
-                                         '--no-mixed', '--no-overlap'])
-env_hisat2['READS'] = clean_reads
-mappings    = env.SConscript(os.path.join(build_dir, ccp_mapping), 
-                             variant_dir = build_dir, src_dir = SRC_DIR, 
-                             duplicate = 0, exports = '''env_hisat2''')
-results.append([File(f) for f in mappings.items()])
+mappings = {'BAM': None,
+            'BAM_INDEX': None}
+
+if not 'linmap' in env['BYPASS']:
+    ## ALIGN TO GENOME
+    env_hisat2 = env.Clone()
+    env_hisat2['HISAT2_INDEX'] = env['GENOME_INDEX']
+    env_hisat2['HISAT2_PARAMS'] = env['HISAT2_EXTRA_PARAMS']
+    env_hisat2.AppendUnique(HISAT2_PARAMS = ['--dta', '--dta-cufflinks', '--rg-id ',
+                                             env['SAMPLE'], '--no-discordant', 
+                                             '--no-mixed', '--no-overlap'])
+    env_hisat2['READS'] = clean_reads
+    mappings    = env.SConscript(os.path.join(build_dir, ccp_mapping), 
+                                 variant_dir = build_dir, src_dir = SRC_DIR, 
+                                 duplicate = 0, exports = '''env_hisat2''')
+    results.append([File(f) for f in mappings.items()])
+    env.Replace(LINMAPS = mappings['BAM'])
+    
+elif env['LINMAPS']:    
+    ## use pre-computed linear alignments, if given
+    mappings = {'BAM': env['LINMAPS'],
+                'BAM_INDEX': env['LINMAPS'].abspath + '.bai'}
 
 env['ALIGNMENTS'] = mappings['BAM'] 
 
-if not env['BYPASS'] == 'linear':
+if env['ALIGNMENTS'] and (not 'linear' in env['BYPASS']):
     ## EXPRESSION ANALYSIS
     env_expression = env.Clone()
     env_expression['FASTQC_DATA'] = fastqc_data
@@ -210,14 +220,14 @@ if not env['BYPASS'] == 'linear':
 else:
 	expression = [None, 
                   env.Command('mock_expression.txt', 
-                              mappings['BAM'], 
+                              env['ALIGNMENTS'], 
                               'touch $TARGET')]
 
 ## CIRCRNA DETECTION
 unmapped_dir = os.path.join(build_dir, 'unmapped_reads')
 
 circrnas = [None, None]
-if not env['BYPASS'] == 'circular':
+if not 'linmap' in env['BYPASS']:
     ## Extract unmapped reads in FASTQ format from BAM alignments
     unmapped_reads_target = ['singleton.fastq.gz']
     #unmapped_reads_cmd = '''samtools fastq -f 12 -F 3328 -n -s >( gzip -c > ${TARGETS[0]} ) '''
@@ -250,7 +260,14 @@ if not env['BYPASS'] == 'circular':
         unmapped_reads = mappings['UNMAPPED_READS']
     
     results.append(unmapped_reads)
-                        
+
+else:
+    if len(env['READS']) > 1:
+        unmapped_reads = ['mockfile.fq.gz'] + env['READS']
+    else:
+        unmapped_reads = env['READS']
+
+if not 'circular' in env['BYPASS']:
     # run circRNA detection pipeline 
     env_sample_circrna_methods = env.Clone()
 
@@ -283,7 +300,7 @@ if not env['BYPASS'] == 'circular':
                             exports = '''env_sample_circrna_methods''')
     results.append(circrnas[0]) ## the list result format
 
-    if not env['BYPASS'] == 'linear':
+    if not 'linear' in env['BYPASS']:
         if env['TOGGLE_TRANSCRIPTOME_RECONSTRUCTION']:
             ## could be improved by setting only the reconstructed 
             ## transcriptome file as the dependency, f.i.
