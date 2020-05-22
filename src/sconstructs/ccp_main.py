@@ -480,7 +480,8 @@ for sample in sorted(samples.keys()):
     env_circpipe['SAMPLE'] = sample
     env_circpipe['READS'] = [File(f) for f in samples[sample]]
     env_circpipe['ADAPTER_FILE'] = adapters[sample]
-    env_circpipe['LINMAPS'] = File(env['LINMAPS'][sample])
+    if env['LINMAPS']:
+        env_circpipe['LINMAPS'] = File(env['LINMAPS'][sample])
     if len(env_circpipe['READS']) > 1:
         env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
                                                         'circexplorer2_tophat_pe', m) for \
