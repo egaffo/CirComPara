@@ -82,9 +82,12 @@ if(basename(meta.file) == "read_groups.info"){
     gene_meta[, sample_id := sub(".*cuffquant/(.*)_hisat2.*", "\\1", file)]
 }else{
     ## prepare meta file and sample colors for plots
-    gene_meta <- unique(fread(file = meta.file)[, .(sample_id = sample, condition)])
+    gene_meta <- unique(fread(file = meta.file))
 }
-
+if(!"condition" %in% colnames(gene_meta)){
+  gene_meta$condition <- "cond01"
+}
+gene_meta <- unique(gene_meta[, .(sample_id = sample, condition)])
 intgroup.dt <- get.color.hues(gene_meta[, .(sample_id, condition)][order(sample_id)])
 ```
 
