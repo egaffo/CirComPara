@@ -34,6 +34,8 @@ else:
 
 reads_stats_collect_cmd = reads_stats_collect_cmd + ''' > $TARGET '''
 
+read_stats_collect_sources = [clean_reads_stats_files]
+
 if env['LINMAPS']:
     mapped_reads_linear_stats_files = get_matching_nodes(runs, '.*processings.*hisat2\.log')
     if mapped_reads_linear_stats_files:
@@ -41,11 +43,12 @@ if env['LINMAPS']:
                                   ''' && grep --with-filename "." ''' +\
                                   ' '.join(f.path for f in mapped_reads_linear_stats_files) +\
                                   ''' >> $TARGET'''
+        read_stats_collect_sources += mapped_reads_linear_stats_files
 
 read_stats_collect_dir = 'read_stats_collect'
 reads_stats_collect = env.Command(os.path.join(read_stats_collect_dir, 'read_stats_collect.txt'), 
-                              [clean_reads_stats_files, mapped_reads_linear_stats_files],
-                              reads_stats_collect_cmd)
+                                  read_stats_collect_sources,
+                                  reads_stats_collect_cmd)
 
 
 ##COLLECT CIRCRNA READS
