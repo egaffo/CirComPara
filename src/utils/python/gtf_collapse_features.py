@@ -53,6 +53,8 @@ if __name__ == '__main__':
         
         for line in f:
 
+            if line.startswith("#"):
+                continue
             fields = line.rstrip().split('\t')
             gene_id = re.search(args.feature + ' "([^"]*)"', fields[8]).group(1)
             gene_name = ''
