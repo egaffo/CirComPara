@@ -23,7 +23,7 @@ parser <-
 arguments <- parse_args(parser, positional_arguments=F)
 
 orig.file <- arguments$circrnas
-orig.est <- fread(file = orig.file)[, .(V1 = Chr, V2 = Start, V3 = End,
+orig.est <- fread(file = orig.file)[, .(V1 = as.character(Chr), V2 = Start, V3 = End,
                                         orig = Chimeric.out.junction, V6 = Strand), ]
 
 ## process the Chimeric.out.junction entries as DCC does:
@@ -36,6 +36,7 @@ orig.est <- fread(file = orig.file)[, .(V1 = Chr, V2 = Start, V3 = End,
 chimout.file <- arguments$chimreads
 chimout <- fread(chimout.file, verbose = F,
                  showProgress = F, header = F)[V1 == V4 & V3 == V6 & V7 >= 0]
+chimout$V1 <- as.character(chimout$V1)
 
 cigar_dist <- function(cigar.str){
     cigar.split <- strsplit(cigar.str, "")[[1]]

@@ -37,9 +37,11 @@ if(ncol(orig.est) > 6){
 }
 
 orig.est <- orig.est[, .(V1, V2, V3, V5, V6)]
+orig.est$V1 <- as.character(orig.est$V1)
 
 bks.reads.file <- arguments$chimreads
 bks.reads <- fread(bks.reads.file, header = F)[, V4 := V7][, V7 := NULL][]
+bks.reads$V1 <- as.character(bks.reads$V1)
 bks.reads <-
     bks.reads[, strsplit(V4, ",", fixed = TRUE),
               by = .(chr = V1, V2, V3, V5,

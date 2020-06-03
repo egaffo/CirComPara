@@ -28,9 +28,11 @@ if(ncol(orig.est) > 6){
 }
 
 orig.est <- orig.est[, .(V1, V2, V3, V5, V6)]
+orig.est$V1 <- as.character(orig.est$V1)
 
 chimout.junc.file <- arguments$chimreads
 chimout.junc.bed <- fread(file = chimout.junc.file, header = F)
+chimout.junc.bed$V1 <- as.character(chimout.junc.bed$V1)
 
 if(annotation == "annotated"){
     ext.range <- c(-arguments$range:arguments$range)

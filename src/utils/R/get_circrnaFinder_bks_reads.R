@@ -20,6 +20,7 @@ arguments <- parse_args(parser, positional_arguments=F)
 
 orig.file <- arguments$circrnas
 orig.est <- fread(orig.file)[, .(orig = sum(V5)), by = .(V1, V2, V3, V6), ]
+orig.est$V1 <- as.character(orig.est$V1)
 
 ## process the Chimeric.out.junction entries filtered as circrna_finder does:
 ## see https://github.com/orzechoj/circRNA_finder/blob/master/filterCirc.awk
@@ -28,6 +29,7 @@ orig.est <- fread(orig.file)[, .(orig = sum(V5)), by = .(V1, V2, V3, V6), ]
 chimout.file <- arguments$chimreads
 chimout.junc.bed <- fread(chimout.file, verbose = F,
                           showProgress = F, header = F)
+chimout.junc.bed$V1 <- as.character(chimout.junc.bed$V1)
 
 filterd.chimout.junc <-
     merge(chimout.junc.bed,

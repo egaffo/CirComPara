@@ -39,11 +39,13 @@ if(ncol(orig.est) > 6){
 }
 
 orig.est <- orig.est[, .(V1, V2, V3, V5, V6)]
+orig.est$V1 <- as.character(orig.est$V1)
 
 bks.reads.file <- arguments$chimreads
 bks.reads <-
     fread(bks.reads.file, showProgress = F,
           skip = 1)[grepl(";C|B;", V4)]
+bks.reads$V1 <- as.character(bks.reads$V1)
 bks.reads <-
     bks.reads[, c("read.group", "type", "read.name",
                       "mate.status") :=
