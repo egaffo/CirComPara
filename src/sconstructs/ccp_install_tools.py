@@ -53,7 +53,7 @@ else:
 BIOPYTHON_dir = os.path.join(python_lib_dir, 'Bio')
 BIOPYTHON_target = [os.path.join(BIOPYTHON_dir, 'SeqIO', 'FastaIO.py')]
 BIOPYTHON = env.Command(BIOPYTHON_target, [pip], 
-                        ['pip install --ignore-installed ' + SET_PIP_USER + ' biopython'])
+                        ['pip install --ignore-installed ' + SET_PIP_USER + ' -Iv biopython==1.76'])
 
 ## CYTHON
 #cython_dir = os.path.join(python_lib_dir, 'cython')
@@ -80,7 +80,7 @@ HTSeq = env.Command(HTSeq_target, [pip, cython],
                            #['pip install --ignore-installed --install-option="--prefix=' +\
                            #os.path.abspath(HTSeq_dir) +\
                            #'" HTSeq'])
-                    ['pip install --ignore-installed ' + SET_PIP_USER + ' HTSeq'])
+                    ['pip install --ignore-installed ' + SET_PIP_USER + ' -Iv HTSeq==0.12.3'])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[1], SymLink)
 
 # CIRCEXPLORER2
