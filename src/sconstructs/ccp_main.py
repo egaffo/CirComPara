@@ -341,6 +341,8 @@ if env['LINMAPS']:
         print '''Malformed LINMAPS string. Please, set as a Python dictionary, '''\
                 '''e.g. {'SAMPLE1': 'path/to/linmaps.bam'}'''
         exit(-1)
+else:
+    env.Replace(LINMAPS = defaultdict(lambda: None))
 
 if not 'circular' in env['BYPASS']:
     if env['CIRCRNA_METHODS'] == ['']:
@@ -480,7 +482,7 @@ for sample in sorted(samples.keys()):
     env_circpipe['SAMPLE'] = sample
     env_circpipe['READS'] = [File(f) for f in samples[sample]]
     env_circpipe['ADAPTER_FILE'] = adapters[sample]
-    if env['LINMAPS']:
+    if env['LINMAPS'][sample]:
         env_circpipe['LINMAPS'] = File(env['LINMAPS'][sample])
     if len(env_circpipe['READS']) > 1:
         env_circpipe.Replace(CIRCRNA_METHODS = [re.sub(r'\bcircexplorer2_tophat\b', 
@@ -494,6 +496,10 @@ for sample in sorted(samples.keys()):
                             exports = '''env_circpipe get_matching_nodes''')
     runs.append(run_sample[0])
     runs_dict[sample] = run_sample[1]
+    
+    ## update the linear mapping file list
+    ## with the ones computed in the ccp_circpipe.py script
+    env['LINMAPS'][sample] = runs_dict[sample]['LINEAR_ALIGNMENTS']
 
     ## dependencies from aligners' genome index
     ## TODO: set these dependencies in each Sconscript command by set

@@ -69,6 +69,10 @@ circrna_analyze = SConscript(os.path.join(circrna_analyze_dir,
                             variant_dir = circrna_analyze_dir, duplicate = 0,
                             exports = '''env_circrna_analyze''')
 
+if circrna_linexp:
+    Depends(circrna_analyze, circrna_linexp)
+
+
 Clean('.', circRNA_collect_dir)
 Clean('.', circrna_analyze_dir)
 
