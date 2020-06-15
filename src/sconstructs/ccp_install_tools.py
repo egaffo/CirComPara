@@ -40,7 +40,7 @@ else:
     pip_targets = [os.path.join(tools_dir, pip_file),
                    os.path.join(tools_dir, 'bin', 'pip')]
     pip_cmd = ' && '.join(['wget -O ${TARGETS[0]} ' + pip_url, 
-                           'python ${TARGETS[0]} ' + SET_PIP_USER + ''])
+                           'python ${TARGETS[0]} ' + SET_PIP_USER + ' pip==20.1.1'])
     pip = env.Command(pip_targets, 
                       [], 
                       pip_cmd)
@@ -61,10 +61,20 @@ if env['ENV']['VIRTUAL_ENV']:
     cython_target = [os.path.join(env['ENV']['VIRTUAL_ENV'], 'bin', 'cython')]
 else:
     cython_target = [os.path.join(tools_dir, 'bin', 'cython')]
-cython_cmd = 'pip install ' + SET_PIP_USER + ' Cython --install-option="--no-cython-compile"'
+cython_cmd = 'pip install ' + SET_PIP_USER + ' Cython==0.29.19 --install-option="--no-cython-compile"'
 cython = env.Command(cython_target,
                      [pip],
                      cython_cmd)
+
+
+# PYSAM
+## freeze pysam to v0.15.4 since
+## v0.16 does not read gzip'ed files
+PYSAM_dir = os.path.join(python_lib_dir, 'pysam')
+PYSAM_target = [os.path.join(PYSAM_dir, 'samtools.py')]
+PYSAM = env.Command(PYSAM_target, [pip], 
+                        ['pip install --ignore-installed --user -Iv pysam==0.15.4'])
+
 
 # HTSeq
 #HTSeq_dir = os.path.join(tools_dir, 'HTSeq')
@@ -85,12 +95,13 @@ env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[1], SymLink)
 
 # CIRCEXPLORER2
 #CIRCEXPLORER2_dir = os.path.join(tools_dir, 'CIRCexplorer2')
+<<<<<<< HEAD:src/sconstructs/ccp_install_tools.py
 #CIRCEXPLORER2_dir = os.path.join(python_lib_dir, 'circ2')
 if env['ENV']['VIRTUAL_ENV']:
     CIRCEXPLORER2_target = [os.path.join(env['ENV']['VIRTUAL_ENV'], 'bin', 'CIRCexplorer2')]#, 
 else:
     CIRCEXPLORER2_target = [os.path.join(tools_dir, 'bin', 'CIRCexplorer2')]#, 
-CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [pip, HTSeq], 
+CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [pip, HTSeq, PYSAM], 
                            #['pip install --install-option="--prefix=' +\
                            #os.path.abspath(CIRCEXPLORER2_dir) +\
                            #'" -Iv circexplorer2==2.3.3'])
