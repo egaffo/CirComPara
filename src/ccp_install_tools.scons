@@ -18,7 +18,7 @@ pip_url = 'https://bootstrap.pypa.io/' + pip_file
 pip_targets = [os.path.join(tools_dir, pip_file),
                os.path.join(tools_dir, 'bin', 'pip')]
 pip_cmd = ' && '.join(['wget -O ${TARGETS[0]} ' + pip_url, 
-                       'python ${TARGETS[0]} --user'])
+                       'python ${TARGETS[0]} --user pip==20.1.1'])
 pip = env.Command(pip_targets, 
                   [], 
                   pip_cmd)
@@ -28,10 +28,24 @@ pip = env.Command(pip_targets,
 BIOPYTHON_dir = os.path.join(python_lib_dir, 'Bio')
 BIOPYTHON_target = [os.path.join(BIOPYTHON_dir, 'SeqIO', 'FastaIO.py')]
 BIOPYTHON = env.Command(BIOPYTHON_target, [pip], 
-                        #['pip install --install-option="--prefix=' +\
-                        #os.path.abspath(BIOPYTHON_dir) +\
-                        #'" biopython'])
-                        ['pip install --ignore-installed --user biopython'])
+                        ['pip install --ignore-installed --user -Iv biopython==1.76'])
+
+# PYSAM
+## freeze pysam to v0.15.4 since
+## v0.16 does not read gzip'ed files
+PYSAM_dir = os.path.join(python_lib_dir, 'pysam')
+PYSAM_target = [os.path.join(PYSAM_dir, 'samtools.py')]
+PYSAM = env.Command(PYSAM_target, [pip], 
+                        ['pip install --ignore-installed --user -Iv pysam==0.15.4'])
+
+
+## CYTHON
+#cython_dir = os.path.join(python_lib_dir, 'cython')
+cython_target = [os.path.join(tools_dir, 'bin', 'cython')]
+cython_cmd = 'pip install --user Cython==0.29.19 --ignore-installed --install-option="--no-cython-compile"'
+cython = env.Command(cython_target,
+                     [pip],
+                     cython_cmd)
 
 # HTSeq
 #HTSeq_dir = os.path.join(tools_dir, 'HTSeq')
@@ -44,7 +58,7 @@ HTSeq = env.Command(HTSeq_target, [pip],
                            #['pip install --ignore-installed --install-option="--prefix=' +\
                            #os.path.abspath(HTSeq_dir) +\
                            #'" HTSeq'])
-                    ['pip install --ignore-installed --user HTSeq'])
+                    ['pip install --ignore-installed --user -Iv HTSeq==0.12.3'])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[1], SymLink)
 
 # CIRCEXPLORER2
@@ -52,11 +66,11 @@ env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[1], SymLink)
 CIRCEXPLORER2_dir = os.path.join(python_lib_dir, 'circ2')
 CIRCEXPLORER2_target = [os.path.join(tools_dir, 'bin', 'CIRCexplorer2')]#, 
 #                       os.path.join(CIRCEXPLORER2_dir, 'bin', 'fast_circ.py')]
-CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [pip, HTSeq], 
+CIRCEXPLORER2 = env.Command(CIRCEXPLORER2_target, [pip, HTSeq, PYSAM], 
                            #['pip install --install-option="--prefix=' +\
                            #os.path.abspath(CIRCEXPLORER2_dir) +\
                            #'" -Iv circexplorer2==2.3.3'])
-                           ['pip install --ignore-installed --user -Iv circexplorer2==2.3.3'])
+                           ['pip install --ignore-installed --user -Iv circexplorer2==2.3.8'])
 env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[0], SymLink)
 #env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), CIRCEXPLORER2[1], SymLink)
 
