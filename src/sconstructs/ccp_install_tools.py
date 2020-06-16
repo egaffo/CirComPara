@@ -95,7 +95,6 @@ env.Command(os.path.join(ccp_bin_dir, "${SOURCE.file}"), HTSeq[1], SymLink)
 
 # CIRCEXPLORER2
 #CIRCEXPLORER2_dir = os.path.join(tools_dir, 'CIRCexplorer2')
-<<<<<<< HEAD:src/sconstructs/ccp_install_tools.py
 #CIRCEXPLORER2_dir = os.path.join(python_lib_dir, 'circ2')
 if env['ENV']['VIRTUAL_ENV']:
     CIRCEXPLORER2_target = [os.path.join(env['ENV']['VIRTUAL_ENV'], 'bin', 'CIRCexplorer2')]#, 
