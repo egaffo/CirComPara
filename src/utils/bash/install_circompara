@@ -9,16 +9,13 @@ export PATH=$CIRCOMPARA_HOME/bin/:$PATH
 ## export environment variable for local R repository
 export R_LIBS=$CIRCOMPARA_HOME/tools/R_libs
 
-## check whether Scons is installed and install it if not
 ## install Scons
-command -v scons >/dev/null 2>&1 ||\
-{ echo >&2 "I require Scons but it's not installed. Installing Scons..."; 
 cd $CIRCOMPARA_HOME/tools;
 wget -N -c http://prdownloads.sourceforge.net/scons/scons-local-3.1.2.tar.gz;
 mkdir -p scons
 tar -xf scons-local-3.1.2.tar.gz -C scons ; 
 ln -s $CIRCOMPARA_HOME/tools/scons/scons.py $CIRCOMPARA_HOME/bin/scons;
-cd - ;}
+cd -
 
 cd $CIRCOMPARA_HOME/bin
 ln -s ../src/utils/python/* .
@@ -26,4 +23,4 @@ ln -s ../src/utils/R/* .
 cd -
 
 ## install other tools
-scons -i -f $CIRCOMPARA_HOME/src/sconstructs/ccp_install_tools.py $1 
+$CIRCOMPARA_HOME/bin/scons -i -f $CIRCOMPARA_HOME/src/sconstructs/ccp_install_tools.py $1 
